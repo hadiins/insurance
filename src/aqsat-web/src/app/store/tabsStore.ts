@@ -1,0 +1,118 @@
+import { create } from "zustand";
+import { fa } from "../../lib/persian";
+import type { OpenTab, OpenTabRequest } from "../types";
+
+interface TabsState {
+  tabs: OpenTab[];
+  activeKey: string | null;
+  maxTabs: number;
+  pendingCloseKey: string | null;
+  toastMessage: string | null;
+
+  openTab: (request: OpenTabRequest) => void;
+  closeTab: (key: string, force?: boolean) => void;
+  confirmClose: () => void;
+  cancelClose: () => void;
+  setActive: (key: string) => void;
+  setDirty: (key: string, dirty: boolean) => void;
+  setTitle: (key: string, title: string) => void;
+  cycleNext: () => void;
+  dismissToast: () => void;
+}
+
+function keyFor(request: OpenTabRequest): string {
+  switch (request.kind) {
+    case "multi-create":
+      return `${request.navType}:${crypto.randomUUID()}`;
+    case "multi-record":
+      return `${request.navType}:${request.recordId}`;
+    case "singleton":
+    default:
+      return request.navType;
+  }
+}
+
+export const useTabsStore = create<TabsState>((set, get) => ({
+  tabs: [],
+  activeKey: null,
+  maxTabs: 12,
+  pendingCloseKey: null,
+  toastMessage: null,
+
+  openTab: (request) => {
+    const { tabs } = get();
+    const isNewEveryTime = request.kind === "multi-create";
+    if (!isNewEveryTime) {
+      const key = keyFor(request);
+      const existing = tabs.find((t) => t.key === key);
+      if (existing) {
+        set({ activeKey: key });
+        return;
+      }
+    }
+
+    if (tabs.length >= get().maxTabs) {
+      set({ toastMessage: `حداکثر ${fa(get().maxTabs)} تب باز می‌شود` });
+      return;
+    }
+
+    const key = keyFor(request);
+    const newTab: OpenTab = {
+      key,
+      navType: request.navType,
+      page: request.page,
+      title: request.title,
+      pinned: request.pinned ?? false,
+      dirty: false,
+      payload: request.payload,
+    };
+    set({ tabs: [...tabs, newTab], activeKey: key });
+  },
+
+  closeTab: (key, force) => {
+    const { tabs, activeKey } = get();
+    const tab = tabs.find((t) => t.key === key);
+    if (!tab || tab.pinned) return;
+
+    if (tab.dirty && !force) {
+      set({ pendingCloseKey: key });
+      return;
+    }
+
+    const index = tabs.findIndex((t) => t.key === key);
+    const nextTabs = tabs.filter((t) => t.key !== key);
+    let nextActive = activeKey;
+    if (activeKey === key) {
+      nextActive = nextTabs[index - 1]?.key ?? nextTabs[0]?.key ?? null;
+    }
+    set({ tabs: nextTabs, activeKey: nextActive, pendingCloseKey: null });
+  },
+
+  confirmClose: () => {
+    const key = get().pendingCloseKey;
+    if (key) get().closeTab(key, true);
+  },
+
+  cancelClose: () => {
+    const key = get().pendingCloseKey;
+    set({ pendingCloseKey: null, activeKey: key ?? get().activeKey });
+  },
+
+  setActive: (key) => set({ activeKey: key }),
+
+  setDirty: (key, dirty) =>
+    set((s) => ({ tabs: s.tabs.map((t) => (t.key === key ? { ...t, dirty } : t)) })),
+
+  setTitle: (key, title) =>
+    set((s) => ({ tabs: s.tabs.map((t) => (t.key === key ? { ...t, title } : t)) })),
+
+  cycleNext: () => {
+    const { tabs, activeKey } = get();
+    if (tabs.length === 0) return;
+    const index = tabs.findIndex((t) => t.key === activeKey);
+    const next = tabs[(index + 1) % tabs.length];
+    set({ activeKey: next.key });
+  },
+
+  dismissToast: () => set({ toastMessage: null }),
+}));

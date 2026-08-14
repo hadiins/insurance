@@ -1,11 +1,13 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Node / frontend
 node_modules/
 dist/
 build/
-
-# Cloudflare Workers
-.wrangler/
-.dev.vars
-.dev.vars.*
 
 # env / secrets
 .env
@@ -15,9 +17,11 @@ build/
 # logs
 *.log
 npm-debug.log*
+logs/
 
 # editor / os
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+*.swp

@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{931C9429-2214-40D2-A60D-0222A1E81996}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aqsat.Domain", "src\Aqsat.Domain\Aqsat.Domain.csproj", "{F11DFA72-D96C-4621-873A-76B4080865B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aqsat.Application", "src\Aqsat.Application\Aqsat.Application.csproj", "{9C2E98F1-2A75-4904-AA02-D02FD0191584}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aqsat.Infrastructure", "src\Aqsat.Infrastructure\Aqsat.Infrastructure.csproj", "{AA017362-E087-4966-986E-62119786514C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aqsat.Api", "src\Aqsat.Api\Aqsat.Api.csproj", "{06BAC06F-1173-43D1-96B1-5E2ADB0499C5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F0BF4CF7-6262-408D-A612-B991127FE1E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aqsat.UnitTests", "tests\Aqsat.UnitTests\Aqsat.UnitTests.csproj", "{27A333F5-7BD3-456E-97B2-AFB11045687E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F11DFA72-D96C-4621-873A-76B4080865B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F11DFA72-D96C-4621-873A-76B4080865B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F11DFA72-D96C-4621-873A-76B4080865B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F11DFA72-D96C-4621-873A-76B4080865B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C2E98F1-2A75-4904-AA02-D02FD0191584}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C2E98F1-2A75-4904-AA02-D02FD0191584}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C2E98F1-2A75-4904-AA02-D02FD0191584}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C2E98F1-2A75-4904-AA02-D02FD0191584}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA017362-E087-4966-986E-62119786514C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA017362-E087-4966-986E-62119786514C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA017362-E087-4966-986E-62119786514C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA017362-E087-4966-986E-62119786514C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06BAC06F-1173-43D1-96B1-5E2ADB0499C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06BAC06F-1173-43D1-96B1-5E2ADB0499C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06BAC06F-1173-43D1-96B1-5E2ADB0499C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06BAC06F-1173-43D1-96B1-5E2ADB0499C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27A333F5-7BD3-456E-97B2-AFB11045687E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27A333F5-7BD3-456E-97B2-AFB11045687E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27A333F5-7BD3-456E-97B2-AFB11045687E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27A333F5-7BD3-456E-97B2-AFB11045687E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F11DFA72-D96C-4621-873A-76B4080865B4} = {931C9429-2214-40D2-A60D-0222A1E81996}
+		{9C2E98F1-2A75-4904-AA02-D02FD0191584} = {931C9429-2214-40D2-A60D-0222A1E81996}
+		{AA017362-E087-4966-986E-62119786514C} = {931C9429-2214-40D2-A60D-0222A1E81996}
+		{06BAC06F-1173-43D1-96B1-5E2ADB0499C5} = {931C9429-2214-40D2-A60D-0222A1E81996}
+		{27A333F5-7BD3-456E-97B2-AFB11045687E} = {F0BF4CF7-6262-408D-A612-B991127FE1E5}
+	EndGlobalSection
+EndGlobal

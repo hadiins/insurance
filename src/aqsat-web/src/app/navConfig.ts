@@ -1,0 +1,128 @@
+import type { NavGroup } from "./types";
+
+export const ICONS = {
+  today: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18",
+  doc: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6",
+  coin: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  card: "M2 5h20v14H2zM2 10h20",
+  chart: "M3 3v18h18M18 9l-5 5-3-3-4 4",
+  msg: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  users:
+    "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87",
+  gear: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+  up: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+} as const;
+
+export const NAV: NavGroup[] = [
+  {
+    id: "desk",
+    label: "میز کار",
+    icon: ICONS.today,
+    defaultOpen: true,
+    items: [
+      { navType: "today", title: "امروز", kind: "singleton", page: "today", pinned: true },
+      { navType: "today-reminders", title: "یادآوری‌های امروز", kind: "singleton", page: "blank" },
+      { navType: "overdue-tasks", title: "کارهای معوق", kind: "singleton", page: "blank" },
+      { navType: "notifications", title: "اعلان‌ها", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "policies",
+    label: "بیمه‌نامه‌ها",
+    icon: ICONS.doc,
+    items: [
+      { navType: "policy-new", title: "ثبت بیمه‌نامه", kind: "multi-create", page: "new-policy" },
+      { navType: "policies-list", title: "فهرست بیمه‌نامه‌ها", kind: "singleton", page: "blank" },
+      { navType: "policies-installment", title: "بیمه‌نامه‌های اقساطی", kind: "singleton", page: "blank" },
+      { navType: "policies-pending", title: "در انتظار تأیید مشتری", kind: "singleton", page: "blank" },
+      { navType: "policies-cancelled", title: "باطل‌شده‌ها", kind: "singleton", page: "blank" },
+      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "collections",
+    label: "اقساط و وصول",
+    icon: ICONS.coin,
+    items: [
+      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-list" },
+      { navType: "installments-overdue", title: "اقساط معوق", kind: "singleton", page: "blank" },
+      { navType: "payment-record", title: "ثبت پرداخت", kind: "singleton", page: "blank" },
+      { navType: "payment-online", title: "پرداخت‌های آنلاین", kind: "singleton", page: "blank" },
+      { navType: "settlement-partial", title: "تسویه‌های جزئی", kind: "singleton", page: "blank" },
+      { navType: "customer-statement", title: "صورت‌حساب مشتری", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "collateral",
+    label: "وثیقه و چک",
+    icon: ICONS.card,
+    items: [
+      { navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "blank" },
+      { navType: "checks-bounced", title: "چک‌های برگشتی", kind: "singleton", page: "blank" },
+      { navType: "check-new", title: "ثبت چک صیادی", kind: "singleton", page: "blank" },
+      { navType: "promissory-notes", title: "سفته‌ها", kind: "singleton", page: "blank" },
+      { navType: "legal-notice", title: "اظهارنامه و پیگیری حقوقی", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "customers",
+    label: "مشتریان",
+    icon: ICONS.users,
+    items: [
+      { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "blank" },
+      { navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "blank" },
+      { navType: "customer-consents", title: "رضایت‌نامه‌های ثبت‌شده", kind: "singleton", page: "blank" },
+      { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "sms",
+    label: "پیامک و اطلاع‌رسانی",
+    icon: ICONS.msg,
+    items: [
+      { navType: "sms-outbox", title: "صندوق ارسال", kind: "singleton", page: "blank" },
+      { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "blank" },
+      { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "blank" },
+      { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "blank" },
+      { navType: "sms-credit", title: "اعتبار پنل", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "reports",
+    label: "گزارش‌ها",
+    icon: ICONS.chart,
+    items: [
+      { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
+      { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "blank" },
+      { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "blank" },
+      { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "blank" },
+      { navType: "reports-network-compare", title: "مقایسه با میانگین شبکه", kind: "singleton", page: "blank" },
+      { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "import",
+    label: "ورود اطلاعات",
+    icon: ICONS.up,
+    items: [
+      { navType: "import-fanavaran", title: "آپلود فایل فناوران", kind: "singleton", page: "blank" },
+      { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "blank" },
+      { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "blank" },
+      { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "settings",
+    label: "تنظیمات",
+    icon: ICONS.gear,
+    items: [
+      { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "blank" },
+      { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "blank" },
+      { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },
+      { navType: "settings-sms-panel", title: "پنل پیامک", kind: "singleton", page: "blank" },
+      { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "blank" },
+    ],
+  },
+];
+
+export const MENU = NAV.flatMap((g) => g.items);
