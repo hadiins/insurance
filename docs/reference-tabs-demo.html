@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نمونهٔ تب‌ها — دفتر اقساط</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--LEAD:0}
+[data-theme="dark"]{
+  --void:#0A1114;--slate:#141F24;--slate-2:#1C2C33;
+  --edge:rgba(255,255,255,.07);--edge-2:rgba(255,255,255,.14);
+  --mint:#3DDC97;--mint-dim:#1E8560;--amber:#F5A524;--ember:#FF6B4A;
+  --ice:#E8F1F2;--ice-2:#A8BFC4;--ice-3:#6B8189;
+  --gl:0 0 24px rgba(61,220,151,.25);--glE:0 0 20px rgba(255,107,74,.22);
+  --pane:linear-gradient(160deg,rgba(28,44,51,.9),rgba(16,26,30,.85));
+  --hov:rgba(255,255,255,.028);--btn:rgba(255,255,255,.04);--btnH:rgba(255,255,255,.09);
+  --tabbar:#0E171B;--tabOff:transparent;--fld:rgba(255,255,255,.04);
+  --onM:#06231A;--sh:0 10px 34px rgba(0,0,0,.5);
+}
+[data-theme="light"]{
+  --void:#EEF2F4;--slate:#FFF;--slate-2:#FFF;
+  --edge:rgba(18,40,48,.10);--edge-2:rgba(18,40,48,.19);
+  --mint:#0E7C6B;--mint-dim:#3FBFA4;--amber:#B57A0A;--ember:#CF4526;
+  --ice:#0F1D22;--ice-2:#42585F;--ice-3:#75898F;
+  --gl:0 2px 10px rgba(14,124,107,.22);--glE:0 2px 10px rgba(207,69,38,.2);
+  --pane:#FFF;--hov:rgba(18,40,48,.028);--btn:#FFF;--btnH:rgba(18,40,48,.05);
+  --tabbar:#E3E9EC;--tabOff:transparent;--fld:rgba(18,40,48,.03);
+  --onM:#FFF;--sh:0 10px 30px rgba(18,40,48,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Vazirmatn',Tahoma,sans-serif;background:var(--void);color:var(--ice);
+  font-size:14px;line-height:1.7;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;overflow:hidden;transition:background-color .3s,color .3s}
+.body{flex:1;display:flex;min-height:0}
+.col{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ══ sidebar ══ */
+.side{width:250px;flex:none;background:var(--slate);border-inline-start:1px solid var(--edge);
+  display:flex;flex-direction:column;transition:width .22s cubic-bezier(.22,.9,.28,1)}
+.side.mini{width:56px}
+.sideTop{padding:10px;flex:none}
+.search{position:relative}
+.search input{padding-inline-start:32px;font-size:12.5px;padding-block:8px}
+.search svg{position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;color:var(--ice-3);pointer-events:none}
+.side.mini .search{display:none}
+.nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 8px 12px;scrollbar-width:thin}
+.nav::-webkit-scrollbar{width:6px}
+.nav::-webkit-scrollbar-thumb{background:var(--edge-2);border-radius:3px}
+
+.grp{margin-bottom:2px}
+.grpH{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:10px;
+  background:transparent;border:none;color:var(--ice-2);font-family:inherit;font-size:12.5px;
+  font-weight:600;cursor:pointer;transition:.16s;text-align:right}
+.grpH:hover{background:var(--hov);color:var(--ice)}
+.grpH:focus-visible{outline:2px solid var(--mint);outline-offset:-2px}
+.grpH .gi{width:16px;height:16px;flex:none;color:var(--ice-3)}
+.grpH .gt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grpH .cnt{font-size:10px;color:var(--ice-3);background:var(--btn);border-radius:9px;padding:0 6px;
+  line-height:15px;flex:none}
+.grpH .ch{width:12px;height:12px;flex:none;color:var(--ice-3);transition:transform .22s}
+.grp.open .grpH .ch{transform:rotate(-90deg)}
+.grp.open .grpH{color:var(--ice)}
+.grp.open .grpH .gi{color:var(--mint)}
+
+.kids{overflow:hidden;max-height:0;transition:max-height .26s cubic-bezier(.22,.9,.28,1)}
+.grp.open .kids{max-height:640px}
+.kids a{display:flex;align-items:center;gap:9px;padding:7px 10px 7px 10px;margin-inline-start:13px;
+  border-inline-start:1px solid var(--edge);color:var(--ice-3);text-decoration:none;font-size:12.5px;
+  cursor:pointer;transition:.15s;position:relative}
+.kids a:hover{color:var(--ice);background:var(--hov)}
+.kids a.on{color:var(--mint);font-weight:600}
+.kids a.on::before{content:'';position:absolute;inset-inline-start:-1px;top:6px;bottom:6px;width:2px;
+  background:var(--mint);border-radius:2px}
+.kids a .kt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kids a:focus-visible{outline:2px solid var(--mint);outline-offset:-2px}
+.kids mark{background:color-mix(in srgb,var(--mint) 28%,transparent);color:inherit;border-radius:3px}
+
+/* mini mode: icons only, flyout on hover */
+.side.mini .nav{padding:0 6px 12px}
+.side.mini .grpH{justify-content:center;padding:10px 0}
+.side.mini .grpH .gt,.side.mini .grpH .cnt,.side.mini .grpH .ch{display:none}
+.side.mini .kids{max-height:0!important}
+.side.mini .grp{position:relative}
+.side.mini .grp:hover .kids{position:absolute;inset-inline-end:100%;top:0;max-height:none!important;
+  background:var(--slate);border:1px solid var(--edge-2);border-radius:12px;padding:6px;
+  min-width:190px;z-index:40;box-shadow:var(--sh);overflow:visible}
+.side.mini .grp:hover .kids a{margin:0;border:none}
+
+.sideFoot{padding:8px 10px;border-top:1px solid var(--edge);flex:none;display:flex;gap:6px}
+.sideFoot button{flex:1;font-family:inherit;font-size:11.5px;padding:6px;border-radius:8px;
+  border:1px solid var(--edge);background:transparent;color:var(--ice-3);cursor:pointer;transition:.16s;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.sideFoot button:hover{background:var(--hov);color:var(--ice)}
+.sideFoot svg{width:14px;height:14px}
+.side.mini .sideFoot .lbl{display:none}
+.noHit{font-size:11.5px;color:var(--ice-3);text-align:center;padding:18px 8px}
+
+/* ── top bar ── */
+.top{display:flex;align-items:center;gap:14px;padding:9px 16px;background:var(--slate);
+  border-bottom:1px solid var(--edge);flex:none}
+.mk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  background:linear-gradient(145deg,var(--mint),var(--mint-dim));color:var(--onM);
+  font-weight:900;font-size:14px;box-shadow:var(--gl)}
+.top b{font-size:14.5px;font-weight:700}
+.top .sp{flex:1}
+.top .who{font-size:11.5px;color:var(--ice-3)}
+.icon{width:32px;height:32px;border-radius:9px;border:1px solid var(--edge);background:transparent;
+  color:var(--ice-3);cursor:pointer;display:grid;place-items:center;transition:.18s;position:relative;overflow:hidden}
+.icon:hover{color:var(--ice);background:var(--hov)}
+.icon:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.icon svg{width:16px;height:16px;position:absolute;transition:transform .45s cubic-bezier(.3,1.1,.4,1),opacity .3s}
+[data-theme="dark"] .sun{transform:none;opacity:1}
+[data-theme="dark"] .moon{transform:translateY(120%);opacity:0}
+[data-theme="light"] .sun{transform:translateY(-120%);opacity:0}
+[data-theme="light"] .moon{transform:none;opacity:1}
+
+/* ── launcher ── */
+.launch{display:flex;gap:4px;padding:7px 12px;background:var(--slate);border-bottom:1px solid var(--edge);
+  flex:none;overflow-x:auto}
+.launch button{font-family:inherit;font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:9px;
+  border:1px solid var(--edge);background:var(--btn);color:var(--ice-2);cursor:pointer;
+  transition:.18s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.launch button:hover{background:var(--btnH);color:var(--ice);border-color:var(--edge-2)}
+.launch button:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.launch svg{width:14px;height:14px}
+
+/* ── tab bar ── */
+.tabbar{display:flex;align-items:stretch;gap:2px;padding:6px 12px 0;background:var(--tabbar);
+  flex:none;overflow-x:auto;scrollbar-width:thin}
+.tab{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:10px 10px 0 0;
+  background:var(--tabOff);color:var(--ice-3);cursor:pointer;font-size:12.5px;white-space:nowrap;
+  border:1px solid transparent;border-bottom:none;transition:.16s;position:relative;
+  max-width:230px;flex:none;font-family:inherit}
+.tab:hover{background:var(--hov);color:var(--ice-2)}
+.tab.on{background:var(--void);color:var(--ice);border-color:var(--edge);font-weight:600}
+.tab.on::after{content:'';position:absolute;inset-inline:0;top:0;height:2px;background:var(--mint);
+  border-radius:2px;box-shadow:var(--gl)}
+.tab .ttl{overflow:hidden;text-overflow:ellipsis}
+.tab .dirty{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none;
+  box-shadow:0 0 8px var(--amber)}
+.tab .x{width:17px;height:17px;border-radius:5px;display:grid;place-items:center;flex:none;
+  opacity:.5;transition:.15s;font-size:14px;line-height:1}
+.tab .x:hover{opacity:1;background:var(--btnH);color:var(--ember)}
+.tab.pinned .x{display:none}
+.tab:focus-visible{outline:2px solid var(--mint);outline-offset:-2px}
+
+/* ── stage ── */
+.stage{flex:1;position:relative;overflow:hidden;background:var(--void)}
+.panel{position:absolute;inset:0;overflow:auto;padding:22px 24px 40px;display:none}
+.panel.on{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+h2{font-size:20px;font-weight:800;letter-spacing:-.03em;margin-bottom:3px}
+h2 em{font-style:normal;font-weight:200;color:var(--ice-2)}
+.sub{font-size:12px;color:var(--ice-3);margin-bottom:18px}
+.card{background:var(--pane);border:1px solid var(--edge);border-radius:16px;padding:20px;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.fig{background:var(--pane);border:1px solid var(--edge);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+.fig::before{content:'';position:absolute;top:0;inset-inline-start:0;width:30px;height:2px;background:var(--mint)}
+.fig.e::before{background:var(--ember)} .fig.a::before{background:var(--amber)}
+.fig .l{font-size:10px;letter-spacing:.16em;color:var(--ice-3);margin-bottom:5px}
+.fig .n{font-size:23px;font-weight:800;letter-spacing:-.03em}
+.fig.e .n{color:var(--ember)} .fig.a .n{color:var(--amber)}
+.fig .c{font-size:11px;color:var(--ice-3)}
+
+label{display:block;font-size:11px;letter-spacing:.1em;color:var(--ice-3);margin-bottom:6px}
+input,select,textarea{width:100%;font-family:inherit;font-size:13.5px;padding:9px 12px;border-radius:10px;
+  border:1px solid var(--edge-2);background:var(--fld);color:var(--ice);transition:.16s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 18%,transparent)}
+.fld{margin-bottom:14px}
+.btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--edge-2);background:var(--btn);color:var(--ice-2);transition:.18s}
+.btn:hover{background:var(--btnH);color:var(--ice)}
+.btn.pri{background:var(--mint);border-color:var(--mint);color:var(--onM);box-shadow:var(--gl)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;letter-spacing:.1em;color:var(--ice-3);font-weight:500;text-align:right;
+  padding:9px 12px;border-bottom:1px solid var(--edge)}
+td{padding:11px 12px;border-bottom:1px solid var(--edge);font-size:13px}
+tbody tr{cursor:pointer;transition:.14s}
+tbody tr:hover{background:var(--hov)}
+tbody tr.sel{background:color-mix(in srgb,var(--mint) 9%,transparent)}
+.pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px}
+.p-l{background:color-mix(in srgb,var(--ember) 13%,transparent);color:var(--ember)}
+.p-d{background:color-mix(in srgb,var(--amber) 13%,transparent);color:var(--amber)}
+.p-o{background:color-mix(in srgb,var(--mint) 12%,transparent);color:var(--mint)}
+
+.hint{font-size:11.5px;color:var(--ice-3);margin-top:10px;padding-inline-start:12px;
+  border-inline-start:2px solid var(--edge-2);line-height:1.8}
+.note{background:color-mix(in srgb,var(--mint) 7%,transparent);border:1px solid color-mix(in srgb,var(--mint) 22%,transparent);
+  border-radius:12px;padding:13px 16px;font-size:12.5px;color:var(--ice-2);margin-bottom:18px}
+.note b{color:var(--mint);font-weight:700}
+
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--ice-3)}
+.empty b{display:block;font-size:16px;font-weight:700;color:var(--ice-2);margin-bottom:4px}
+
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:60;padding:20px}
+.mask.on{display:grid}
+.modal{background:var(--slate);border:1px solid var(--edge-2);border-radius:16px;padding:22px;
+  max-width:400px;box-shadow:var(--sh)}
+.modal b{display:block;font-size:15px;font-weight:700;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--ice-2);margin-bottom:18px}
+.modal .row{display:flex;gap:9px;justify-content:flex-start}
+
+.toast{position:fixed;bottom:22px;inset-inline-start:22px;background:var(--slate-2);
+  border:1px solid var(--edge-2);padding:11px 17px;border-radius:12px;font-size:12.5px;
+  display:flex;align-items:center;gap:9px;z-index:70;transform:translateY(160%);
+  transition:transform .35s cubic-bezier(.22,.9,.28,1);box-shadow:var(--sh)}
+.toast.on{transform:none}
+.toast i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:var(--gl);flex:none}
+
+@media(max-width:980px){.side{width:56px}
+  .side .search,.side .grpH .gt,.side .grpH .cnt,.side .grpH .ch,.side .sideFoot .lbl{display:none}
+  .side .grpH{justify-content:center;padding:10px 0}
+  .side .kids{max-height:0!important}
+  .side .grp{position:relative}
+  .side .grp:hover .kids{position:absolute;inset-inline-end:100%;top:0;max-height:none!important;
+    background:var(--slate);border:1px solid var(--edge-2);border-radius:12px;padding:6px;
+    min-width:190px;z-index:40;box-shadow:var(--sh);overflow:visible}
+  .side .grp:hover .kids a{margin:0;border:none}}
+@media(max-width:820px){.grid2,.grid4{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="mk">ق</div><b>دفتر اقساط</b>
+  <span class="sp"></span>
+  <span class="who">نمایندگی ۲۴۹۱ — شیراز</span>
+  <button class="icon" id="themeBtn" type="button" aria-label="روز و شب">
+    <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+  </button>
+</div>
+
+<div class="body">
+  <aside class="side" id="side">
+    <div class="sideTop">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="navSearch" placeholder="جست‌وجوی منو..." aria-label="جست‌وجوی منو">
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sideFoot">
+      <button id="collapse" type="button" title="جمع کردن منو">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <span class="lbl">جمع کردن</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="col">
+    <div class="tabbar" id="tabbar"></div>
+    <div class="stage" id="stage"></div>
+  </div>
+</div>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <b>کار ذخیره‌نشده دارید</b>
+    <p id="modalMsg">این تب تغییرات ذخیره‌نشده دارد. اگر ببندید، اطلاعات از دست می‌رود.</p>
+    <div class="row">
+      <button class="btn pri" id="mKeep" type="button">برگرد و ذخیره کن</button>
+      <button class="btn" id="mDrop" type="button">بستن بدون ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><i></i><span id="toastMsg"></span></div>
+
+<script>
+const FA=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+const fa=n=>String(n).replace(/\d/g,d=>FA[d]);
+const money=n=>fa(n.toLocaleString('en-US')).replace(/,/g,'٬');
+const $=id=>document.getElementById(id);
+
+/* ══ store: tabs + per-tab state (Zustand's job in the real app) ══ */
+const store={
+  tabs:[],            // {key,title,type,pinned,dirty,payload}
+  active:null,
+  state:{}            // key -> preserved form/scroll/selection state
+};
+const MAX=8;
+
+const I={
+ today:'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18',
+ doc:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
+ coin:'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+ card:'M2 5h20v14H2zM2 10h20',
+ chart:'M3 3v18h18M18 9l-5 5-3-3-4 4',
+ msg:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+ users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87',
+ gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+ up:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12'
+};
+
+/* منوی واقعی — ۹ گروه، ۴۲ آیتم */
+const NAV=[
+ {g:'میز کار', icon:I.today, open:true, items:[
+   {type:'today',  t:'امروز', pinned:true},
+   {type:'blank',  t:'یادآوری‌های امروز'},
+   {type:'blank',  t:'کارهای معوق'},
+   {type:'blank',  t:'اعلان‌ها'}]},
+
+ {g:'بیمه‌نامه‌ها', icon:I.doc, items:[
+   {type:'new',    t:'ثبت بیمه‌نامه'},
+   {type:'blank',  t:'فهرست بیمه‌نامه‌ها'},
+   {type:'blank',  t:'بیمه‌نامه‌های اقساطی'},
+   {type:'blank',  t:'در انتظار تأیید مشتری'},
+   {type:'blank',  t:'باطل‌شده‌ها'},
+   {type:'blank',  t:'سررسید تمدید'}]},
+
+ {g:'اقساط و وصول', icon:I.coin, items:[
+   {type:'list',   t:'فهرست اقساط'},
+   {type:'blank',  t:'اقساط معوق'},
+   {type:'blank',  t:'ثبت پرداخت'},
+   {type:'blank',  t:'پرداخت‌های آنلاین'},
+   {type:'blank',  t:'تسویه‌های جزئی'},
+   {type:'blank',  t:'صورت‌حساب مشتری'}]},
+
+ {g:'وثیقه و چک', icon:I.card, items:[
+   {type:'checks', t:'چک‌های پیشِ رو'},
+   {type:'blank',  t:'چک‌های برگشتی'},
+   {type:'blank',  t:'ثبت چک صیادی'},
+   {type:'blank',  t:'سفته‌ها'},
+   {type:'blank',  t:'اظهارنامه و پیگیری حقوقی'}]},
+
+ {g:'مشتریان', icon:I.users, items:[
+   {type:'blank',  t:'فهرست مشتریان'},
+   {type:'blank',  t:'سابقهٔ پرداخت'},
+   {type:'blank',  t:'رضایت‌نامه‌های ثبت‌شده'},
+   {type:'blank',  t:'مشتریان پرریسک'}]},
+
+ {g:'پیامک و اطلاع‌رسانی', icon:I.msg, items:[
+   {type:'blank',  t:'صندوق ارسال'},
+   {type:'blank',  t:'قالب پیامک‌ها'},
+   {type:'blank',  t:'زمان‌بندی یادآوری'},
+   {type:'blank',  t:'گزارش تحویل'},
+   {type:'blank',  t:'اعتبار پنل'}]},
+
+ {g:'گزارش‌ها', icon:I.chart, items:[
+   {type:'report', t:'گزارش‌گیری'},
+   {type:'blank',  t:'وصولی‌های دوره'},
+   {type:'blank',  t:'نرخ وصول به‌موقع'},
+   {type:'blank',  t:'تحلیل نکول'},
+   {type:'blank',  t:'مقایسه با میانگین شبکه'},
+   {type:'blank',  t:'خروجی اکسل'}]},
+
+ {g:'ورود اطلاعات', icon:I.up, items:[
+   {type:'blank',  t:'آپلود فایل فناوران'},
+   {type:'blank',  t:'تنظیم قراردادهای اقساطی'},
+   {type:'blank',  t:'تاریخچهٔ ورود داده'},
+   {type:'blank',  t:'رکوردهای ناسازگار'}]},
+
+ {g:'تنظیمات', icon:I.gear, items:[
+   {type:'blank',  t:'مشخصات نمایندگی'},
+   {type:'blank',  t:'کاربران و دسترسی‌ها'},
+   {type:'blank',  t:'درگاه پرداخت'},
+   {type:'blank',  t:'پنل پیامک'},
+   {type:'blank',  t:'لاگ فعالیت'}]}
+];
+const MENU=NAV.flatMap(g=>g.items);
+
+const ROWS=[
+  {id:'۸۰۳۰۹۸۷',  st:'late', lbl:'۳۸ روز تأخیر', amt:8200000, n:'۳ از ۴'},
+  {id:'۱۰۱۳۸۸۹۳',st:'late', lbl:'۱۱ روز تأخیر', amt:6500000, n:'۲ از ۴'},
+  {id:'۹۱۸۵۳۵۶',  st:'due',  lbl:'سررسید امروز', amt:9100000, n:'۱ از ۳'},
+  {id:'۷۷۴۲۰۱۵',  st:'due',  lbl:'سررسید امروز', amt:7300000, n:'۲ از ۴'},
+  {id:'۵۵۹۰۳۳۴',  st:'ok',   lbl:'۴ روز مانده',  amt:8100000, n:'۴ از ۴'}
+];
+
+/* ══ sidebar ══ */
+const open=new Set(NAV.filter(g=>g.open).map(g=>g.g));
+let q='';
+const hi=(s,t)=>!t?s:s.replace(new RegExp(`(${t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'g'),'<mark>$1</mark>');
+
+function drawNav(){
+  const t=q.trim();
+  const groups=NAV.map(g=>({...g,items:t?g.items.filter(i=>i.t.includes(t)):g.items}))
+                  .filter(g=>g.items.length);
+  if(!groups.length){ $('nav').innerHTML='<div class="noHit">موردی پیدا نشد</div>'; return; }
+  $('nav').innerHTML=groups.map(g=>{
+    const isOpen = t ? true : open.has(g.g);
+    return `<div class="grp ${isOpen?'open':''}" data-grp="${g.g}">
+      <button class="grpH" type="button" aria-expanded="${isOpen}">
+        <svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${g.icon}"/></svg>
+        <span class="gt">${g.g}</span>
+        <span class="cnt">${fa(g.items.length)}</span>
+        <svg class="ch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="kids">${g.items.map(i=>
+        `<a data-open="${i.type}" data-title="${i.t}" tabindex="0"><span class="kt">${hi(i.t,t)}</span></a>`).join('')}</div>
+    </div>`;
+  }).join('');
+  syncActive();
+}
+
+function syncActive(){
+  const cur=store.tabs.find(x=>x.key===store.active);
+  document.querySelectorAll('.kids a').forEach(a=>
+    a.classList.toggle('on', !!cur && a.dataset.title===cur.title));
+}
+
+$('nav').addEventListener('click',e=>{
+  const h=e.target.closest('.grpH');
+  if(h){ const g=h.closest('.grp').dataset.grp;
+    open.has(g)?open.delete(g):open.add(g); drawNav(); return; }
+  const a=e.target.closest('[data-open]');
+  if(a) openTab(a.dataset.open,{title:a.dataset.title});
+});
+$('nav').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const a=e.target.closest('[data-open]');
+  if(a){e.preventDefault();openTab(a.dataset.open,{title:a.dataset.title});}
+});
+$('navSearch').addEventListener('input',e=>{q=e.target.value;drawNav();});
+$('collapse').addEventListener('click',()=>{
+  $('side').classList.toggle('mini');
+  if(!$('side').classList.contains('mini')) $('navSearch').value=q='',drawNav();
+});
+
+/* ══ tab lifecycle ══ */
+function openTab(type,payload){
+  const def=MENU.find(m=>m.type===type)||{t:'صفحه'};
+  // singleton tabs (today) — focus instead of duplicating
+  const singleton=['today','list','checks','new','report'].includes(type)||type==='blank';
+  const key = type==='blank' ? 'blank:'+(payload?.title||'') : (singleton ? type : `${type}:${payload?.id ?? Date.now()}`);
+  let t=store.tabs.find(x=>x.key===key);
+  if(!t){
+    if(store.tabs.length>=MAX){ toast('حداکثر ۸ تب باز می‌شود'); return; }
+    t={key,type,title:payload?.title ?? def.t,pinned:!!def.pinned,dirty:false,payload};
+    store.tabs.push(t);
+    buildPanel(t);
+  }
+  store.active=key; paint();
+}
+
+function closeTab(key,force){
+  const t=store.tabs.find(x=>x.key===key);
+  if(!t||t.pinned)return;
+  if(t.dirty&&!force){ pending=key; $('mask').classList.add('on'); return; }
+  const i=store.tabs.indexOf(t);
+  store.tabs.splice(i,1);
+  delete store.state[key];
+  document.getElementById('p-'+cssKey(key))?.remove();
+  if(store.active===key) store.active=(store.tabs[i-1]||store.tabs[0]||{}).key ?? null;
+  paint();
+}
+const cssKey=k=>k.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g,'_');
+
+/* ══ paint tab bar + panel visibility ══ */
+function paint(){
+  $('tabbar').innerHTML = store.tabs.map(t=>
+    `<button class="tab ${t.key===store.active?'on':''} ${t.pinned?'pinned':''}" data-tab="${t.key}" type="button">
+       ${t.dirty?'<span class="dirty" title="ذخیره نشده"></span>':''}
+       <span class="ttl">${t.title}</span>
+       <span class="x" data-close="${t.key}">×</span>
+     </button>`).join('');
+
+  store.tabs.forEach(t=>{
+    const p=document.getElementById('p-'+cssKey(t.key));
+    if(!p)return;
+    const on=t.key===store.active;
+    // preserve scroll of the tab we're leaving
+    if(!on && p.classList.contains('on')) store.state[t.key]={...(store.state[t.key]||{}),scroll:p.scrollTop};
+    p.classList.toggle('on',on);
+    if(on) requestAnimationFrame(()=>{ p.scrollTop = store.state[t.key]?.scroll ?? 0; });
+  });
+
+  syncActive();
+  if(!store.tabs.length){
+    $('stage').insertAdjacentHTML('beforeend',
+      `<div class="empty" id="emptyState"><div><b>تبی باز نیست</b>از نوار بالا یکی را باز کنید</div></div>`);
+  } else { $('emptyState')?.remove(); }
+}
+
+/* ══ panels ══ */
+function buildPanel(t){
+  const d=document.createElement('div');
+  d.className='panel'; d.id='p-'+cssKey(t.key);
+  d.innerHTML=render(t);
+  $('stage').appendChild(d);
+  restore(t,d);
+}
+
+function render(t){
+  if(t.type==='today') return `
+    <h2>۵ پیگیری <em>در انتظار شما</em></h2>
+    <div class="sub">سه‌شنبه ۱۹ مرداد ۱۴۰۵</div>
+    <div class="note">این تب <b>سنجاق</b> شده و بسته نمی‌شود. روی هر ردیف کلیک کنید تا در تب جدید باز شود — این تب دست‌نخورده می‌ماند.</div>
+    <div class="grid4" style="margin-bottom:16px">
+      <div class="fig e"><div class="l">معوق</div><div class="n">${money(51200000)}</div><div class="c">۷ قسط</div></div>
+      <div class="fig a"><div class="l">سررسید امروز</div><div class="n">${money(24500000)}</div><div class="c">۳ قسط</div></div>
+      <div class="fig"><div class="l">وصول مرداد</div><div class="n">${money(142800000)}</div><div class="c">۱۸ قسط</div></div>
+      <div class="fig"><div class="l">اقساطی فعال</div><div class="n">۲۸</div><div class="c">از ۱۸۰</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table><thead><tr><th>بیمه‌گذار</th><th>وضعیت</th><th>قسط</th><th>مبلغ</th></tr></thead>
+      <tbody>${ROWS.map(r=>`<tr data-row="${r.id}">
+        <td style="font-weight:600">مشتری ${r.id}</td>
+        <td><span class="pill p-${r.st[0]}">${r.lbl}</span></td>
+        <td style="color:var(--ice-3)">${r.n}</td>
+        <td style="font-weight:700">${money(r.amt)}</td></tr>`).join('')}</tbody></table>
+    </div>`;
+
+  if(t.type==='new') return `
+    <h2>ثبت <em>بیمه‌نامهٔ جدید</em></h2>
+    <div class="sub">فرم نیمه‌تمام هنگام جابه‌جایی بین تب‌ها حفظ می‌شود</div>
+    <div class="note">چند فیلد را پر کنید، بعد تب دیگری باز کنید و برگردید. <b>مقادیر سرِ جایشان هستند</b> و نقطهٔ نارنجی روی تب یعنی ذخیره نشده.</div>
+    <div class="card">
+      <div class="grid2">
+        <div class="fld"><label>کد ملی بیمه‌گذار</label><input data-f="nid" placeholder="۰۰۷۲۳۴۵۴۵۳"></div>
+        <div class="fld"><label>شمارهٔ همراه</label><input data-f="mob" placeholder="۰۹۱۲۳۴۵۶۷۸۹"></div>
+        <div class="fld"><label>شماره پلاک</label><input data-f="plate" placeholder="۷۴ ب ۳۲۱ ایران ۶۳"></div>
+        <div class="fld"><label>حق بیمهٔ کل (تومان)</label><input data-f="prem" placeholder="۹٬۸۰۰٬۰۰۰"></div>
+        <div class="fld"><label>تعداد اقساط</label>
+          <select data-f="cnt"><option>۲</option><option selected>۳</option><option>۴</option><option>۶</option></select></div>
+        <div class="fld"><label>نوع وثیقه</label>
+          <select data-f="col"><option>چک صیادی</option><option>سفته</option><option>بدون وثیقه</option></select></div>
+      </div>
+      <div class="fld"><label>توضیح بیمه‌نامه</label><textarea data-f="desc" rows="2" placeholder="اختیاری"></textarea></div>
+      <button class="btn pri" data-save type="button">ذخیره</button>
+      <button class="btn" data-reset type="button">پاک کردن</button>
+      <div class="hint">در نسخهٔ واقعی، این فرم فیلد متن آزاد دربارهٔ <b>شخص</b> ندارد — فقط دربارهٔ بیمه‌نامه.</div>
+    </div>`;
+
+  if(t.type==='report') return `
+    <h2>گزارش‌گیری</h2>
+    <div class="sub">فیلترها هم بخشی از وضعیت تب هستند</div>
+    <div class="note">بازه و نوع را عوض کنید، به تب دیگری بروید و برگردید — <b>انتخاب‌ها حفظ می‌شوند</b>.</div>
+    <div class="card">
+      <div class="grid2">
+        <div class="fld"><label>از تاریخ</label><input data-f="from" placeholder="۱۴۰۵/۰۵/۰۱"></div>
+        <div class="fld"><label>تا تاریخ</label><input data-f="to" placeholder="۱۴۰۵/۰۵/۳۱"></div>
+        <div class="fld"><label>نوع گزارش</label>
+          <select data-f="kind"><option>وصولی‌ها</option><option>معوقات</option><option>چک‌های سررسیدشده</option><option>پیامک‌های ارسالی</option></select></div>
+        <div class="fld"><label>وضعیت</label>
+          <select data-f="st"><option>همه</option><option>پرداخت‌شده</option><option>معوق</option></select></div>
+      </div>
+      <button class="btn pri" type="button">تهیهٔ گزارش</button>
+    </div>
+    <div class="card"><div style="color:var(--ice-3);font-size:12.5px;text-align:center;padding:26px 0">
+      نتیجهٔ گزارش اینجا نمایش داده می‌شود</div></div>`;
+
+  if(t.type==='list') return `
+    <h2>فهرست <em>اقساط</em></h2>
+    <div class="sub">جست‌وجو، اسکرول و ردیف انتخاب‌شده حفظ می‌شوند</div>
+    <div class="note">یک ردیف را انتخاب کنید و کمی اسکرول کنید. تب دیگری باز کنید و برگردید — <b>همان‌جا هستید</b>.</div>
+    <div class="fld" style="max-width:320px"><label>جست‌وجو</label><input data-f="q" placeholder="کد مشتری..."></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table><thead><tr><th>بیمه‌گذار</th><th>وضعیت</th><th>قسط</th><th>مبلغ</th></tr></thead>
+      <tbody>${Array.from({length:22},(_,i)=>{const r=ROWS[i%5];
+        return `<tr data-sel="${i}"><td style="font-weight:600">مشتری ${r.id}</td>
+        <td><span class="pill p-${r.st[0]}">${r.lbl}</span></td>
+        <td style="color:var(--ice-3)">${r.n}</td>
+        <td style="font-weight:700">${money(r.amt)}</td></tr>`}).join('')}</tbody></table>
+    </div>`;
+
+  if(t.type==='checks') return `
+    <h2>چک‌های <em>پیشِ رو</em></h2>
+    <div class="sub">۲ چک تا پنج روز آینده</div>
+    <div class="card">
+      <table><thead><tr><th>بیمه‌گذار</th><th>بانک</th><th>سررسید</th><th>مبلغ</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600">مشتری ۸۰۳۰۹۸۷</td><td style="color:var(--ice-3)">ملت</td><td><span class="pill p-d">۲۱ مرداد</span></td><td style="font-weight:700">${money(8200000)}</td></tr>
+        <tr><td style="font-weight:600">مشتری ۷۷۴۲۰۱۵</td><td style="color:var(--ice-3)">صادرات</td><td><span class="pill p-d">۲۴ مرداد</span></td><td style="font-weight:700">${money(7300000)}</td></tr>
+      </tbody></table>
+    </div>`;
+
+  if(t.type==='blank') return `
+    <h2>${t.title}</h2>
+    <div class="sub">این صفحه در نمونهٔ نمایشی ساخته نشده</div>
+    <div class="note">هدف این نمونه، آزمودن <b>منوی آبشاری و رفتار تب‌ها</b> است — نه محتوای هر صفحه.
+      همین تب هم مثل بقیه بسته می‌شود، جابه‌جا می‌شود و وضعیتش حفظ می‌گردد.</div>
+    <div class="card"><div style="color:var(--ice-3);font-size:12.5px;text-align:center;padding:34px 0">
+      محتوای «${t.title}»</div></div>`;
+
+  // detail tab opened from a row
+  return `
+    <h2>پروندهٔ <em>مشتری ${t.payload.id}</em></h2>
+    <div class="sub">در تب جدید باز شد — تب «امروز» دست‌نخورده ماند</div>
+    <div class="note">این تب از کلیک روی یک ردیف ساخته شد. هر مشتری <b>تب مستقل خودش</b> را می‌گیرد و تب تکراری باز نمی‌شود.</div>
+    <div class="grid4" style="margin-bottom:16px">
+      <div class="fig e"><div class="l">مانده</div><div class="n">${money(t.payload.amt)}</div><div class="c">${t.payload.lbl}</div></div>
+      <div class="fig"><div class="l">قسط</div><div class="n">${t.payload.n}</div><div class="c">پرداخت‌شده</div></div>
+      <div class="fig"><div class="l">وثیقه</div><div class="n" style="font-size:16px;padding-top:5px">چک صیادی</div><div class="c">بانک ملت</div></div>
+      <div class="fig a"><div class="l">آخرین پیامک</div><div class="n" style="font-size:16px;padding-top:5px">۱۲ مرداد</div><div class="c">تحویل شد</div></div>
+    </div>
+    <div class="card">
+      <div class="fld"><label>یادداشت پیگیری — دربارهٔ بیمه‌نامه</label>
+        <textarea data-f="note" rows="3" placeholder="مثلاً: قرار شد تا پایان هفته واریز کند"></textarea></div>
+      <button class="btn pri" data-save type="button">ثبت پیگیری</button>
+      <button class="btn" type="button">ارسال یادآوری</button>
+    </div>`;
+}
+
+/* ══ state preservation ══ */
+function restore(t,p){
+  const s=store.state[t.key]; if(!s)return;
+  p.querySelectorAll('[data-f]').forEach(el=>{ if(s.f&&s.f[el.dataset.f]!==undefined) el.value=s.f[el.dataset.f]; });
+  if(s.sel!==undefined) p.querySelector(`[data-sel="${s.sel}"]`)?.classList.add('sel');
+}
+function capture(key){
+  const p=document.getElementById('p-'+cssKey(key)); if(!p)return;
+  const f={}; p.querySelectorAll('[data-f]').forEach(el=>f[el.dataset.f]=el.value);
+  store.state[key]={...(store.state[key]||{}),f,scroll:p.scrollTop};
+}
+
+/* ══ events ══ */
+$('tabbar').addEventListener('click',e=>{
+  const x=e.target.closest('[data-close]');
+  if(x){ e.stopPropagation(); closeTab(x.dataset.close); return; }
+  const t=e.target.closest('[data-tab]');
+  if(t){ if(store.active) capture(store.active); store.active=t.dataset.tab; paint(); }
+});
+$('stage').addEventListener('click',e=>{
+  const row=e.target.closest('[data-row]');
+  if(row){ const r=ROWS.find(x=>x.id===row.dataset.row);
+    openTab('detail',{...r,title:`مشتری ${r.id}`}); return; }
+  const sel=e.target.closest('[data-sel]');
+  if(sel){ const p=sel.closest('.panel');
+    p.querySelectorAll('.sel').forEach(x=>x.classList.remove('sel'));
+    sel.classList.add('sel');
+    const k=store.active; store.state[k]={...(store.state[k]||{}),sel:sel.dataset.sel}; return; }
+  if(e.target.closest('[data-save]')){ markClean(); toast('ذخیره شد'); return; }
+  if(e.target.closest('[data-reset]')){
+    e.target.closest('.panel').querySelectorAll('[data-f]').forEach(el=>el.value='');
+    markClean(); return; }
+});
+$('stage').addEventListener('input',e=>{
+  if(!e.target.matches('[data-f]'))return;
+  capture(store.active); markDirty();
+});
+$('stage').addEventListener('change',e=>{
+  if(!e.target.matches('[data-f]'))return;
+  capture(store.active); markDirty();
+});
+function markDirty(){ const t=store.tabs.find(x=>x.key===store.active);
+  if(t&&!t.dirty&&['new','detail','report'].includes(t.type)){t.dirty=true;paint();} }
+function markClean(){ const t=store.tabs.find(x=>x.key===store.active);
+  if(t&&t.dirty){t.dirty=false;paint();} }
+
+let pending=null;
+$('mDrop').addEventListener('click',()=>{ $('mask').classList.remove('on'); closeTab(pending,true); pending=null; });
+$('mKeep').addEventListener('click',()=>{ $('mask').classList.remove('on');
+  store.active=pending; pending=null; paint(); });
+
+$('themeBtn').addEventListener('click',()=>{
+  const el=document.documentElement;
+  const n=el.getAttribute('data-theme')==='dark'?'light':'dark';
+  el.setAttribute('data-theme',n); toast(n==='dark'?'حالت شب':'حالت روز');
+});
+let tt; function toast(m){ $('toastMsg').textContent=m; $('toast').classList.add('on');
+  clearTimeout(tt); tt=setTimeout(()=>$('toast').classList.remove('on'),2200); }
+
+// ctrl+w closes, ctrl+tab cycles
+addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='w'){e.preventDefault();closeTab(store.active);}
+  if(e.ctrlKey&&e.key==='Tab'){e.preventDefault();
+    const i=store.tabs.findIndex(x=>x.key===store.active);
+    if(store.active)capture(store.active);
+    store.active=store.tabs[(i+1)%store.tabs.length].key; paint();}
+});
+
+drawNav();
+openTab('today');
+</script>
+</body>
+</html>
