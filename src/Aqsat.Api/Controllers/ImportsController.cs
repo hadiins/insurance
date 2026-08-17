@@ -39,6 +39,10 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
                 .ToList()));
     }
 
+    [HttpGet("fanavaran/fields")]
+    public ActionResult<IReadOnlyList<ImportTargetFieldDto>> GetFanavaranFields() =>
+        Ok(FanavaranImportFields.All.Select(f => new ImportTargetFieldDto(f.Key, f.Label, f.Required, f.Type.ToString())).ToList());
+
     [HttpGet("column-mapping")]
     public async Task<ActionResult<ColumnMappingResponse>> GetColumnMapping([FromQuery] string importType, CancellationToken ct)
     {

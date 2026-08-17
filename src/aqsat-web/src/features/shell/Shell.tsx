@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
+import { useAuthStore } from "../../app/store/authStore";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 import { Stage } from "./Stage";
@@ -13,6 +14,10 @@ export function Shell() {
   const openTab = useTabsStore((s) => s.openTab);
   const closeTab = useTabsStore((s) => s.closeTab);
   const cycleNext = useTabsStore((s) => s.cycleNext);
+
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const switchOrganization = useAuthStore((s) => s.switchOrganization);
 
   useEffect(() => {
     if (tabs.length === 0) {
@@ -36,6 +41,8 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeKey, closeTab, cycleNext]);
 
+  const activeOrg = user?.organizations.find((o) => o.organizationId === user.activeOrganizationId);
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex flex-none items-center gap-3.5 border-b border-(--edge) bg-(--slate) px-4 py-2.5">
@@ -44,7 +51,33 @@ export function Shell() {
         </div>
         <b className="text-[14.5px] font-bold text-(--ice)">دفتر اقساط</b>
         <span className="flex-1" />
-        <span className="text-[11.5px] text-(--ice-3)">نمایندگی ۲۴۹۱ — شیراز</span>
+
+        {user && user.organizations.length > 1 ? (
+          <select
+            value={user.activeOrganizationId}
+            onChange={(e) => switchOrganization(e.target.value)}
+            className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11.5px] text-(--ice-2) outline-none focus:border-(--mint)"
+          >
+            {user.organizations.map((o) => (
+              <option key={o.organizationId} value={o.organizationId}>
+                {o.organizationName}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-[11.5px] text-(--ice-3)">{activeOrg?.organizationName ?? ""}</span>
+        )}
+
+        <span className="text-[11.5px] text-(--ice-3)">{user?.displayName}</span>
+
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded-[9px] border border-(--edge) px-2.5 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+        >
+          خروج
+        </button>
+
         <ThemeToggle />
       </div>
 

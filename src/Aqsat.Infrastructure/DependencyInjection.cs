@@ -1,7 +1,9 @@
 using Aqsat.Application.Common;
+using Aqsat.Application.Schedule;
 using Aqsat.Infrastructure.Auth;
 using Aqsat.Infrastructure.Import;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Schedule;
 using Aqsat.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +26,8 @@ public static class DependencyInjection
 
         services.AddSingleton<IWorkbookReader, ClosedXmlWorkbookReader>();
         services.AddScoped<ImportService>();
+
+        services.AddSingleton<IHolidayChecker, WeekendOnlyHolidayChecker>();
 
         services.AddDbContext<AppDbContext>((sp, options) => options
             .UseSqlServer(configuration.GetConnectionString("Default"))

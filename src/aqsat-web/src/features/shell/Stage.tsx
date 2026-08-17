@@ -4,6 +4,8 @@ import { TodayPage } from "../today/TodayPage";
 import { NewPolicyPage } from "../policies/NewPolicyPage";
 import { InstallmentListPage } from "../installments/InstallmentListPage";
 import { CustomerDetailPage } from "../customers/CustomerDetailPage";
+import { FanavaranImportPage } from "../imports/FanavaranImportPage";
+import { ContractTemplatesPage } from "../imports/ContractTemplatesPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
 
@@ -17,6 +19,10 @@ function renderPage(tab: OpenTab) {
       return <InstallmentListPage />;
     case "customer-detail":
       return <CustomerDetailPage />;
+    case "import-fanavaran":
+      return <FanavaranImportPage />;
+    case "contract-templates":
+      return <ContractTemplatesPage />;
     case "blank":
     default:
       return <BlankPage title={tab.title} />;

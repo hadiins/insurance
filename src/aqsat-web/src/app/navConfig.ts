@@ -105,8 +105,8 @@ export const NAV: NavGroup[] = [
     label: "ورود اطلاعات",
     icon: ICONS.up,
     items: [
-      { navType: "import-fanavaran", title: "آپلود فایل فناوران", kind: "singleton", page: "blank" },
-      { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "blank" },
+      { navType: "import-fanavaran", title: "آپلود فایل فناوران", kind: "singleton", page: "import-fanavaran" },
+      { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "contract-templates" },
       { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "blank" },
       { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "blank" },
     ],

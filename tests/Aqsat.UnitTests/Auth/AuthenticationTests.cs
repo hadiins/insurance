@@ -15,6 +15,7 @@ namespace Aqsat.UnitTests.Auth;
 /// authorization policies) and the same LocalDB database Task 3 migrated — not a mocked auth layer.
 /// Proves Task 4's own check: org switching and 403-not-500 on a missing permission.
 /// </summary>
+[Collection("WebApplicationFactory")]
 public class AuthenticationTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;

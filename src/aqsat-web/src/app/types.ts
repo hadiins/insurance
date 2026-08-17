@@ -1,6 +1,13 @@
 export type TabKind = "singleton" | "multi-create" | "multi-record";
 
-export type PageKind = "today" | "new-policy" | "installment-list" | "customer-detail" | "blank";
+export type PageKind =
+  | "today"
+  | "new-policy"
+  | "installment-list"
+  | "customer-detail"
+  | "import-fanavaran"
+  | "contract-templates"
+  | "blank";
 
 export interface NavItem {
   navType: string;

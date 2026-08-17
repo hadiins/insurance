@@ -124,7 +124,7 @@ contract mapping.
 
 ---
 
-### [ ] Task 8 — Templates + schedule generation
+### [x] Task 8 — Templates + schedule generation
 
 Contract→template mapping UI; schedule generation per 3.1 and 3.2; down-payment suggestion;
 warning above `MaxInstallments`; batch grid where the agent edits down payment and count for many
