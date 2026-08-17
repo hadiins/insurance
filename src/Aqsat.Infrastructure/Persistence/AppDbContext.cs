@@ -32,6 +32,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<Collateral> Collaterals => Set<Collateral>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportRow> ImportRows => Set<ImportRow>();
+    public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();
 
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<RecordPresence> RecordPresences => Set<RecordPresence>();

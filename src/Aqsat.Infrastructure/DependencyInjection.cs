@@ -1,5 +1,6 @@
 using Aqsat.Application.Common;
 using Aqsat.Infrastructure.Auth;
+using Aqsat.Infrastructure.Import;
 using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,9 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserContext, CurrentUserContextAccessor>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddScoped<JwtTokenService>();
+
+        services.AddSingleton<IWorkbookReader, ClosedXmlWorkbookReader>();
+        services.AddScoped<ImportService>();
 
         services.AddDbContext<AppDbContext>((sp, options) => options
             .UseSqlServer(configuration.GetConnectionString("Default"))

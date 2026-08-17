@@ -98,7 +98,7 @@ Force an exception mid-transaction; **neither** the change nor the audit row per
 
 ## Milestone 1 — Import
 
-### [ ] Task 6 — Import engine
+### [x] Task 6 — Import engine
 
 Generic pipeline: upload → detect format → **preview (first 20 rows, detected currency and date
 format)** → column mapping (savable per agency) → validate → commit → batch report.
