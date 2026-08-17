@@ -11,8 +11,9 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
@@ -26,6 +27,7 @@
     <ProjectReference Include="..\..\src\Aqsat.Domain\Aqsat.Domain.csproj" />
     <ProjectReference Include="..\..\src\Aqsat.Application\Aqsat.Application.csproj" />
     <ProjectReference Include="..\..\src\Aqsat.Infrastructure\Aqsat.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Aqsat.Api\Aqsat.Api.csproj" />
   </ItemGroup>
 
 </Project>

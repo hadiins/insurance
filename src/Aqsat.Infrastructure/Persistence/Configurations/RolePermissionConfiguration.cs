@@ -13,7 +13,7 @@ public sealed class RolePermissionConfiguration : AqsatEntityConfiguration<RoleP
         builder.Property(p => p.Permission).HasMaxLength(50).IsRequired();
 
         builder.HasOne(p => p.Role)
-            .WithMany()
+            .WithMany(r => r.RolePermissions)
             .HasForeignKey(p => p.RoleId);
 
         builder.HasIndex(p => new { p.RoleId, p.Permission }).IsUnique();

@@ -1,6 +1,8 @@
+using Aqsat.Application.Auth;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Security;
 
 namespace Aqsat.Infrastructure.Seed;
 
@@ -88,5 +90,92 @@ public static class DevSeeder
         await context.SaveChangesAsync(ct);
 
         return new SeededAgency(org.Id, customer.Id, policy.Id, installment.Id);
+    }
+
+    /// <summary>Known dev-only password for every seeded user — this is fake fixture data, never real credentials.</summary>
+    public const string SeededUserPassword = "Passw0rd!1";
+
+    public sealed record SeededAuthFixture(
+        Guid HeadquartersId,
+        Guid RegionalId,
+        Guid AgencyAId,
+        Guid AgencyBId,
+        Guid DualAgencyManagerId,
+        string DualAgencyManagerMobile,
+        Guid AgencyOnlyStaffId,
+        string AgencyOnlyStaffMobile);
+
+    /// <summary>
+    /// Builds the 3-level Organization tree CLAUDE.md requires from day one (only Agency ships in
+    /// Phase 1, but the hierarchy and RLS predicate must already support all three), plus Role/
+    /// RolePermission/UserOrgRole fixtures proving Task 4's own check: one user with roles in two
+    /// agencies (org switching) and one user missing Payment.Write (403 check).
+    /// None of these tables carry AgencyId — Organization is the tenant itself, AppUser/Role/
+    /// RolePermission/UserOrgRole are the identity tables Task 3 exempted from RLS — so this needs
+    /// no AgencyContext at all, matching the real login flow that must work before any scope exists.
+    /// </summary>
+    public static async Task<SeededAuthFixture> SeedAuthFixtureAsync(AppDbContext context, CancellationToken ct = default)
+    {
+        // Role.Name and AppUser.Mobile are globally unique (neither table carries AgencyId, so
+        // there's no per-agency scope to make repeats safe the way SeedTwoAgenciesAsync's Customer
+        // rows are) — a random suffix keeps this seeder safely re-runnable against a persistent dev
+        // database, same spirit as Task 3's seeder relying on a fresh AgencyId per run.
+        var suffix = Guid.NewGuid().ToString("N")[..6];
+
+        var hq = new Organization { Level = OrganizationLevel.Headquarters, Code = "HQ", Name = "دفتر مرکزی", IsActive = true };
+        context.Organizations.Add(hq);
+        await context.SaveChangesAsync(ct);
+
+        var regional = new Organization { Level = OrganizationLevel.Regional, ParentId = hq.Id, Code = "REG-1", Name = "منطقهٔ یک", IsActive = true };
+        context.Organizations.Add(regional);
+        await context.SaveChangesAsync(ct);
+
+        var agencyA = new Organization { Level = OrganizationLevel.Agency, ParentId = regional.Id, Code = "4001", Name = "نمایندگی ۴۰۰۱", City = "تهران", InsurerName = "شرکت بیمهٔ آزمایشی", IsActive = true };
+        var agencyB = new Organization { Level = OrganizationLevel.Agency, ParentId = regional.Id, Code = "4002", Name = "نمایندگی ۴۰۰۲", City = "مشهد", InsurerName = "شرکت بیمهٔ آزمایشی", IsActive = true };
+        context.Organizations.AddRange(agencyA, agencyB);
+        await context.SaveChangesAsync(ct);
+
+        var managerRole = new Role { Name = $"Manager-{suffix}" };
+        var staffRole = new Role { Name = $"Staff-{suffix}" };
+        context.Roles.AddRange(managerRole, staffRole);
+        await context.SaveChangesAsync(ct);
+
+        foreach (var permission in Permissions.All)
+        {
+            context.RolePermissions.Add(new RolePermission { RoleId = managerRole.Id, Permission = permission });
+        }
+
+        foreach (var permission in Permissions.All.Where(p => p is not (Permissions.PaymentWrite or Permissions.SettingsWrite)))
+        {
+            context.RolePermissions.Add(new RolePermission { RoleId = staffRole.Id, Permission = permission });
+        }
+
+        await context.SaveChangesAsync(ct);
+
+        var hasher = new PasswordHasher();
+        var passwordHash = hasher.Hash(SeededUserPassword);
+
+        // Mobile is globally unique — random 8-digit suffix keeps re-runs collision-free in practice.
+        var dualAgencyManagerMobile = $"091{Random.Shared.Next(10_000_000, 99_999_999)}";
+        var agencyOnlyStaffMobile = $"091{Random.Shared.Next(10_000_000, 99_999_999)}";
+
+        var dualAgencyManager = new AppUser { FullName = "مدیر دونمایندگی", Mobile = dualAgencyManagerMobile, PasswordHash = passwordHash, IsActive = true };
+        var agencyOnlyStaff = new AppUser { FullName = "کارمند بدون دسترسی پرداخت", Mobile = agencyOnlyStaffMobile, PasswordHash = passwordHash, IsActive = true };
+        context.Users.AddRange(dualAgencyManager, agencyOnlyStaff);
+        await context.SaveChangesAsync(ct);
+
+        // Deliberately a DIFFERENT role per agency for the dual-agency user — Task 4's check is
+        // "two roles in two agencies", not just two memberships. Manager in A, Staff in B proves
+        // permissions actually change with the active org, not merely ActiveOrganizationId.
+        context.UserOrgRoles.AddRange(
+            new UserOrgRole { UserId = dualAgencyManager.Id, OrganizationId = agencyA.Id, RoleId = managerRole.Id },
+            new UserOrgRole { UserId = dualAgencyManager.Id, OrganizationId = agencyB.Id, RoleId = staffRole.Id },
+            new UserOrgRole { UserId = agencyOnlyStaff.Id, OrganizationId = agencyA.Id, RoleId = staffRole.Id });
+        await context.SaveChangesAsync(ct);
+
+        return new SeededAuthFixture(
+            hq.Id, regional.Id, agencyA.Id, agencyB.Id,
+            dualAgencyManager.Id, dualAgencyManager.Mobile,
+            agencyOnlyStaff.Id, agencyOnlyStaff.Mobile);
     }
 }

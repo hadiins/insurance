@@ -1,6 +1,11 @@
+using System.Text;
 using Aqsat.Api.Middleware;
+using Aqsat.Application.Auth;
 using Aqsat.Infrastructure;
+using Aqsat.Infrastructure.Auth;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 const string ViteDevCorsPolicy = "ViteDev";
@@ -32,6 +37,36 @@ try
 
     builder.Services.AddInfrastructure(builder.Configuration);
 
+    var jwtSection = builder.Configuration.GetSection("Jwt");
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            // Keep the "sub" claim as-is — ScopeResolutionMiddleware reads it directly;
+            // the default inbound claim map would otherwise rewrite it to a legacy URI claim type.
+            options.MapInboundClaims = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = jwtSection["Issuer"],
+                ValidateAudience = true,
+                ValidAudience = jwtSection["Audience"],
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Key"]!)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromSeconds(30),
+            };
+        });
+
+    builder.Services.AddAuthorization(options =>
+    {
+        // One policy per Phase-1 permission (docs/PHASE-1-SPEC.md §2) — ScopeResolutionMiddleware
+        // attaches a "permission" claim per permission the caller's resolved role grants.
+        foreach (var permission in Permissions.All)
+        {
+            options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
+        }
+    });
+
     builder.Services.AddHealthChecks();
 
     builder.Services.AddCors(options =>
@@ -57,6 +92,8 @@ try
 
     app.UseCors(ViteDevCorsPolicy);
 
+    app.UseAuthentication();
+    app.UseMiddleware<ScopeResolutionMiddleware>();
     app.UseAuthorization();
 
     app.MapControllers();
@@ -84,3 +121,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+/// <summary>Lets WebApplicationFactory&lt;Program&gt; see this entry point from the test project.</summary>
+public partial class Program;
