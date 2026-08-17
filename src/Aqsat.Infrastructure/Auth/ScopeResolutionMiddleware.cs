@@ -20,6 +20,10 @@ public sealed class ScopeResolutionMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext httpContext, AppDbContext dbContext)
     {
+        // Set for every request reaching this middleware, authenticated or not — AppDbContext's
+        // audit override (Task 5) only ever consults this for writes that already require auth.
+        CurrentRequestContext.IpAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+
         if (httpContext.User.Identity?.IsAuthenticated != true)
         {
             await next(httpContext);

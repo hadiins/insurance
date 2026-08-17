@@ -3,7 +3,7 @@ using Aqsat.Domain.Enums;
 
 namespace Aqsat.Domain;
 
-public class Policy : AgencyOwnedEntity
+public class Policy : AgencyOwnedEntity, IAuditableEntity
 {
     public string PolicyNumber { get; set; } = default!;
 
@@ -37,4 +37,13 @@ public class Policy : AgencyOwnedEntity
 
     public Guid? ImportBatchId { get; set; }
     public ImportBatch? ImportBatch { get; set; }
+
+    Guid IAuditableEntity.PolicyId => Id;
+
+    string IAuditableEntity.DescribeChange(AuditAction action) => action switch
+    {
+        AuditAction.Created => $"ثبت بیمه‌نامهٔ {PolicyNumber}",
+        AuditAction.Updated => $"ویرایش بیمه‌نامهٔ {PolicyNumber}",
+        _ => $"تغییر بیمه‌نامهٔ {PolicyNumber}",
+    };
 }

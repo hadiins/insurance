@@ -17,6 +17,7 @@ public class Customer : AgencyOwnedEntity
     /// Plaintext in memory; encrypted at rest via an EF value converter (Aqsat.Infrastructure).
     /// Nullable — not present in every import.
     /// </summary>
+    [AuditSensitive]
     public string? NationalId { get; set; }
 
     /// <summary>SHA-256 hash for lookup without decrypting.</summary>

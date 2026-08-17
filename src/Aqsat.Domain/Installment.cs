@@ -4,7 +4,7 @@ using Aqsat.Domain.Enums;
 
 namespace Aqsat.Domain;
 
-public class Installment : AgencyOwnedEntity
+public class Installment : AgencyOwnedEntity, IAuditableEntity
 {
     public Guid PolicyId { get; set; }
     public Policy Policy { get; set; } = default!;
@@ -26,4 +26,13 @@ public class Installment : AgencyOwnedEntity
 
     [NotMapped]
     public decimal Balance => Amount - PaidAmount;
+
+    Guid IAuditableEntity.PolicyId => PolicyId;
+
+    string IAuditableEntity.DescribeChange(AuditAction action) => action switch
+    {
+        AuditAction.Created => $"ثبت قسط شمارهٔ {SeqNo}",
+        AuditAction.Updated => $"ویرایش قسط شمارهٔ {SeqNo}",
+        _ => $"تغییر قسط شمارهٔ {SeqNo}",
+    };
 }

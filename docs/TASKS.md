@@ -86,7 +86,7 @@ without `Payment.Write` receives 403, not 500.
 
 ---
 
-### [ ] Task 5 — Audit infrastructure
+### [x] Task 5 — Audit infrastructure
 
 `SaveChangesAsync` override writing audit rows **in the same transaction**. Human-readable
 description composed at write time. Encrypted fields recorded as "changed" only.
