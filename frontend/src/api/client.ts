@@ -4,6 +4,53 @@ export const api = axios.create({
   baseURL: "/api",
 });
 
+const TOKEN_STORAGE_KEY = "auth_token";
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+export function setStoredToken(token: string | null): void {
+  if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  else localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+api.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && getStoredToken()) {
+      setStoredToken(null);
+      localStorage.removeItem("auth_user");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export interface AuthUser {
+  id: number;
+  fullName: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post<AuthResponse>("/auth/login", { email, password }).then((r) => r.data),
+  register: (fullName: string, email: string, password: string) =>
+    api.post<AuthResponse>("/auth/register", { fullName, email, password }).then((r) => r.data),
+};
+
 export type TaskStatus = "todo" | "in_progress" | "done";
 
 export interface Task {

@@ -1,3 +1,14 @@
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'users')
+BEGIN
+    CREATE TABLE users (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        email NVARCHAR(200) NOT NULL UNIQUE,
+        password_hash NVARCHAR(200) NOT NULL,
+        full_name NVARCHAR(200) NOT NULL,
+        created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END;
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'customers')
 BEGIN
     CREATE TABLE customers (

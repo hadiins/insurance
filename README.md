@@ -5,10 +5,12 @@
 ```bash
 cd backend
 npm install
-cp .env.example .env   # مقادیر اتصال SQL Server را تنظیم کنید
+cp .env.example .env   # مقادیر اتصال SQL Server و JWT_SECRET را تنظیم کنید
 npm run db:migrate     # ساخت جداول
 npm run dev             # اجرا روی http://localhost:3001
 ```
+
+مسیرهای `/api/tasks` و `/api/customers` نیاز به توکن JWT دارند. برای گرفتن توکن ابتدا با `/api/auth/register` یا `/api/auth/login` وارد شوید.
 
 ## فرانت‌اند (React 18 + Ant Design 5، RTL)
 
