@@ -97,6 +97,34 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
         return Ok(new ImportCommitResponse(report.BatchId, report.NewCount, report.DuplicateCount, report.FailedCount));
     }
 
+    /// <summary>
+    /// Task 7's adapter over the same pipeline: fixed sheet ("CarSalesBNVer"), the agency's saved
+    /// FanavaranPolicyReport column mapping, and Fanavaran-specific field parsing — no dateFormat/
+    /// amountsAreInRials from the caller, both are fixed facts of this export format (§4.1).
+    /// </summary>
+    [HttpPost("fanavaran/commit")]
+    [RequestSizeLimit(MaxFileSizeBytes)]
+    public async Task<ActionResult<ImportCommitResponse>> CommitFanavaran(IFormFile file, CancellationToken ct)
+    {
+        if (file.Length == 0)
+        {
+            return ValidationProblem("فایل خالی است.");
+        }
+
+        var bytes = await ReadAllBytesAsync(file, ct);
+
+        try
+        {
+            var report = await importService.CommitFanavaranPolicyReportAsync(
+                bytes, file.FileName, currentUser.ActiveOrganizationId, ct);
+            return Ok(new ImportCommitResponse(report.BatchId, report.NewCount, report.DuplicateCount, report.FailedCount));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ValidationProblem(ex.Message);
+        }
+    }
+
     private static async Task<byte[]> ReadAllBytesAsync(IFormFile file, CancellationToken ct)
     {
         using var memory = new MemoryStream();

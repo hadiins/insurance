@@ -8,7 +8,22 @@ public sealed class ClosedXmlWorkbookReader : IWorkbookReader
     public RawSheet ReadFirstSheet(Stream fileStream)
     {
         using var workbook = new XLWorkbook(fileStream);
-        var worksheet = workbook.Worksheets.First();
+        return ReadWorksheet(workbook.Worksheets.First());
+    }
+
+    public RawSheet ReadSheet(Stream fileStream, string sheetName)
+    {
+        using var workbook = new XLWorkbook(fileStream);
+        if (!workbook.TryGetWorksheet(sheetName, out var worksheet))
+        {
+            throw new InvalidOperationException($"شیت «{sheetName}» در فایل یافت نشد.");
+        }
+
+        return ReadWorksheet(worksheet);
+    }
+
+    private static RawSheet ReadWorksheet(IXLWorksheet worksheet)
+    {
         var usedRange = worksheet.RangeUsed();
         if (usedRange is null)
         {

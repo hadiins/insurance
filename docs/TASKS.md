@@ -112,7 +112,7 @@ format)** → column mapping (savable per agency) → validate → commit → ba
 
 ---
 
-### [ ] Task 7 — Fanavaran parser
+### [x] Task 7 — Fanavaran parser
 
 Concrete adapter over Task 6. Sheet `CarSalesBNVer`; extract per section 4.1; parse
 `نام خانوادگی کد 8030987` into name + external code; strip `شماره قرارداد...` from the contract

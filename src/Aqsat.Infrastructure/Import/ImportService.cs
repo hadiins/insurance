@@ -11,9 +11,11 @@ namespace Aqsat.Infrastructure.Import;
 
 /// <summary>
 /// The generic import pipeline (docs/PHASE-1-SPEC.md §4.3, docs/TASKS.md Task 6): upload → preview
-/// → column mapping → validate → commit → batch report. Task 7's Fanavaran parser is a concrete
-/// adapter over this same CommitAsync — it just supplies a hardcoded mapping and pre-processes a
-/// few fields (name/code splitting, contract-name stripping) before calling in.
+/// → column mapping → validate → commit → batch report. CommitFanavaranPolicyReportAsync (Task 7)
+/// is a concrete adapter over the same per-row persistence core (ProcessRowAsync/RunCommitAsync) —
+/// it only supplies its own sheet selection and row-parsing (name+code split, contract-name strip,
+/// fixed rials conversion); everything else (dedupe, template matching, per-row failure isolation,
+/// batch bookkeeping) is shared, not duplicated.
 /// </summary>
 public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbookReader, IFieldEncryptor fieldEncryptor)
 {
@@ -82,26 +84,54 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
         bool amountsAreInRials,
         CancellationToken ct)
     {
-        var fileHash = Convert.ToHexString(SHA256.HashData(fileBytes));
-
         using var stream = new MemoryStream(fileBytes);
         var sheet = workbookReader.ReadFirstSheet(stream);
+        var columnIndex = BuildColumnIndex(sheet.Headers, mapping);
 
-        var columnIndex = new Dictionary<string, int>();
-        foreach (var (targetKey, sourceHeader) in mapping)
-        {
-            var index = sheet.Headers
-                .Select((header, i) => (header, i))
-                .Where(h => string.Equals(h.header.Trim(), sourceHeader.Trim(), StringComparison.OrdinalIgnoreCase))
-                .Select(h => h.i)
-                .DefaultIfEmpty(-1)
-                .First();
+        return await RunCommitAsync(
+            agencyId,
+            fileName,
+            ComputeHash(fileBytes),
+            sheet.Rows,
+            row => ParseGenericRow(row, columnIndex, dateFormat, amountsAreInRials),
+            ct);
+    }
 
-            if (index >= 0)
-            {
-                columnIndex[targetKey] = index;
-            }
-        }
+    /// <summary>
+    /// Task 7: reads the fixed "CarSalesBNVer" sheet using whatever column mapping the agency has
+    /// saved under FanavaranImportFields.ImportType (this codebase has never seen a real export, so
+    /// exact header text can't be hardcoded — the mapping mechanism from Task 6 already solves
+    /// that). Rials→toman is always applied (not operator-confirmed like the generic path) because
+    /// §4.1 states the source format's unit as a fact, not a per-file choice.
+    /// </summary>
+    public async Task<ImportCommitReport> CommitFanavaranPolicyReportAsync(
+        byte[] fileBytes, string fileName, Guid agencyId, CancellationToken ct)
+    {
+        var mapping = await GetSavedMappingAsync(FanavaranImportFields.ImportType, ct)
+            ?? throw new InvalidOperationException("نگاشت ستون‌های گزارش فاناوران هنوز پیکربندی نشده است.");
+
+        using var stream = new MemoryStream(fileBytes);
+        var sheet = workbookReader.ReadSheet(stream, FanavaranImportFields.SheetName);
+        var columnIndex = BuildColumnIndex(sheet.Headers, mapping);
+
+        return await RunCommitAsync(
+            agencyId,
+            fileName,
+            ComputeHash(fileBytes),
+            sheet.Rows,
+            row => ParseFanavaranRow(row, columnIndex),
+            ct);
+    }
+
+    private async Task<ImportCommitReport> RunCommitAsync(
+        Guid agencyId,
+        string fileName,
+        string fileHash,
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        Func<IReadOnlyList<string>, (ParsedPolicyRow? Row, string? Error)> parseRow,
+        CancellationToken ct)
+    {
+        var templates = await dbContext.ContractTemplates.AsNoTracking().ToListAsync(ct);
 
         var batch = new ImportBatch { AgencyId = agencyId, FileName = fileName, FileHash = fileHash };
         dbContext.ImportBatches.Add(batch);
@@ -112,29 +142,24 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
         var failedCount = 0;
         var rowRecords = new List<ImportRow>();
 
-        for (var rowIndex = 0; rowIndex < sheet.Rows.Count; rowIndex++)
+        for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
-            var row = sheet.Rows[rowIndex];
             var rowNumber = rowIndex + 1;
-
-            string Get(string targetKey) =>
-                columnIndex.TryGetValue(targetKey, out var idx) && idx < row.Count ? row[idx].Trim() : string.Empty;
-
-            var (validated, validationError) = Validate(Get, dateFormat);
-            if (validated is null)
+            var (parsed, parseError) = parseRow(rows[rowIndex]);
+            if (parsed is null)
             {
-                rowRecords.Add(NewRow(agencyId, batch.Id, rowNumber, ImportRowStatus.Failed, validationError));
+                rowRecords.Add(NewRow(agencyId, batch.Id, rowNumber, ImportRowStatus.Failed, parseError));
                 failedCount++;
                 continue;
             }
 
             // docs/PHASE-1-SPEC.md §2 states the dedupe key as "PolicyNumber + SeqNo", but Policy
             // has no SeqNo — that field belongs to Installment (§3.5's cartable/reminder context).
-            // Task 6 imports policies, not installments (schedule generation is Task 8), so
+            // Task 6/7 import policies, not installments (schedule generation is Task 8), so
             // PolicyNumber alone is the dedupe key here, matching the Check's own wording exactly
             // ("import the same file twice — second run reports 100% duplicates").
             var alreadyExists = await dbContext.Policies.AsNoTracking()
-                .AnyAsync(p => p.PolicyNumber == validated.PolicyNumber, ct);
+                .AnyAsync(p => p.PolicyNumber == parsed.PolicyNumber, ct);
             if (alreadyExists)
             {
                 rowRecords.Add(NewRow(agencyId, batch.Id, rowNumber, ImportRowStatus.Duplicate));
@@ -144,15 +169,15 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
 
             try
             {
-                await CreatePolicyAsync(agencyId, batch.Id, validated, Get, amountsAreInRials, ct);
+                await CreatePolicyAsync(agencyId, batch.Id, parsed, templates, ct);
                 rowRecords.Add(NewRow(agencyId, batch.Id, rowNumber, ImportRowStatus.New));
                 newCount++;
             }
             catch (DbUpdateException)
             {
-                // A row failing to persist must never abort the batch (CLAUDE.md rule: a failed
-                // row never aborts the batch). Detach whatever this attempt added so the tracker
-                // doesn't retry stale/invalid entities on the next row's SaveChanges.
+                // A row failing to persist must never abort the batch. Detach whatever this
+                // attempt added so the tracker doesn't retry stale/invalid entities on the next
+                // row's SaveChanges.
                 foreach (var entry in dbContext.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged).ToList())
                 {
                     entry.State = EntityState.Detached;
@@ -173,29 +198,23 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
     }
 
     private async Task CreatePolicyAsync(
-        Guid agencyId,
-        Guid batchId,
-        ValidatedRow validated,
-        Func<string, string> get,
-        bool amountsAreInRials,
-        CancellationToken ct)
+        Guid agencyId, Guid batchId, ParsedPolicyRow row, IReadOnlyList<ContractTemplate> templates, CancellationToken ct)
     {
-        var customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.ExternalCode == validated.ExternalCode, ct);
+        var customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.ExternalCode == row.CustomerExternalCode, ct);
         if (customer is null)
         {
             customer = new Customer
             {
                 AgencyId = agencyId,
-                ExternalCode = validated.ExternalCode,
-                FullName = validated.FullName,
-                Mobile = NullIfEmpty(get(ImportTargetFields.CustomerMobile)),
+                ExternalCode = row.CustomerExternalCode,
+                FullName = row.CustomerFullName,
+                Mobile = row.CustomerMobile,
             };
 
-            var nationalId = get(ImportTargetFields.CustomerNationalId);
-            if (!string.IsNullOrEmpty(nationalId))
+            if (row.CustomerNationalId is not null)
             {
-                customer.NationalId = nationalId;
-                customer.NationalIdHash = fieldEncryptor.Hash(nationalId);
+                customer.NationalId = row.CustomerNationalId;
+                customer.NationalIdHash = fieldEncryptor.Hash(row.CustomerNationalId);
             }
 
             dbContext.Customers.Add(customer);
@@ -204,35 +223,33 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
         var vehicle = new Vehicle
         {
             AgencyId = agencyId,
-            Plate = NullIfEmpty(get(ImportTargetFields.VehiclePlate)),
-            Vin = NullIfEmpty(get(ImportTargetFields.VehicleVin)),
-            Chassis = NullIfEmpty(get(ImportTargetFields.VehicleChassis)),
-            Make = NullIfEmpty(get(ImportTargetFields.VehicleMake)),
-            Model = NullIfEmpty(get(ImportTargetFields.VehicleModel)),
+            Plate = row.VehiclePlate,
+            Vin = row.VehicleVin,
+            Chassis = row.VehicleChassis,
+            Make = row.VehicleMake,
+            Model = row.VehicleModel,
+            Year = row.VehicleYear,
         };
-        if (int.TryParse(get(ImportTargetFields.VehicleYear), out var year))
-        {
-            vehicle.Year = year;
-        }
-
         dbContext.Vehicles.Add(vehicle);
 
-        var totalPremium = amountsAreInRials ? validated.TotalPremium / 10m : validated.TotalPremium;
+        // The 80% problem (CLAUDE.md, PHASE-1-SPEC §2): resolved via agency-configured
+        // ContractTemplate matching, never a hardcoded "اقساطی" search. InstallmentCount stays 0
+        // here — the actual schedule (count, per-installment amount) is Task 8's job; this only
+        // resolves the boolean flag Task 7's own check requires.
+        var matchedTemplate = ContractTemplateMatcher.Match(row.ContractName, templates);
 
         var policy = new Policy
         {
             AgencyId = agencyId,
-            PolicyNumber = validated.PolicyNumber,
+            PolicyNumber = row.PolicyNumber,
             Customer = customer,
             Vehicle = vehicle,
-            ContractName = validated.ContractName,
-            // IsInstallment stays false here — resolved by Task 8's contract→template matching,
-            // never guessed during import.
-            IsInstallment = false,
-            IssueDate = validated.IssueDate,
-            StartDate = validated.StartDate,
-            EndDate = validated.EndDate,
-            TotalPremium = totalPremium,
+            ContractName = row.ContractName,
+            IsInstallment = matchedTemplate?.IsInstallment ?? false,
+            IssueDate = row.IssueDate,
+            StartDate = row.StartDate,
+            EndDate = row.EndDate,
+            TotalPremium = row.TotalPremium,
             DownPayment = 0,
             InstallmentCount = 0,
             ImportBatchId = batchId,
@@ -241,6 +258,29 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
 
         await dbContext.SaveChangesAsync(ct);
     }
+
+    private static Dictionary<string, int> BuildColumnIndex(IReadOnlyList<string> headers, Dictionary<string, string> mapping)
+    {
+        var columnIndex = new Dictionary<string, int>();
+        foreach (var (targetKey, sourceHeader) in mapping)
+        {
+            var index = headers
+                .Select((header, i) => (header, i))
+                .Where(h => string.Equals(h.header.Trim(), sourceHeader.Trim(), StringComparison.OrdinalIgnoreCase))
+                .Select(h => h.i)
+                .DefaultIfEmpty(-1)
+                .First();
+
+            if (index >= 0)
+            {
+                columnIndex[targetKey] = index;
+            }
+        }
+
+        return columnIndex;
+    }
+
+    private static string ComputeHash(byte[] fileBytes) => Convert.ToHexString(SHA256.HashData(fileBytes));
 
     private static ImportRow NewRow(Guid agencyId, Guid batchId, int rowNumber, ImportRowStatus status, string? error = null) =>
         new()
@@ -254,63 +294,134 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
 
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
-    private sealed record ValidatedRow(
-        string PolicyNumber,
-        string ExternalCode,
-        string FullName,
-        DateOnly IssueDate,
-        DateOnly StartDate,
-        DateOnly EndDate,
-        decimal TotalPremium,
-        string ContractName);
-
-    private static (ValidatedRow? Row, string? Error) Validate(Func<string, string> get, DetectedDateFormat dateFormat)
+    private static (ParsedPolicyRow? Row, string? Error) ParseGenericRow(
+        IReadOnlyList<string> row, Dictionary<string, int> columnIndex, DetectedDateFormat dateFormat, bool amountsAreInRials)
     {
-        var policyNumber = get(ImportTargetFields.PolicyNumber);
+        string Get(string key) => columnIndex.TryGetValue(key, out var idx) && idx < row.Count ? row[idx].Trim() : string.Empty;
+
+        var policyNumber = Get(ImportTargetFields.PolicyNumber);
         if (string.IsNullOrWhiteSpace(policyNumber))
         {
             return (null, "شمارهٔ بیمه‌نامه خالی است.");
         }
 
-        var externalCode = get(ImportTargetFields.CustomerExternalCode);
+        var externalCode = Get(ImportTargetFields.CustomerExternalCode);
         if (string.IsNullOrWhiteSpace(externalCode))
         {
             return (null, "کد بیمه‌گذار خالی است.");
         }
 
-        var fullName = get(ImportTargetFields.CustomerFullName);
+        var fullName = Get(ImportTargetFields.CustomerFullName);
         if (string.IsNullOrWhiteSpace(fullName))
         {
             return (null, "نام بیمه‌گذار خالی است.");
         }
 
-        if (!ImportDateParser.TryParse(get(ImportTargetFields.IssueDate), dateFormat, out var issueDate))
+        if (!ImportDateParser.TryParse(Get(ImportTargetFields.IssueDate), dateFormat, out var issueDate))
         {
             return (null, "تاریخ صدور نامعتبر است.");
         }
 
-        if (!ImportDateParser.TryParse(get(ImportTargetFields.StartDate), dateFormat, out var startDate))
+        if (!ImportDateParser.TryParse(Get(ImportTargetFields.StartDate), dateFormat, out var startDate))
         {
             return (null, "تاریخ شروع نامعتبر است.");
         }
 
-        if (!ImportDateParser.TryParse(get(ImportTargetFields.EndDate), dateFormat, out var endDate))
+        if (!ImportDateParser.TryParse(Get(ImportTargetFields.EndDate), dateFormat, out var endDate))
         {
             return (null, "تاریخ پایان نامعتبر است.");
         }
 
-        var premiumRaw = get(ImportTargetFields.TotalPremium).Replace(",", "");
+        var premiumRaw = Get(ImportTargetFields.TotalPremium).Replace(",", "");
         if (!decimal.TryParse(premiumRaw, out var totalPremium) || totalPremium <= 0)
         {
             return (null, "حق بیمه نامعتبر است.");
         }
 
-        var contractName = get(ImportTargetFields.ContractName);
+        var contractName = Get(ImportTargetFields.ContractName);
         if (string.IsNullOrWhiteSpace(contractName))
         {
             return (null, "نام قرارداد خالی است.");
         }
 
-        return (new ValidatedRow(policyNumber, externalCode, fullName, issueDate, startDate, endDate, totalPremium, contractName), null);
+        var year = int.TryParse(Get(ImportTargetFields.VehicleYear), out var y) ? y : (int?)null;
+        var premium = amountsAreInRials ? totalPremium / 10m : totalPremium;
+
+        return (new ParsedPolicyRow(
+            policyNumber, externalCode, fullName,
+            NullIfEmpty(Get(ImportTargetFields.CustomerMobile)),
+            NullIfEmpty(Get(ImportTargetFields.CustomerNationalId)),
+            NullIfEmpty(Get(ImportTargetFields.VehiclePlate)),
+            NullIfEmpty(Get(ImportTargetFields.VehicleVin)),
+            NullIfEmpty(Get(ImportTargetFields.VehicleChassis)),
+            NullIfEmpty(Get(ImportTargetFields.VehicleMake)),
+            NullIfEmpty(Get(ImportTargetFields.VehicleModel)),
+            year,
+            issueDate, startDate, endDate, premium, contractName), null);
+    }
+
+    private static (ParsedPolicyRow? Row, string? Error) ParseFanavaranRow(
+        IReadOnlyList<string> row, Dictionary<string, int> columnIndex)
+    {
+        string Get(string key) => columnIndex.TryGetValue(key, out var idx) && idx < row.Count ? row[idx].Trim() : string.Empty;
+
+        var policyNumber = Get(FanavaranImportFields.PolicyNumber);
+        if (string.IsNullOrWhiteSpace(policyNumber))
+        {
+            return (null, "شمارهٔ بیمه‌نامه خالی است.");
+        }
+
+        var nameAndCode = Get(FanavaranImportFields.InsuredNameAndCode);
+        if (string.IsNullOrWhiteSpace(nameAndCode))
+        {
+            return (null, "نام و کد بیمه‌گذار خالی است.");
+        }
+
+        var (fullName, externalCode) = FanavaranFieldParsers.ParseInsuredNameAndCode(nameAndCode);
+        if (externalCode is null)
+        {
+            return (null, "کد بیمه‌گذار از ستون نام/کد قابل استخراج نیست.");
+        }
+
+        if (!ImportDateParser.TryParse(Get(FanavaranImportFields.IssueDate), DetectedDateFormat.Jalali, out var issueDate))
+        {
+            return (null, "تاریخ صدور نامعتبر است.");
+        }
+
+        if (!ImportDateParser.TryParse(Get(FanavaranImportFields.StartDate), DetectedDateFormat.Jalali, out var startDate))
+        {
+            return (null, "تاریخ شروع نامعتبر است.");
+        }
+
+        var durationMonths = int.TryParse(Get(FanavaranImportFields.DurationMonths), out var d) && d > 0 ? d : 12;
+        var endDate = startDate.AddMonths(durationMonths);
+
+        var premiumRaw = Get(FanavaranImportFields.TotalPremiumWithTaxRials).Replace(",", "");
+        if (!decimal.TryParse(premiumRaw, out var totalPremiumRials) || totalPremiumRials <= 0)
+        {
+            return (null, "حق بیمه نامعتبر است.");
+        }
+
+        // Unlike the generic path, a blank contract name is not a validation failure here — §4.1's
+        // real sample distribution has ~9.4% blank contract names, and those are still legitimate
+        // (non-installment) policies, not bad rows. An empty string simply never matches any
+        // ContractTemplate in ContractTemplateMatcher.
+        var contractName = FanavaranFieldParsers.StripContractNumber(Get(FanavaranImportFields.ContractName));
+
+        return (new ParsedPolicyRow(
+            policyNumber, externalCode, fullName,
+            CustomerMobile: null,
+            CustomerNationalId: null,
+            NullIfEmpty(Get(FanavaranImportFields.Plate)),
+            NullIfEmpty(Get(FanavaranImportFields.Vin)),
+            NullIfEmpty(Get(FanavaranImportFields.Chassis)),
+            VehicleMake: null,
+            VehicleModel: null,
+            VehicleYear: null,
+            issueDate, startDate, endDate,
+            // §4.1: "Total premium with tax — RIALS → ÷10" — a fact of this specific export, not
+            // an operator choice like the generic path's amountsAreInRials flag.
+            totalPremiumRials / 10m,
+            contractName), null);
     }
 }
