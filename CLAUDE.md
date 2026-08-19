@@ -6,6 +6,19 @@ Installment management & collection system for Iranian insurance agencies (بی�
 
 ---
 
+## What agents actually asked for
+
+Requirements were collected from working agents (`niaz.md`). They ranked three things as decisive:
+
+1. **سود و زیان** — profit & loss (commission in − marketer commission out − defaults)
+2. **اعلان‌ها** — due dates, overdue, renewals
+3. **پیامک** — to customers **and to marketers**
+
+Plus the settlement countdown below, which prevents an operational disaster.
+
+**P&L is not accounting.** Do not build a general ledger, journal entries, or tax filing. Every
+input already exists in the system; it is arithmetic over data you already hold.
+
 ## The one thing this product does
 
 An agency sells third-party motor insurance on installments. **The insurance company extends the
@@ -140,6 +153,45 @@ Violating any of these is a bug, not a style preference.
 
 ---
 
+## Money rules (added in v2 — read carefully)
+
+- **Field order in issuance is a business rule**: `NetPremium → ServiceFee → DownPayment →
+  installments`. The agency charges its own service fee on top of the premium (this is existing
+  industry practice, not something we invented).
+- **`TotalReceivable = NetPremium + ServiceFee`.** The customer owes this; installments divide it.
+- **Marketer commission base is `NetPremium` only — never `TotalReceivable`.** The service fee
+  belongs to the agency. Getting this wrong overpays every marketer on every policy.
+- **Commission accrues per installment, not per policy.** Slices proportional to *amount*, not
+  count — the last installment differs after rounding.
+- **The down payment gets its own commission slice, payable immediately.** Forgetting this silently
+  underpays every marketer.
+- **A slice becomes payable only on FULL settlement of its installment.** Partial is not enough.
+- **Partial default is proportional.** Settled installments pay; unsettled ones never activate.
+  **No clawback, no deduction from future commissions.**
+- **Rate is locked at issuance.** Changing a marketer's rate today must not alter yesterday's
+  entries.
+- **Guard:** `downShare + Σ instShare == totalCommission` to the rial. Assert it in a test.
+
+## Multi-line from day one
+
+Policies are not only ثالث. Lines have sub-types (مسئولیت has several). The insured subject varies:
+vehicle for ثالث/بدنه, property for آتش‌سوزی. **Do not force `VehicleId` onto every policy** —
+nullable, with a service-layer rule keyed off `InsuranceLine.RequiresVehicle`.
+
+## Marketer access — a security boundary, not a feature
+
+An independent marketer is **outside the agency** and often works with several agencies. A marketer
+sees only the customers they introduced, and:
+
+- **No export. No xlsx, no print, no copy-list.** Otherwise the customer list walks out of the agency.
+- **Every marketer view is audited**, and the agency owner can see what they looked at.
+- **One marketer, one agency** — enforced by a unique index, not by UI validation.
+- Marketers may see their customers' *overdue status* (status only, never amounts) — deliberate,
+  since their commission depends on collection.
+
+`Marketer` profile and `AppUser` login are **separate entities**. Many marketers never log in and
+only receive SMS.
+
 ## Architecture: never couple to Fanavaran
 
 Some insurers do not use Fanavaran at all. Three layers, strictly separated:
@@ -189,12 +241,6 @@ tab store; retrofitting ten pages later means rewriting all ten.
   | A specific record | ✅ different records · ❌ same record twice |
 - Create-tab titles update live from the first meaningful field («بیمه‌نامهٔ جدید» → «بیمه‌نامه — ۷۴ب۳۲۱»)
 - Light/dark theme, persisted, no flash on load
-
-## Update system
-
-See `docs/UPDATE-SYSTEM.md`. **Not part of Phase 1.** When it is built, the one rule that must
-never bend: the internet-facing API gets **no Docker socket, no host filesystem access**. A
-separate `Aqsat.Updater` service holds those, reachable only over the internal network.
 
 ## Concurrency
 
