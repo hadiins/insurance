@@ -10,7 +10,7 @@ shell must exist before any page is written.
 
 ## Milestone 0 — Foundation (Tasks 1–5)
 
-### [ ] Task 1 — Solution scaffold
+### [x] Task 1 — Solution scaffold
 
 ```
 /src
@@ -32,7 +32,7 @@ on external accounts.
 
 ---
 
-### [ ] Task 2 — MDI tab shell (frontend only)
+### [x] Task 2 — MDI tab shell (frontend only)
 
 Read the *Frontend* section of `CLAUDE.md` in full first. Reference behaviour:
 `docs/reference-tabs-demo.html` — match the interaction, not the markup.
@@ -48,7 +48,7 @@ selection intact. Open two create-tabs; titles differ. Close a dirty tab; it ask
 
 ---
 
-### [ ] Task 3 — Data model + RLS ⚠️ HIGHEST RISK
+### [x] Task 3 — Data model + RLS ⚠️ HIGHEST RISK
 
 All of section 2 of `PHASE-1-SPEC.md` — **including the tables whose UI ships later**
 (`Endorsement`, regional/HQ levels). Retrofitting a schema onto live data is the one mistake with
@@ -69,7 +69,7 @@ on every row · unique indexes for payment dedupe, marketer-user, active lock, p
 
 ---
 
-### [ ] Task 4 — Auth, roles, org hierarchy, marketer accounts
+### [x] Task 4 — Auth, roles, org hierarchy, marketer accounts
 
 JWT · `AppUser`/`Role`/`UserOrgRole` · permission policies · self-referencing `Organization` with
 all three levels in seed · scope middleware · **`Marketer` profile separate from `AppUser`** (many
@@ -81,7 +81,7 @@ entries.
 
 ---
 
-### [ ] Task 5 — Audit infrastructure
+### [x] Task 5 — Audit infrastructure
 
 `SaveChangesAsync` override writing audit rows **in the same transaction**. Human-readable Persian
 description composed at write time. Encrypted fields recorded as "changed" only. Marketer views
@@ -94,7 +94,7 @@ exception mid-transaction → **neither** the change nor the audit row persists.
 
 ## Milestone 1 — Policies & import (Tasks 6–9)
 
-### [ ] Task 6 — Insurance lines & issuance form
+### [x] Task 6 — Insurance lines & issuance form
 
 `InsuranceLine` seeded with all lines and sub-types · **line dropdown is the first field** (niaz
 #10) · form adapts: vehicle fields for ثالث/بدنه, property fields for آتش‌سوزی · `RequiresVehicle`
@@ -111,7 +111,7 @@ rejected with a clear Persian message.
 
 ---
 
-### [ ] Task 7 — Import engine + Fanavaran parser
+### [x] Task 7 — Import engine + Fanavaran parser
 
 Generic pipeline (upload → detect → **preview 20 rows with detected currency and date format** →
 column mapping savable per agency → validate → commit → batch report) plus the concrete Fanavaran
@@ -124,7 +124,7 @@ mapping rule.
 
 ---
 
-### [ ] Task 8 — Templates, schedule, service fee
+### [x] Task 8 — Templates, schedule, service fee
 
 Contract→template mapping UI · schedule per 3.1/3.2 · **service fee inserted between premium and
 down payment** · down-payment suggestion for round installments · warning above `MaxInstallments` ·
@@ -137,7 +137,7 @@ A 500,000 service fee raises `TotalReceivable` but **not** the commission base.
 
 ---
 
-### [ ] Task 9 — Editable installments (niaz #3)
+### [x] Task 9 — Editable installments (niaz #3)
 
 Amount and due date editable per installment · `IsManuallyEdited` flag · audit row per edit ·
 **commission recalculated for that installment** · deadline recomputed.
@@ -149,7 +149,7 @@ due date → its settlement deadline shifts, holiday rule reapplied.
 
 ## Milestone 2 — The core loop (Tasks 10–12)
 
-### [ ] Task 10 — Settlement countdown ⭐
+### [x] Task 10 — Settlement countdown ⭐
 
 Query per 3.3 · urgency classification · holiday shift via `IsHoliday` (cached) ·
 **SHORTFALL = owed − collected** as the dominant element on the dashboard · daily Hangfire
@@ -160,7 +160,7 @@ shortfall figure is arithmetically right. Advance the clock one day; everything 
 
 ---
 
-### [ ] Task 11 — Payments & commission activation
+### [x] Task 11 — Payments & commission activation
 
 Payment + allocation per 3.4 · one-click from a queue row with pre-filled but **editable** amount ·
 batch mode · partial status · overpayment → next installment, agent-editable · reversal with audit ·
@@ -172,7 +172,7 @@ payment twice → one record.
 
 ---
 
-### [ ] Task 12 — Concurrency
+### [x] Task 12 — Concurrency
 
 All three layers per `docs/CONCURRENCY.md`. SignalR presence · atomic `MERGE` lock acquisition ·
 force-release with mandatory reason + audit + instant notification · polling fallback.

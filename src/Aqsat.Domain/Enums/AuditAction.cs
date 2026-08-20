@@ -7,4 +7,5 @@ public enum AuditAction : byte
     Deleted = 3,
     PaymentRecorded = 4,
     LockForceReleased = 5,
+    PaymentReversed = 6,
 }

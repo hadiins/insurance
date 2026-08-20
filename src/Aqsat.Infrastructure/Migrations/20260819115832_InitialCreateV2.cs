@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Aqsat.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialCreateV2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -104,6 +104,56 @@ namespace Aqsat.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ImportColumnMappings",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    ImportType = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
+                    MappingJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ImportColumnMappings", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "InsuranceLines",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Code = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    NameFa = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
+                    RequiresVehicle = table.Column<bool>(type: "bit", nullable: false),
+                    RequiresProperty = table.Column<bool>(type: "bit", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InsuranceLines", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                    table.ForeignKey(
+                        name: "FK_InsuranceLines_InsuranceLines_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "InsuranceLines",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Organizations",
                 columns: table => new
                 {
@@ -131,6 +181,28 @@ namespace Aqsat.Infrastructure.Migrations
                         principalTable: "Organizations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PropertySubjects",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    Address = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false),
+                    PostalCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    Type = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: true),
+                    Value = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: true),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PropertySubjects", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
                 });
 
             migrationBuilder.CreateTable(
@@ -309,6 +381,8 @@ namespace Aqsat.Infrastructure.Migrations
                     MaxInstallments = table.Column<int>(type: "int", nullable: false),
                     ReminderDaysBefore = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
                     MaxOpenTabs = table.Column<int>(type: "int", nullable: false),
+                    DefaultServiceFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ServiceFeeMode = table.Column<byte>(type: "tinyint", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
@@ -343,6 +417,36 @@ namespace Aqsat.Infrastructure.Migrations
                         name: "FK_RolePermissions_Roles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Marketers",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    FullName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Mobile = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
+                    NationalId = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
+                    Type = table.Column<byte>(type: "tinyint", nullable: false),
+                    AppUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Marketers", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                    table.ForeignKey(
+                        name: "FK_Marketers_Users_AppUserId",
+                        column: x => x.AppUserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -386,21 +490,65 @@ namespace Aqsat.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MarketerRates",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    MarketerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InsuranceLineId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RatePercent = table.Column<decimal>(type: "decimal(9,4)", precision: 9, scale: 4, nullable: false),
+                    EffectiveFrom = table.Column<DateOnly>(type: "date", nullable: false),
+                    EffectiveTo = table.Column<DateOnly>(type: "date", nullable: true),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MarketerRates", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                    table.ForeignKey(
+                        name: "FK_MarketerRates_InsuranceLines_InsuranceLineId",
+                        column: x => x.InsuranceLineId,
+                        principalTable: "InsuranceLines",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_MarketerRates_Marketers_MarketerId",
+                        column: x => x.MarketerId,
+                        principalTable: "Marketers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Policies",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
                     PolicyNumber = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    InsuranceLineId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    VehicleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VehicleId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PropertySubjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ContractName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     IsInstallment = table.Column<bool>(type: "bit", nullable: false),
                     IssueDate = table.Column<DateOnly>(type: "date", nullable: false),
                     StartDate = table.Column<DateOnly>(type: "date", nullable: false),
                     EndDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    TotalPremium = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
+                    NetPremium = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
+                    ServiceFee = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
                     DownPayment = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
                     InstallmentCount = table.Column<int>(type: "int", nullable: false),
+                    AgencyCommissionPercent = table.Column<decimal>(type: "decimal(9,4)", precision: 9, scale: 4, nullable: true),
+                    AgencyCommissionAmount = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: true),
+                    MarketerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MarketerRatePercent = table.Column<decimal>(type: "decimal(9,4)", precision: 9, scale: 4, nullable: true),
+                    PreviousInsurer = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: true),
+                    IsRenewal = table.Column<bool>(type: "bit", nullable: false),
                     Status = table.Column<byte>(type: "tinyint", nullable: false),
                     ImportBatchId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     BizId = table.Column<long>(type: "bigint", nullable: false)
@@ -424,6 +572,24 @@ namespace Aqsat.Infrastructure.Migrations
                         name: "FK_Policies_ImportBatches_ImportBatchId",
                         column: x => x.ImportBatchId,
                         principalTable: "ImportBatches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Policies_InsuranceLines_InsuranceLineId",
+                        column: x => x.InsuranceLineId,
+                        principalTable: "InsuranceLines",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Policies_Marketers_MarketerId",
+                        column: x => x.MarketerId,
+                        principalTable: "Marketers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Policies_PropertySubjects_PropertySubjectId",
+                        column: x => x.PropertySubjectId,
+                        principalTable: "PropertySubjects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -468,6 +634,38 @@ namespace Aqsat.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Endorsements",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    PolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    EndorsementNo = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
+                    IssueDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    PremiumDelta = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
+                    ServiceFeeDelta = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
+                    AffectsInstallments = table.Column<bool>(type: "bit", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Endorsements", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                    table.ForeignKey(
+                        name: "FK_Endorsements_Policies_PolicyId",
+                        column: x => x.PolicyId,
+                        principalTable: "Policies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Installments",
                 columns: table => new
                 {
@@ -480,6 +678,7 @@ namespace Aqsat.Infrastructure.Migrations
                     PaidAmount = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
                     Status = table.Column<byte>(type: "tinyint", nullable: false),
                     RemittedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    IsManuallyEdited = table.Column<bool>(type: "bit", nullable: false),
                     BizId = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -493,6 +692,104 @@ namespace Aqsat.Infrastructure.Migrations
                         .Annotation("SqlServer:Clustered", false);
                     table.ForeignKey(
                         name: "FK_Installments_Policies_PolicyId",
+                        column: x => x.PolicyId,
+                        principalTable: "Policies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RenewalWatches",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ProspectName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: true),
+                    ProspectMobile = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
+                    InsuranceLineId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CurrentInsurer = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: true),
+                    CurrentExpiryDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    NotifyDaysBefore = table.Column<int>(type: "int", nullable: false),
+                    MarketerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Status = table.Column<byte>(type: "tinyint", nullable: false),
+                    PolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RenewalWatches", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                    table.ForeignKey(
+                        name: "FK_RenewalWatches_Customers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "Customers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RenewalWatches_InsuranceLines_InsuranceLineId",
+                        column: x => x.InsuranceLineId,
+                        principalTable: "InsuranceLines",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RenewalWatches_Marketers_MarketerId",
+                        column: x => x.MarketerId,
+                        principalTable: "Marketers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RenewalWatches_Policies_PolicyId",
+                        column: x => x.PolicyId,
+                        principalTable: "Policies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CommissionEntries",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    MarketerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InstallmentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    BasePortion = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
+                    RatePercent = table.Column<decimal>(type: "decimal(9,4)", precision: 9, scale: 4, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,0)", precision: 18, scale: 0, nullable: false),
+                    Status = table.Column<byte>(type: "tinyint", nullable: false),
+                    EligibleAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    PaidAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    PaymentBatchId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    BizId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CommissionEntries", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
+                    table.ForeignKey(
+                        name: "FK_CommissionEntries_Installments_InstallmentId",
+                        column: x => x.InstallmentId,
+                        principalTable: "Installments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CommissionEntries_Marketers_MarketerId",
+                        column: x => x.MarketerId,
+                        principalTable: "Marketers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CommissionEntries_Policies_PolicyId",
                         column: x => x.PolicyId,
                         principalTable: "Policies",
                         principalColumn: "Id",
@@ -566,6 +863,48 @@ namespace Aqsat.Infrastructure.Migrations
                 column: "PolicyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_AgencyId",
+                table: "CommissionEntries",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_AgencyId_InstallmentId",
+                table: "CommissionEntries",
+                columns: new[] { "AgencyId", "InstallmentId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_AgencyId_MarketerId_Status",
+                table: "CommissionEntries",
+                columns: new[] { "AgencyId", "MarketerId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_AgencyId_PolicyId",
+                table: "CommissionEntries",
+                columns: new[] { "AgencyId", "PolicyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_BizId",
+                table: "CommissionEntries",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_InstallmentId",
+                table: "CommissionEntries",
+                column: "InstallmentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_MarketerId",
+                table: "CommissionEntries",
+                column: "MarketerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionEntries_PolicyId",
+                table: "CommissionEntries",
+                column: "PolicyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ContractTemplates_AgencyId",
                 table: "ContractTemplates",
                 column: "AgencyId");
@@ -601,6 +940,28 @@ namespace Aqsat.Infrastructure.Migrations
                 .Annotation("SqlServer:Clustered", true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Endorsements_AgencyId",
+                table: "Endorsements",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Endorsements_AgencyId_PolicyId",
+                table: "Endorsements",
+                columns: new[] { "AgencyId", "PolicyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Endorsements_BizId",
+                table: "Endorsements",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Endorsements_PolicyId",
+                table: "Endorsements",
+                column: "PolicyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ImportBatches_AgencyId",
                 table: "ImportBatches",
                 column: "AgencyId");
@@ -608,6 +969,24 @@ namespace Aqsat.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ImportBatches_BizId",
                 table: "ImportBatches",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ImportColumnMappings_AgencyId",
+                table: "ImportColumnMappings",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ImportColumnMappings_AgencyId_ImportType",
+                table: "ImportColumnMappings",
+                columns: new[] { "AgencyId", "ImportType" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ImportColumnMappings_BizId",
+                table: "ImportColumnMappings",
                 column: "BizId",
                 unique: true)
                 .Annotation("SqlServer:Clustered", true);
@@ -661,6 +1040,75 @@ namespace Aqsat.Infrastructure.Migrations
                 name: "IX_Installments_PolicyId",
                 table: "Installments",
                 column: "PolicyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InsuranceLines_BizId",
+                table: "InsuranceLines",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InsuranceLines_Code",
+                table: "InsuranceLines",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InsuranceLines_ParentId",
+                table: "InsuranceLines",
+                column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketerRates_AgencyId",
+                table: "MarketerRates",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketerRates_AgencyId_MarketerId_InsuranceLineId",
+                table: "MarketerRates",
+                columns: new[] { "AgencyId", "MarketerId", "InsuranceLineId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketerRates_BizId",
+                table: "MarketerRates",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketerRates_InsuranceLineId",
+                table: "MarketerRates",
+                column: "InsuranceLineId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketerRates_MarketerId",
+                table: "MarketerRates",
+                column: "MarketerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Marketers_AgencyId",
+                table: "Marketers",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Marketers_AgencyId_Mobile",
+                table: "Marketers",
+                columns: new[] { "AgencyId", "Mobile" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Marketers_AppUserId",
+                table: "Marketers",
+                column: "AppUserId",
+                unique: true,
+                filter: "[AppUserId] IS NOT NULL AND [IsDeleted] = 0");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Marketers_BizId",
+                table: "Marketers",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Organizations_BizId",
@@ -746,6 +1194,16 @@ namespace Aqsat.Infrastructure.Migrations
                 columns: new[] { "AgencyId", "CustomerId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Policies_AgencyId_InsuranceLineId",
+                table: "Policies",
+                columns: new[] { "AgencyId", "InsuranceLineId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Policies_AgencyId_MarketerId",
+                table: "Policies",
+                columns: new[] { "AgencyId", "MarketerId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Policies_AgencyId_PolicyNumber",
                 table: "Policies",
                 columns: new[] { "AgencyId", "PolicyNumber" },
@@ -769,9 +1227,36 @@ namespace Aqsat.Infrastructure.Migrations
                 column: "ImportBatchId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Policies_InsuranceLineId",
+                table: "Policies",
+                column: "InsuranceLineId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Policies_MarketerId",
+                table: "Policies",
+                column: "MarketerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Policies_PropertySubjectId",
+                table: "Policies",
+                column: "PropertySubjectId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Policies_VehicleId",
                 table: "Policies",
                 column: "VehicleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PropertySubjects_AgencyId",
+                table: "PropertySubjects",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PropertySubjects_BizId",
+                table: "PropertySubjects",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RecordLocks_AgencyId_EntityType_EntityId",
@@ -790,6 +1275,48 @@ namespace Aqsat.Infrastructure.Migrations
                 name: "IX_RecordPresences_AgencyId_LastSeenAt",
                 table: "RecordPresences",
                 columns: new[] { "AgencyId", "LastSeenAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_AgencyId",
+                table: "RenewalWatches",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_AgencyId_CurrentExpiryDate",
+                table: "RenewalWatches",
+                columns: new[] { "AgencyId", "CurrentExpiryDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_AgencyId_Status",
+                table: "RenewalWatches",
+                columns: new[] { "AgencyId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_BizId",
+                table: "RenewalWatches",
+                column: "BizId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_CustomerId",
+                table: "RenewalWatches",
+                column: "CustomerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_InsuranceLineId",
+                table: "RenewalWatches",
+                column: "InsuranceLineId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_MarketerId",
+                table: "RenewalWatches",
+                column: "MarketerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RenewalWatches_PolicyId",
+                table: "RenewalWatches",
+                column: "PolicyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_BizId",
@@ -876,10 +1403,22 @@ namespace Aqsat.Infrastructure.Migrations
                 name: "Collaterals");
 
             migrationBuilder.DropTable(
+                name: "CommissionEntries");
+
+            migrationBuilder.DropTable(
                 name: "ContractTemplates");
 
             migrationBuilder.DropTable(
+                name: "Endorsements");
+
+            migrationBuilder.DropTable(
+                name: "ImportColumnMappings");
+
+            migrationBuilder.DropTable(
                 name: "ImportRows");
+
+            migrationBuilder.DropTable(
+                name: "MarketerRates");
 
             migrationBuilder.DropTable(
                 name: "OrgSettings");
@@ -892,6 +1431,9 @@ namespace Aqsat.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "RecordPresences");
+
+            migrationBuilder.DropTable(
+                name: "RenewalWatches");
 
             migrationBuilder.DropTable(
                 name: "RolePermissions");
@@ -912,9 +1454,6 @@ namespace Aqsat.Infrastructure.Migrations
                 name: "Roles");
 
             migrationBuilder.DropTable(
-                name: "Users");
-
-            migrationBuilder.DropTable(
                 name: "Policies");
 
             migrationBuilder.DropTable(
@@ -924,7 +1463,19 @@ namespace Aqsat.Infrastructure.Migrations
                 name: "ImportBatches");
 
             migrationBuilder.DropTable(
+                name: "InsuranceLines");
+
+            migrationBuilder.DropTable(
+                name: "Marketers");
+
+            migrationBuilder.DropTable(
+                name: "PropertySubjects");
+
+            migrationBuilder.DropTable(
                 name: "Vehicles");
+
+            migrationBuilder.DropTable(
+                name: "Users");
         }
     }
 }

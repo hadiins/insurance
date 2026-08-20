@@ -1,7 +1,7 @@
 namespace Aqsat.Api.Contracts;
 
 public sealed record PendingSchedulePolicyDto(
-    Guid PolicyId, string PolicyNumber, string CustomerFullName, string ContractName, decimal TotalPremium);
+    Guid PolicyId, string PolicyNumber, string CustomerFullName, string ContractName, decimal TotalReceivable);
 
 public sealed record ScheduleRequest(decimal DownPayment, int InstallmentCount);
 

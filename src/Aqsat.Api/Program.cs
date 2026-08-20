@@ -1,10 +1,14 @@
 using System.Text;
+using Aqsat.Api.Hubs;
 using Aqsat.Api.Middleware;
 using Aqsat.Application.Auth;
 using Aqsat.Infrastructure;
 using Aqsat.Infrastructure.Auth;
+using Aqsat.Infrastructure.Jobs;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
@@ -55,7 +59,26 @@ try
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromSeconds(30),
             };
+            options.Events = new JwtBearerEvents
+            {
+                // Browser WebSocket/SSE transports can't set a custom Authorization header, so the
+                // SignalR JS client sends the token as a query string param instead — accept it only
+                // on the hub path, never for ordinary API requests.
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                },
+            };
         });
+
+    builder.Services.AddSignalR(options => options.EnableDetailedErrors = builder.Environment.IsDevelopment());
+    builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
 
     builder.Services.AddAuthorization(options =>
     {
@@ -97,6 +120,18 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<PresenceHub>("/hubs/presence");
+
+    // Dashboard defaults to local-requests-only authorization — no extra filter needed for Phase 1.
+    app.UseHangfireDashboard();
+    RecurringJob.AddOrUpdate<DeadlineRecalculationJob>(
+        "settlement-deadline-recalculation",
+        job => job.RecalculateAsync(CancellationToken.None),
+        Cron.Daily);
+    RecurringJob.AddOrUpdate<PresenceAndLockSweepJob>(
+        "presence-and-lock-sweep",
+        job => job.SweepAsync(CancellationToken.None),
+        "*/2 * * * *");
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {

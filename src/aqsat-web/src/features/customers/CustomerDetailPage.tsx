@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
-import { money } from "../../lib/persian";
-import type { FakeInstallmentRow } from "../../app/fakeData";
+import { fa, money } from "../../lib/persian";
+import { PresenceLockBar } from "../concurrency/PresenceLockBar";
+
+interface CustomerDetailPayload {
+  policyId: string;
+  policyNumber: string;
+  customerFullName: string;
+  seqNo: number;
+  balance: number;
+  status: string;
+  urgency: string;
+}
 
 export function CustomerDetailPage() {
   const tabKey = useTabKey();
@@ -10,41 +20,33 @@ export function CustomerDetailPage() {
   const setDirty = useTabsStore((s) => s.setDirty);
   const [note, setNote] = useState("");
 
-  const row = tab?.payload as FakeInstallmentRow | undefined;
+  const row = tab?.payload as CustomerDetailPayload | undefined;
   if (!row) return null;
 
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
-        پروندهٔ <em className="font-extralight not-italic text-(--ice-2)">مشتری {row.id}</em>
+        پروندهٔ <em className="font-extralight not-italic text-(--ice-2)">{row.customerFullName}</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">در تب جدید باز شد — تب «امروز» دست‌نخورده ماند</div>
+      <div className="mb-4.5 text-xs text-(--ice-3)">بیمه‌نامهٔ {row.policyNumber} — در تب جدید باز شد</div>
 
-      <div className="mb-4.5 rounded-xl border border-(--mint)/22 bg-(--mint)/7 p-4 text-[12.5px] text-(--ice-2)">
-        این تب از کلیک روی یک ردیف ساخته شد. هر مشتری <b className="font-bold text-(--mint)">تب مستقل خودش</b> را
-        می‌گیرد و تب تکراری باز نمی‌شود.
-      </div>
+      <PresenceLockBar entityType="Policy" entityId={row.policyId} />
 
-      <div className="mb-4 grid grid-cols-4 gap-3">
+      <div className="mb-4 grid grid-cols-3 gap-3">
         <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
           <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">مانده</div>
-          <div className="text-[23px] font-extrabold tracking-tight text-(--ember)">{money(row.amount)}</div>
-          <div className="text-[11px] text-(--ice-3)">{row.label}</div>
+          <div className="text-[23px] font-extrabold tracking-tight text-(--ember)">{money(row.balance)}</div>
+          <div className="text-[11px] text-(--ice-3)">قسط شمارهٔ {fa(row.seqNo)}</div>
         </div>
         <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-          <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">قسط</div>
-          <div className="text-[23px] font-extrabold tracking-tight text-(--ice)">{row.progress}</div>
-          <div className="text-[11px] text-(--ice-3)">پرداخت‌شده</div>
+          <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">وضعیت</div>
+          <div className="text-[23px] font-extrabold tracking-tight text-(--ice)">{row.status}</div>
+          <div className="text-[11px] text-(--ice-3)">این قسط</div>
         </div>
         <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-          <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">وثیقه</div>
-          <div className="pt-1 text-[16px] font-extrabold tracking-tight text-(--ice)">چک صیادی</div>
-          <div className="text-[11px] text-(--ice-3)">بانک ملت</div>
-        </div>
-        <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-          <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">آخرین پیامک</div>
-          <div className="pt-1 text-[16px] font-extrabold tracking-tight text-(--amber)">۱۲ مرداد</div>
-          <div className="text-[11px] text-(--ice-3)">تحویل شد</div>
+          <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">فوریت</div>
+          <div className="pt-1 text-[16px] font-extrabold tracking-tight text-(--amber)">{row.urgency}</div>
+          <div className="text-[11px] text-(--ice-3)">شمارش‌معکوس تسویه</div>
         </div>
       </div>
 

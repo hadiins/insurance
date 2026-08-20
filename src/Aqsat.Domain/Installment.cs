@@ -24,6 +24,10 @@ public class Installment : AgencyOwnedEntity, IAuditableEntity
     /// <summary>When remitted to the insurer.</summary>
     public DateTimeOffset? RemittedAt { get; set; }
 
+    /// <summary>Set the first time an agent overrides Amount or DueDate after generation
+    /// (docs/PHASE-1-SPEC.md §2.7/niaz #3).</summary>
+    public bool IsManuallyEdited { get; set; }
+
     [NotMapped]
     public decimal Balance => Amount - PaidAmount;
 

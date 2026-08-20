@@ -32,11 +32,15 @@ public class PolicyScheduleEndpointTests : IClassFixture<WebApplicationFactory<P
     {
         await using var seedContext = TestDbContextFactory.Create();
         var fixture = await DevSeeder.SeedAuthFixtureAsync(seedContext);
+        await InsuranceLineSeeder.EnsureSeededAsync(seedContext);
+        var thirdPartyLineId = await seedContext.InsuranceLines
+            .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
 
         var policy = new Policy
         {
             AgencyId = fixture.AgencyAId,
             PolicyNumber = $"POL-{Guid.NewGuid():N}"[..16],
+            InsuranceLineId = thirdPartyLineId,
             CustomerId = Guid.Empty,
             VehicleId = Guid.Empty,
             ContractName = "تجارت آفرینان تسنیم",
@@ -44,7 +48,7 @@ public class PolicyScheduleEndpointTests : IClassFixture<WebApplicationFactory<P
             IssueDate = new DateOnly(2026, 1, 1),
             StartDate = new DateOnly(2026, 1, 1),
             EndDate = new DateOnly(2027, 1, 1),
-            TotalPremium = 10_700_000m,
+            NetPremium = 10_700_000m,
             DownPayment = 0,
             InstallmentCount = 0,
         };

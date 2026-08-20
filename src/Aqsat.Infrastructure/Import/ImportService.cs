@@ -5,6 +5,7 @@ using Aqsat.Application.Import;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Seed;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aqsat.Infrastructure.Import;
@@ -133,6 +134,17 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
     {
         var templates = await dbContext.ContractTemplates.AsNoTracking().ToListAsync(ct);
 
+        // Both import paths (generic and Fanavaran) are motor-insurance exports (Vehicle fields
+        // present) — every imported policy is ثالث until a non-motor import source exists.
+        var thirdPartyLineId = await dbContext.InsuranceLines.AsNoTracking()
+            .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode)
+            .Select(l => l.Id)
+            .FirstOrDefaultAsync(ct);
+        if (thirdPartyLineId == Guid.Empty)
+        {
+            throw new InvalidOperationException("رشتهٔ بیمهٔ «ثالث» هنوز پیکربندی نشده است.");
+        }
+
         var batch = new ImportBatch { AgencyId = agencyId, FileName = fileName, FileHash = fileHash };
         dbContext.ImportBatches.Add(batch);
         await dbContext.SaveChangesAsync(ct);
@@ -169,7 +181,7 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
 
             try
             {
-                await CreatePolicyAsync(agencyId, batch.Id, parsed, templates, ct);
+                await CreatePolicyAsync(agencyId, batch.Id, thirdPartyLineId, parsed, templates, ct);
                 rowRecords.Add(NewRow(agencyId, batch.Id, rowNumber, ImportRowStatus.New));
                 newCount++;
             }
@@ -198,7 +210,8 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
     }
 
     private async Task CreatePolicyAsync(
-        Guid agencyId, Guid batchId, ParsedPolicyRow row, IReadOnlyList<ContractTemplate> templates, CancellationToken ct)
+        Guid agencyId, Guid batchId, Guid insuranceLineId, ParsedPolicyRow row, IReadOnlyList<ContractTemplate> templates,
+        CancellationToken ct)
     {
         var customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.ExternalCode == row.CustomerExternalCode, ct);
         if (customer is null)
@@ -242,6 +255,7 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
         {
             AgencyId = agencyId,
             PolicyNumber = row.PolicyNumber,
+            InsuranceLineId = insuranceLineId,
             Customer = customer,
             Vehicle = vehicle,
             ContractName = row.ContractName,
@@ -249,7 +263,7 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
             IssueDate = row.IssueDate,
             StartDate = row.StartDate,
             EndDate = row.EndDate,
-            TotalPremium = row.TotalPremium,
+            NetPremium = row.TotalPremium,
             DownPayment = 0,
             InstallmentCount = 0,
             ImportBatchId = batchId,

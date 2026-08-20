@@ -157,6 +157,6 @@ public class FanavaranImportServiceTests
         Assert.Equal("مشتری آزمایشی", policy.Customer.FullName);
         Assert.Equal("تجارت آفرینان تسنیم", policy.ContractName);
         Assert.True(policy.IsInstallment);
-        Assert.Equal(9_000_000m, policy.TotalPremium);
+        Assert.Equal(9_000_000m, policy.NetPremium);
     }
 }

@@ -10,9 +10,13 @@ public static class Permissions
     public const string SettingsWrite = "Settings.Write";
     public const string LockForceRelease = "Lock.ForceRelease";
     public const string ReportRead = "Report.Read";
+    public const string FinanceRead = "Finance.Read";
+    public const string MarketerManage = "Marketer.Manage";
+    public const string MarketerSelfView = "Marketer.SelfView";
 
     public static readonly IReadOnlyList<string> All =
     [
         PolicyRead, PolicyWrite, PaymentWrite, ImportRun, SettingsWrite, LockForceRelease, ReportRead,
+        FinanceRead, MarketerManage, MarketerSelfView,
     ];
 }

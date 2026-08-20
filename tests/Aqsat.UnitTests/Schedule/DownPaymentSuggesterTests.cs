@@ -9,7 +9,7 @@ public class DownPaymentSuggesterTests
     {
         // premium 10,700,000 / 9 ~= 1,188,888 -> rounded down to nearest 10,000 = 1,180,000.
         // financed = 1,180,000 * 9 = 10,620,000 -> down payment = 80,000.
-        var suggestion = DownPaymentSuggester.Suggest(totalPremium: 10_700_000m, installmentCount: 9);
+        var suggestion = DownPaymentSuggester.Suggest(totalReceivable: 10_700_000m, installmentCount: 9);
 
         Assert.Equal(80_000m, suggestion);
 
@@ -20,7 +20,7 @@ public class DownPaymentSuggesterTests
     [Fact]
     public void Never_suggests_a_negative_down_payment()
     {
-        var suggestion = DownPaymentSuggester.Suggest(totalPremium: 5_000m, installmentCount: 9);
+        var suggestion = DownPaymentSuggester.Suggest(totalReceivable: 5_000m, installmentCount: 9);
         Assert.True(suggestion >= 0);
     }
 }

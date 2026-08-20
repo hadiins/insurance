@@ -24,15 +24,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
 
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<PropertySubject> PropertySubjects => Set<PropertySubject>();
+    public DbSet<InsuranceLine> InsuranceLines => Set<InsuranceLine>();
     public DbSet<ContractTemplate> ContractTemplates => Set<ContractTemplate>();
     public DbSet<Policy> Policies => Set<Policy>();
     public DbSet<Installment> Installments => Set<Installment>();
+    public DbSet<Endorsement> Endorsements => Set<Endorsement>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<Collateral> Collaterals => Set<Collateral>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportRow> ImportRows => Set<ImportRow>();
     public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();
+
+    public DbSet<Marketer> Marketers => Set<Marketer>();
+    public DbSet<MarketerRate> MarketerRates => Set<MarketerRate>();
+    public DbSet<CommissionEntry> CommissionEntries => Set<CommissionEntry>();
+    public DbSet<RenewalWatch> RenewalWatches => Set<RenewalWatch>();
 
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<RecordPresence> RecordPresences => Set<RecordPresence>();
@@ -152,13 +160,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     {
         base.OnModelCreating(modelBuilder);
 
-        // CustomerConfiguration needs an IFieldEncryptor instance to build the NationalId value
-        // converter, so it can't be discovered via the assembly scan (which requires a
-        // parameterless constructor) — applied explicitly instead.
+        // CustomerConfiguration and MarketerConfiguration each need an IFieldEncryptor instance to
+        // build their NationalId value converter, so neither can be discovered via the assembly
+        // scan (which requires a parameterless constructor) — applied explicitly instead.
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(AppDbContext).Assembly,
-            t => t != typeof(CustomerConfiguration));
+            t => t != typeof(CustomerConfiguration) && t != typeof(MarketerConfiguration));
         modelBuilder.ApplyConfiguration(new CustomerConfiguration(fieldEncryptor));
+        modelBuilder.ApplyConfiguration(new MarketerConfiguration(fieldEncryptor));
 
         // No hard deletes anywhere (CLAUDE.md rule 7) — soft-deleted rows never come back from a
         // normal query. This is the ONLY global EF filter; AgencyId isolation is 100% DB-side RLS.

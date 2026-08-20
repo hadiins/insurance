@@ -3,6 +3,7 @@ using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Security;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aqsat.Infrastructure.Seed;
 
@@ -18,13 +19,22 @@ public static class DevSeeder
     public static async Task<(SeededAgency AgencyA, SeededAgency AgencyB)> SeedTwoAgenciesAsync(
         AppDbContext context, CancellationToken ct = default)
     {
-        var agencyA = await SeedOneAgencyAsync(context, "2491", "شیراز", ct);
-        var agencyB = await SeedOneAgencyAsync(context, "3312", "اصفهان", ct);
+        await InsuranceLineSeeder.EnsureSeededAsync(context, ct);
+        var thirdPartyLineId = await GetThirdPartyLineIdAsync(context, ct);
+
+        var agencyA = await SeedOneAgencyAsync(context, "2491", "شیراز", thirdPartyLineId, ct);
+        var agencyB = await SeedOneAgencyAsync(context, "3312", "اصفهان", thirdPartyLineId, ct);
         return (agencyA, agencyB);
     }
 
+    private static async Task<Guid> GetThirdPartyLineIdAsync(AppDbContext context, CancellationToken ct) =>
+        await context.InsuranceLines
+            .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode)
+            .Select(l => l.Id)
+            .FirstAsync(ct);
+
     private static async Task<SeededAgency> SeedOneAgencyAsync(
-        AppDbContext context, string code, string city, CancellationToken ct)
+        AppDbContext context, string code, string city, Guid insuranceLineId, CancellationToken ct)
     {
         var org = new Organization
         {
@@ -61,6 +71,7 @@ public static class DevSeeder
         {
             AgencyId = org.Id,
             PolicyNumber = $"POL-{code}-0001",
+            InsuranceLineId = insuranceLineId,
             CustomerId = customer.Id,
             VehicleId = vehicle.Id,
             ContractName = "تجارت آفرینان تسنیم",
@@ -68,7 +79,7 @@ public static class DevSeeder
             IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
             StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
             EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(1)),
-            TotalPremium = 9_000_000,
+            NetPremium = 9_000_000,
             DownPayment = 1_000_000,
             InstallmentCount = 4,
             Status = PolicyStatus.Active,

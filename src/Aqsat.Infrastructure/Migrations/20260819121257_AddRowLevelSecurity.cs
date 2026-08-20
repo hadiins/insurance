@@ -10,17 +10,20 @@ namespace Aqsat.Infrastructure.Migrations
     /// predicate function on AgencyId — not a repository Where(x => x.AgencyId == ...). If a
     /// developer forgets an application-level filter, the database still refuses cross-tenant
     /// rows. The predicate reads SESSION_CONTEXT('AgencyId'), stamped on every connection by
-    /// AgencySessionContextInterceptor.
+    /// AgencySessionContextInterceptor. InsuranceLines is deliberately excluded — it is global
+    /// reference data (docs/PHASE-1-SPEC.md §2.3), not per-agency.
     /// </summary>
     public partial class AddRowLevelSecurity : Migration
     {
-        // Every table that carries an AgencyId column (13 total): the 10 AgencyOwnedEntity
-        // tables plus AuditEntries, RecordPresences and RecordLocks, which have AgencyId without
-        // following the full Entity/AgencyOwnedEntity CLR shape.
+        // Every table that carries an AgencyId column: the AgencyOwnedEntity tables plus
+        // AuditEntries, RecordPresences and RecordLocks, which have AgencyId without following the
+        // full Entity/AgencyOwnedEntity CLR shape.
         private static readonly string[] AgencyScopedTables =
         [
-            "Customers", "Vehicles", "ContractTemplates", "Policies", "Installments",
-            "Payments", "PaymentAllocations", "Collaterals", "ImportBatches", "ImportRows",
+            "Customers", "Vehicles", "PropertySubjects", "ContractTemplates", "Policies",
+            "Installments", "Endorsements", "Payments", "PaymentAllocations", "Collaterals",
+            "ImportBatches", "ImportRows", "ImportColumnMappings",
+            "Marketers", "MarketerRates", "CommissionEntries", "RenewalWatches",
             "AuditEntries", "RecordPresences", "RecordLocks",
         ];
 

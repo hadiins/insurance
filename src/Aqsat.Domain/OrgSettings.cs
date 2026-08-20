@@ -19,5 +19,8 @@ public class OrgSettings
     public string ReminderDaysBefore { get; set; } = "7,3,0";
     public int MaxOpenTabs { get; set; } = 12;
 
+    public decimal DefaultServiceFee { get; set; }
+    public ServiceFeeMode ServiceFeeMode { get; set; } = ServiceFeeMode.Fixed;
+
     public byte[] RowVersion { get; set; } = default!;
 }

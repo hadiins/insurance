@@ -1,82 +1,189 @@
-import { ROWS } from "../../app/fakeData";
+import { useCallback, useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
-import { money } from "../../lib/persian";
+import { api, ApiError } from "../../lib/api";
+import { fa, money } from "../../lib/persian";
+import { RecordPaymentDialog } from "./RecordPaymentDialog";
 
-const PILL_CLASS: Record<string, string> = {
-  late: "bg-(--ember)/13 text-(--ember)",
-  due: "bg-(--amber)/13 text-(--amber)",
-  ok: "bg-(--mint)/12 text-(--mint)",
+interface CountdownRowDto {
+  installmentId: string;
+  policyId: string;
+  policyNumber: string;
+  customerFullName: string;
+  seqNo: number;
+  dueDate: string;
+  settlementDeadline: string;
+  amount: number;
+  paidAmount: number;
+  balance: number;
+  status: string;
+  urgency: "Overdue" | "Critical" | "Warning" | "Upcoming" | "Future";
+}
+
+interface CountdownDashboardDto {
+  owed: number;
+  collected: number;
+  shortfall: number;
+  rows: CountdownRowDto[];
+}
+
+const URGENCY_LABEL: Record<CountdownRowDto["urgency"], string> = {
+  Overdue: "معوق",
+  Critical: "بحرانی",
+  Warning: "هشدار",
+  Upcoming: "سررسید نزدیک",
+  Future: "آینده",
 };
+
+const URGENCY_PILL_CLASS: Record<CountdownRowDto["urgency"], string> = {
+  Overdue: "bg-(--ember)/13 text-(--ember)",
+  Critical: "bg-(--ember)/13 text-(--ember)",
+  Warning: "bg-(--amber)/13 text-(--amber)",
+  Upcoming: "bg-(--mint)/12 text-(--mint)",
+  Future: "bg-(--mint)/12 text-(--mint)",
+};
+
+function daysLabel(row: CountdownRowDto): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadline = new Date(row.settlementDeadline);
+  const diffDays = Math.round((deadline.getTime() - today.getTime()) / 86_400_000);
+
+  if (row.urgency === "Overdue") return `${fa(Math.abs(diffDays))} روز تأخیر`;
+  if (row.urgency === "Upcoming" || row.urgency === "Future") return `${fa(diffDays)} روز تا سررسید`;
+  return diffDays <= 0 ? "سررسید مهلت" : `${fa(diffDays)} روز مانده`;
+}
 
 export function TodayPage() {
   const openTab = useTabsStore((s) => s.openTab);
+  const [data, setData] = useState<CountdownDashboardDto | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [payingRow, setPayingRow] = useState<CountdownRowDto | null>(null);
+
+  const reload = useCallback(() => {
+    api
+      .get<CountdownDashboardDto>("/countdown")
+      .then(setData)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری اطلاعات"));
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const overdueOrCriticalCount = data?.rows.filter((r) => r.urgency === "Overdue" || r.urgency === "Critical").length ?? 0;
 
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
-        ۵ پیگیری <em className="font-extralight not-italic text-(--ice-2)">در انتظار شما</em>
+        شمارش‌معکوس <em className="font-extralight not-italic text-(--ice-2)">تسویه</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">سه‌شنبه ۱۹ مرداد ۱۴۰۵</div>
+      <div className="mb-4.5 text-xs text-(--ice-3)">اقساطی که باید ظرف مهلت مقرر به بیمه‌گر تسویه شوند</div>
 
       <div className="mb-4.5 rounded-xl border border-(--mint)/22 bg-(--mint)/7 p-4 text-[12.5px] text-(--ice-2)">
         این تب <b className="font-bold text-(--mint)">سنجاق</b> شده و بسته نمی‌شود. روی هر ردیف کلیک کنید تا در تب
         جدید باز شود — این تب دست‌نخورده می‌ماند.
       </div>
 
-      <div className="mb-4 grid grid-cols-4 gap-3">
-        <Fig label="معوق" value={money(51_200_000)} caption="۷ قسط" tone="ember" />
-        <Fig label="سررسید امروز" value={money(24_500_000)} caption="۳ قسط" tone="amber" />
-        <Fig label="وصول مرداد" value={money(142_800_000)} caption="۱۸ قسط" />
-        <Fig label="اقساطی فعال" value="۲۸" caption="از ۱۸۰" />
-      </div>
+      {error && (
+        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          {error}
+        </div>
+      )}
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                بیمه‌گذار
-              </th>
-              <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                وضعیت
-              </th>
-              <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                قسط
-              </th>
-              <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                مبلغ
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {ROWS.map((r) => (
-              <tr
-                key={r.id}
-                onClick={() =>
-                  openTab({
-                    navType: "customer-detail",
-                    page: "customer-detail",
-                    kind: "multi-record",
-                    recordId: r.id,
-                    title: `مشتری ${r.id}`,
-                    payload: r,
-                  })
-                }
-                className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
-              >
-                <td className="px-3 py-2.75 text-[13px] font-semibold">مشتری {r.id}</td>
-                <td className="px-3 py-2.75 text-[13px]">
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PILL_CLASS[r.status]}`}>
-                    {r.label}
-                  </span>
-                </td>
-                <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{r.progress}</td>
-                <td className="px-3 py-2.75 text-[13px] font-bold">{money(r.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {!error && data === null && <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>}
+
+      {!error && data !== null && (
+        <>
+          <div className="mb-4 grid grid-cols-4 gap-3">
+            <Fig label="کسری" value={money(data.shortfall)} caption="از جیب نماینده" tone="ember" />
+            <Fig
+              label="بدهی به بیمه‌گر"
+              value={money(data.owed)}
+              caption={`${fa(data.rows.length)} قسط`}
+              tone="amber"
+            />
+            <Fig label="وصول‌شده" value={money(data.collected)} caption="از همین اقساط" />
+            <Fig label="معوق/بحرانی" value={fa(overdueOrCriticalCount)} caption="نیازمند اقدام فوری" tone="ember" />
+          </div>
+
+          {data.rows.length === 0 ? (
+            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">
+              هیچ قسطی در بازهٔ فعال تسویه نیست.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                      بیمه‌گذار
+                    </th>
+                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                      وضعیت
+                    </th>
+                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                      قسط
+                    </th>
+                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                      مبلغ
+                    </th>
+                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.rows.map((r) => (
+                    <tr
+                      key={r.installmentId}
+                      onClick={() =>
+                        openTab({
+                          navType: "customer-detail",
+                          page: "customer-detail",
+                          kind: "multi-record",
+                          recordId: r.policyId,
+                          title: r.customerFullName,
+                          payload: r,
+                        })
+                      }
+                      className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
+                    >
+                      <td className="px-3 py-2.75 text-[13px] font-semibold">{r.customerFullName}</td>
+                      <td className="px-3 py-2.75 text-[13px]">
+                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${URGENCY_PILL_CLASS[r.urgency]}`}>
+                          {URGENCY_LABEL[r.urgency]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{daysLabel(r)}</td>
+                      <td className="px-3 py-2.75 text-[13px] font-bold">{money(r.balance)}</td>
+                      <td className="px-3 py-2.75 text-[13px]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPayingRow(r);
+                          }}
+                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                        >
+                          ثبت پرداخت
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {payingRow && (
+        <RecordPaymentDialog
+          installmentId={payingRow.installmentId}
+          customerFullName={payingRow.customerFullName}
+          suggestedAmount={payingRow.balance}
+          onClose={() => setPayingRow(null)}
+          onRecorded={reload}
+        />
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ public class InstallmentAmountCalculatorTests
     public void The_specs_own_worked_example_yields_nine_equal_installments()
     {
         var amounts = InstallmentAmountCalculator.CalculateAmounts(
-            totalPremium: 10_700_000m, downPayment: 1_700_000m, installmentCount: 9);
+            totalReceivable: 10_700_000m, downPayment: 1_700_000m, installmentCount: 9);
 
         Assert.Equal(9, amounts.Count);
         Assert.All(amounts, a => Assert.Equal(1_000_000m, a));
@@ -21,7 +21,7 @@ public class InstallmentAmountCalculatorTests
     {
         // financed = 1,000,000; base = floor(1,000,000 / 3) = 333,333; last = 1,000,000 - 333,333*2 = 333,334.
         var amounts = InstallmentAmountCalculator.CalculateAmounts(
-            totalPremium: 1_000_000m, downPayment: 0m, installmentCount: 3);
+            totalReceivable: 1_000_000m, downPayment: 0m, installmentCount: 3);
 
         Assert.Equal([333_333m, 333_333m, 333_334m], amounts);
         Assert.Equal(1_000_000m, amounts.Sum());
