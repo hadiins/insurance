@@ -3,7 +3,9 @@ import type { OpenTab } from "../../app/types";
 import { TodayPage } from "../today/TodayPage";
 import { NewPolicyPage } from "../policies/NewPolicyPage";
 import { InstallmentListPage } from "../installments/InstallmentListPage";
-import { CustomerDetailPage } from "../customers/CustomerDetailPage";
+import { CustomerFilePage } from "../customers/CustomerFilePage";
+import { CustomersListPage } from "../customers/CustomersListPage";
+import { PolicyFilePage } from "../policies/PolicyFilePage";
 import { FanavaranImportPage } from "../imports/FanavaranImportPage";
 import { ContractTemplatesPage } from "../imports/ContractTemplatesPage";
 import { MarketersPage } from "../marketers/MarketersPage";
@@ -22,8 +24,12 @@ function renderPage(tab: OpenTab) {
       return <NewPolicyPage />;
     case "installment-list":
       return <InstallmentListPage />;
-    case "customer-detail":
-      return <CustomerDetailPage />;
+    case "customer-file":
+      return <CustomerFilePage />;
+    case "policy-file":
+      return <PolicyFilePage />;
+    case "customers-list":
+      return <CustomersListPage />;
     case "import-fanavaran":
       return <FanavaranImportPage />;
     case "contract-templates":

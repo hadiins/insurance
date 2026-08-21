@@ -361,6 +361,56 @@ public sealed class PoliciesController(
         return (dto, null);
     }
 
+    /// <summary>
+    /// docs/TASKS.md Task 17 — the policy file: installments, endorsements, commission, and a
+    /// history tab that is a single indexed query on AuditEntry.PolicyId (CLAUDE.md rule 28).
+    /// </summary>
+    [HttpGet("{id:guid}/file")]
+    [Authorize(Policy = Permissions.PolicyRead)]
+    public async Task<ActionResult<PolicyFileDto>> File(Guid id, CancellationToken ct)
+    {
+        var policy = await dbContext.Policies.AsNoTracking()
+            .Include(p => p.InsuranceLine)
+            .Include(p => p.Customer)
+            .Include(p => p.Marketer)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        var installments = await dbContext.Installments.AsNoTracking()
+            .Where(i => i.PolicyId == id)
+            .OrderBy(i => i.SeqNo)
+            .Select(i => new PolicyInstallmentDto(i.Id, i.SeqNo, i.DueDate, i.SettlementDeadline, i.Amount, i.PaidAmount, i.Balance, i.Status.ToString()))
+            .ToListAsync(ct);
+
+        var endorsements = await dbContext.Endorsements.AsNoTracking()
+            .Where(e => e.PolicyId == id)
+            .OrderByDescending(e => e.IssueDate)
+            .Select(e => new PolicyEndorsementDto(e.Id, e.EndorsementNo, e.Type, e.IssueDate, e.PremiumDelta, e.ServiceFeeDelta, e.Description))
+            .ToListAsync(ct);
+
+        var commissions = await dbContext.CommissionEntries.AsNoTracking()
+            .Where(c => c.PolicyId == id)
+            .Include(c => c.Installment)
+            .OrderByDescending(c => c.EligibleAt)
+            .Select(c => new PolicyCommissionRowDto(c.Id, c.Installment != null ? c.Installment.SeqNo : null, c.Amount, c.Status.ToString(), c.EligibleAt, c.PaidAt))
+            .ToListAsync(ct);
+
+        var timeline = await dbContext.AuditEntries.AsNoTracking()
+            .Where(a => a.PolicyId == id)
+            .OrderByDescending(a => a.OccurredAt)
+            .Take(200)
+            .Select(a => new TimelineEntryDto(a.UserDisplayName, a.OccurredAt, a.Description))
+            .ToListAsync(ct);
+
+        return Ok(new PolicyFileDto(
+            policy.Id, policy.PolicyNumber, policy.CustomerId, policy.Customer.FullName, policy.InsuranceLine.NameFa, policy.Status.ToString(),
+            policy.NetPremium, policy.ServiceFee, policy.TotalReceivable, policy.DownPayment, policy.Marketer?.FullName,
+            installments, endorsements, commissions, timeline));
+    }
+
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {
         Status = StatusCodes.Status400BadRequest,

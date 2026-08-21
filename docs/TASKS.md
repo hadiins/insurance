@@ -237,7 +237,7 @@ policy.
 
 ---
 
-### [ ] Task 17 — Customer file & policy file (niaz #7)
+### [x] Task 17 — Customer file & policy file (niaz #7)
 
 **Customer file:** all policies across all lines, aggregate balance, full payment history,
 collateral, unified timeline.

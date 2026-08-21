@@ -170,12 +170,12 @@ export function TodayPage() {
                       key={r.installmentId}
                       onClick={() =>
                         openTab({
-                          navType: "customer-detail",
-                          page: "customer-detail",
+                          navType: "policy-file",
+                          page: "policy-file",
                           kind: "multi-record",
                           recordId: r.policyId,
-                          title: r.customerFullName,
-                          payload: r,
+                          title: r.policyNumber,
+                          payload: { policyId: r.policyId },
                         })
                       }
                       className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"

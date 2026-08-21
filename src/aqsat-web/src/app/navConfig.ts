@@ -69,7 +69,7 @@ export const NAV: NavGroup[] = [
     label: "مشتریان",
     icon: ICONS.users,
     items: [
-      { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "blank" },
+      { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "customers-list" },
       { navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "blank" },
       { navType: "customer-consents", title: "رضایت‌نامه‌های ثبت‌شده", kind: "singleton", page: "blank" },
       { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "blank" },
