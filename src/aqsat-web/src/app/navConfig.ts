@@ -36,7 +36,7 @@ export const NAV: NavGroup[] = [
       { navType: "policies-installment", title: "بیمه‌نامه‌های اقساطی", kind: "singleton", page: "blank" },
       { navType: "policies-pending", title: "در انتظار تأیید مشتری", kind: "singleton", page: "blank" },
       { navType: "policies-cancelled", title: "باطل‌شده‌ها", kind: "singleton", page: "blank" },
-      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "blank" },
+      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "renewal-watches" },
     ],
   },
   {

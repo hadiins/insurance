@@ -225,7 +225,7 @@ numbers change coherently and both are defensible.
 
 ---
 
-### [ ] Task 16 — Renewal tracking (niaz #4)
+### [x] Task 16 — Renewal tracking (niaz #4)
 
 `RenewalWatch` · walk-in prospect registration (name + mobile + current insurer + expiry +
 `NotifyDaysBefore`) · automatic watches from `Policy.EndDate` · reminder job → customer **and their

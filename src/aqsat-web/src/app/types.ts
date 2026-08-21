@@ -11,6 +11,7 @@ export type PageKind =
   | "marketer-panel"
   | "sms-reminders"
   | "pnl"
+  | "renewal-watches"
   | "blank";
 
 export interface NavItem {

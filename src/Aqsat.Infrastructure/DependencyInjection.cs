@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<DeadlineRecalculationJob>();
         services.AddScoped<PresenceAndLockSweepJob>();
         services.AddScoped<SmsReminderJob>();
+        services.AddScoped<RenewalWatchJob>();
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()

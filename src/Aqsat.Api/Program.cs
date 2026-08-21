@@ -155,6 +155,10 @@ try
             "sms-reminders",
             job => job.RunAsync(CancellationToken.None),
             Cron.Daily);
+        RecurringJob.AddOrUpdate<RenewalWatchJob>(
+            "renewal-watches",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily);
     }
 
     app.MapHealthChecks("/health", new HealthCheckOptions

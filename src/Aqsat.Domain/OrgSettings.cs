@@ -27,5 +27,10 @@ public class OrgSettings
     /// a hard-coded constant.</summary>
     public int DefaultWriteOffDays { get; set; } = 30;
 
+    /// <summary>docs/PHASE-1-SPEC.md §2.9 — how many days before a policy's own EndDate the daily
+    /// job auto-creates a RenewalWatch for it. Configurable per agency, not a hard-coded
+    /// constant.</summary>
+    public int RenewalAutoWatchLeadDays { get; set; } = 60;
+
     public byte[] RowVersion { get; set; } = default!;
 }
