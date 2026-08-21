@@ -57,10 +57,16 @@ export const NAV: NavGroup[] = [
     label: "وثیقه و چک",
     icon: ICONS.card,
     items: [
-      { navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "blank" },
-      { navType: "checks-bounced", title: "چک‌های برگشتی", kind: "singleton", page: "blank" },
-      { navType: "check-new", title: "ثبت چک صیادی", kind: "singleton", page: "blank" },
-      { navType: "promissory-notes", title: "سفته‌ها", kind: "singleton", page: "blank" },
+      {
+        navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "collateral",
+        payload: { type: "ChequeSayadi", upcomingDays: "30" },
+      },
+      {
+        navType: "checks-bounced", title: "چک‌های برگشتی", kind: "singleton", page: "collateral",
+        payload: { type: "ChequeSayadi", status: "Bounced" },
+      },
+      { navType: "check-new", title: "ثبت چک صیادی", kind: "singleton", page: "collateral", payload: { type: "ChequeSayadi" } },
+      { navType: "promissory-notes", title: "سفته‌ها", kind: "singleton", page: "collateral", payload: { type: "PromissoryNote" } },
       { navType: "legal-notice", title: "اظهارنامه و پیگیری حقوقی", kind: "singleton", page: "blank" },
     ],
   },
@@ -103,11 +109,11 @@ export const NAV: NavGroup[] = [
     items: [
       { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl" },
       { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
-      { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "blank" },
-      { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "blank" },
-      { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "blank" },
+      { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report" },
+      { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "collections-report" },
+      { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "collections-report" },
       { navType: "reports-network-compare", title: "مقایسه با میانگین شبکه", kind: "singleton", page: "blank" },
-      { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "blank" },
+      { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "collections-report" },
     ],
   },
   {

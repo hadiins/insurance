@@ -13,6 +13,8 @@ import { MarketerPanelPage } from "../marketers/MarketerPanelPage";
 import { SmsReminderPage } from "../sms/SmsReminderPage";
 import { PnlPage } from "../reports/PnlPage";
 import { RenewalWatchesPage } from "../renewals/RenewalWatchesPage";
+import { CollateralPage } from "../collateral/CollateralPage";
+import { CollectionsReportPage } from "../reports/CollectionsReportPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
 
@@ -44,6 +46,10 @@ function renderPage(tab: OpenTab) {
       return <PnlPage />;
     case "renewal-watches":
       return <RenewalWatchesPage />;
+    case "collateral":
+      return <CollateralPage />;
+    case "collections-report":
+      return <CollectionsReportPage />;
     case "blank":
     default:
       return <BlankPage title={tab.title} />;

@@ -14,6 +14,8 @@ export type PageKind =
   | "sms-reminders"
   | "pnl"
   | "renewal-watches"
+  | "collateral"
+  | "collections-report"
   | "blank";
 
 export interface NavItem {
@@ -22,6 +24,7 @@ export interface NavItem {
   kind: TabKind;
   page: PageKind;
   pinned?: boolean;
+  payload?: unknown;
 }
 
 export interface NavGroup {

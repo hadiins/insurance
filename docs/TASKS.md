@@ -249,7 +249,7 @@ collateral, unified timeline.
 
 ## Milestone 4 — Ship (Tasks 18–20)
 
-### [ ] Task 18 — Reports & cheques
+### [x] Task 18 — Reports & cheques
 Filtered reports with server-side paging and xlsx export, read from a view or Hangfire-populated
 reporting table — **never a heavy join on live operational tables**. Try
 `READ COMMITTED SNAPSHOT` and measure before building a reporting table.

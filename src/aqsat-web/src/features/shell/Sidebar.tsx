@@ -44,6 +44,7 @@ export function Sidebar() {
       kind: item.kind,
       title: item.title,
       pinned: item.pinned,
+      payload: item.payload,
     });
   }
 
