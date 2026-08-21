@@ -223,7 +223,22 @@ export function CollateralPage() {
         >
           فقط پیشِ رو (۳۰ روز)
         </button>
+        {(typeFilter || statusFilter || upcomingOnly) && (
+          <button
+            type="button"
+            onClick={() => {
+              setTypeFilter("");
+              setStatusFilter("");
+              setUpcomingOnly(false);
+            }}
+            className="rounded-full px-3 py-1 text-[11.5px] text-(--ice-3) underline underline-offset-2 transition-colors hover:text-(--ice)"
+          >
+            پاک‌کردن فیلترها
+          </button>
+        )}
       </div>
+
+      {items !== null && <div className="mb-2 text-[11px] text-(--ice-3)">{fa(items.length)} مورد</div>}
 
       {items === null ? (
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>

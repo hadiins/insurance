@@ -10,9 +10,11 @@ using Aqsat.Infrastructure.Jobs;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Threading.RateLimiting;
 
 const string ViteDevCorsPolicy = "ViteDev";
 
@@ -20,7 +22,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/aqsat-api-.log", rollingInterval: RollingInterval.Day)
+    .WriteTo.File("logs/aqsat-api-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30)
     .CreateBootstrapLogger();
 
 try
@@ -47,7 +49,7 @@ try
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .WriteTo.Console()
-        .WriteTo.File("logs/aqsat-api-.log", rollingInterval: RollingInterval.Day));
+        .WriteTo.File("logs/aqsat-api-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30));
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
@@ -109,6 +111,33 @@ try
 
     builder.Services.AddHealthChecks();
 
+    // docs/TASKS.md Task 19 — hardening. Global per-IP window protects the whole API from a runaway
+    // client or scraper; "login" is far tighter since it's the one unauthenticated, password-
+    // checking endpoint and the obvious brute-force target. Effectively unlimited under the test
+    // host — WebApplicationFactory tests call /api/auth/login dozens of times from the same
+    // in-memory "IP" across one process, which a real per-IP window would throttle into failures.
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = isTestHost ? int.MaxValue : 300,
+                    Window = TimeSpan.FromMinutes(1),
+                }));
+
+        options.AddPolicy("login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = isTestHost ? int.MaxValue : 10,
+                Window = TimeSpan.FromMinutes(1),
+            }));
+    });
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy(ViteDevCorsPolicy, policy => policy
@@ -132,6 +161,8 @@ try
 
     app.UseCors(ViteDevCorsPolicy);
 
+    app.UseRateLimiter();
+
     app.UseAuthentication();
     app.UseMiddleware<ScopeResolutionMiddleware>();
     app.UseAuthorization();
@@ -143,22 +174,38 @@ try
     {
         // Dashboard defaults to local-requests-only authorization — no extra filter needed for Phase 1.
         app.UseHangfireDashboard();
-        RecurringJob.AddOrUpdate<DeadlineRecalculationJob>(
-            "settlement-deadline-recalculation",
-            job => job.RecalculateAsync(CancellationToken.None),
-            Cron.Daily);
-        RecurringJob.AddOrUpdate<PresenceAndLockSweepJob>(
-            "presence-and-lock-sweep",
-            job => job.SweepAsync(CancellationToken.None),
-            "*/2 * * * *");
-        RecurringJob.AddOrUpdate<SmsReminderJob>(
-            "sms-reminders",
-            job => job.RunAsync(CancellationToken.None),
-            Cron.Daily);
-        RecurringJob.AddOrUpdate<RenewalWatchJob>(
-            "renewal-watches",
-            job => job.RunAsync(CancellationToken.None),
-            Cron.Daily);
+
+        // docs/TASKS.md Task 19 — hardening. Registering recurring jobs acquires a distributed lock
+        // over a real DB connection, synchronously, during startup. If the database happens to be
+        // unreachable at that exact moment (a slow-starting DB container, a transient network blip),
+        // an unhandled SqlException here previously crashed the ENTIRE process before it ever bound
+        // its port — every request would fail, not just the DB-dependent ones, and health checks
+        // couldn't even report "unhealthy" because nothing was listening. Recurring-job registration
+        // is idempotent (Hangfire just re-upserts the same schedule), so it's safe to log and move on
+        // — the API still starts and serves what it can; Hangfire's own server retries independently.
+        try
+        {
+            RecurringJob.AddOrUpdate<DeadlineRecalculationJob>(
+                "settlement-deadline-recalculation",
+                job => job.RecalculateAsync(CancellationToken.None),
+                Cron.Daily);
+            RecurringJob.AddOrUpdate<PresenceAndLockSweepJob>(
+                "presence-and-lock-sweep",
+                job => job.SweepAsync(CancellationToken.None),
+                "*/2 * * * *");
+            RecurringJob.AddOrUpdate<SmsReminderJob>(
+                "sms-reminders",
+                job => job.RunAsync(CancellationToken.None),
+                Cron.Daily);
+            RecurringJob.AddOrUpdate<RenewalWatchJob>(
+                "renewal-watches",
+                job => job.RunAsync(CancellationToken.None),
+                Cron.Daily);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to register Hangfire recurring jobs at startup — the database may be unreachable. The API will continue starting.");
+        }
     }
 
     app.MapHealthChecks("/health", new HealthCheckOptions

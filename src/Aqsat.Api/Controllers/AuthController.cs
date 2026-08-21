@@ -4,6 +4,7 @@ using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aqsat.Api.Controllers;
@@ -16,8 +17,11 @@ public sealed class AuthController(
     JwtTokenService tokenService,
     ICurrentUserContext currentUser) : ControllerBase
 {
+    /// <summary>docs/TASKS.md Task 19 — the one unauthenticated, password-checking endpoint is the
+    /// obvious brute-force target, so it gets its own tighter limit on top of the API-wide one.</summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("login")]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Mobile) || string.IsNullOrWhiteSpace(request.Password))

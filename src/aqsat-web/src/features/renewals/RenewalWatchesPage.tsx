@@ -204,6 +204,8 @@ export function RenewalWatchesPage() {
         ))}
       </div>
 
+      {watches !== null && <div className="mb-2 text-[11px] text-(--ice-3)">{fa(watches.length)} مورد</div>}
+
       {watches === null ? (
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : watches.length === 0 ? (

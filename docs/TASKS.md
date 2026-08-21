@@ -255,7 +255,7 @@ reporting table — **never a heavy join on live operational tables**. Try
 `READ COMMITTED SNAPSHOT` and measure before building a reporting table.
 Cheque registration, status lifecycle, upcoming view, `ChequeColor` (cached 30 days).
 
-### [ ] Task 19 — Hardening
+### [x] Task 19 — Hardening
 Loading/empty/error on every list · clear-filter control on every filter · total count always shown
 · invalid scope throws rather than returning empty · structured errors · rate limiting · Serilog
 with rotation.

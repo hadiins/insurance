@@ -110,7 +110,7 @@ export function MarketersPage() {
         effectiveFrom: new Date().toISOString().slice(0, 10),
       });
       setNewRatePercent("");
-      api.get<MarketerRateDto[]>(`/marketers/${selected.id}/rates`).then(setRates);
+      api.get<MarketerRateDto[]>(`/marketers/${selected.id}/rates`).then(setRates).catch(() => {});
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت نرخ ناموفق بود.");
     }
@@ -123,7 +123,7 @@ export function MarketersPage() {
     setError(null);
     try {
       await api.post(`/marketers/${selected.id}/commissions/pay`, { commissionEntryIds: payableIds });
-      api.get<CommissionSummaryDto>(`/marketers/${selected.id}/commissions`).then(setCommissions);
+      api.get<CommissionSummaryDto>(`/marketers/${selected.id}/commissions`).then(setCommissions).catch(() => {});
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "پرداخت پورسانت ناموفق بود.");
     }
