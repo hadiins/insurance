@@ -42,6 +42,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<CommissionEntry> CommissionEntries => Set<CommissionEntry>();
     public DbSet<RenewalWatch> RenewalWatches => Set<RenewalWatch>();
 
+    public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
+    public DbSet<ApiIrCallLog> ApiIrCallLogs => Set<ApiIrCallLog>();
+
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<RecordPresence> RecordPresences => Set<RecordPresence>();
     public DbSet<RecordLock> RecordLocks => Set<RecordLock>();

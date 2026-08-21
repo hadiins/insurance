@@ -61,10 +61,25 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
         foreach (var allocation in payment.Allocations)
         {
             var installment = allocation.Installment;
+            var wasSettled = installment.Status == InstallmentStatus.Settled;
             installment.PaidAmount -= allocation.Amount;
             installment.Status = RecomputeStatus(installment.PaidAmount, installment.Amount);
             allocation.IsDeleted = true;
             allocation.DeletedAt = occurredAt;
+
+            // docs/TASKS.md Task 13 — undoing the settlement that made a commission slice payable
+            // must undo the activation too. This is not the "no clawback" case (rule: a customer
+            // who simply stops paying never triggers this) — it is unwinding our own mistaken entry.
+            if (wasSettled && installment.Status != InstallmentStatus.Settled)
+            {
+                var commissionEntry = await dbContext.CommissionEntries
+                    .FirstOrDefaultAsync(c => c.InstallmentId == installment.Id, ct);
+                if (commissionEntry is { Status: CommissionStatus.Payable })
+                {
+                    commissionEntry.Status = CommissionStatus.Pending;
+                    commissionEntry.EligibleAt = null;
+                }
+            }
 
             dbContext.AuditEntries.Add(new AuditEntry
             {
@@ -165,6 +180,20 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             var installment = installmentsById[installmentId];
             installment.PaidAmount += amount;
             installment.Status = RecomputeStatus(installment.PaidAmount, installment.Amount);
+
+            // docs/TASKS.md Task 13 — full settlement flips this installment's commission slice to
+            // payable (docs/PHASE-1-SPEC.md §3.4). `unsettled` was queried as Status != Settled, so
+            // reaching Settled here is always a fresh transition, never a re-trigger.
+            if (installment.Status == InstallmentStatus.Settled)
+            {
+                var commissionEntry = await dbContext.CommissionEntries
+                    .FirstOrDefaultAsync(c => c.InstallmentId == installmentId, ct);
+                if (commissionEntry is { Status: CommissionStatus.Pending })
+                {
+                    commissionEntry.Status = CommissionStatus.Payable;
+                    commissionEntry.EligibleAt = occurredAt;
+                }
+            }
 
             dbContext.PaymentAllocations.Add(new PaymentAllocation
             {

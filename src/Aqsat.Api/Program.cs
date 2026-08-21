@@ -132,6 +132,10 @@ try
         "presence-and-lock-sweep",
         job => job.SweepAsync(CancellationToken.None),
         "*/2 * * * *");
+    RecurringJob.AddOrUpdate<SmsReminderJob>(
+        "sms-reminders",
+        job => job.RunAsync(CancellationToken.None),
+        Cron.Daily);
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {

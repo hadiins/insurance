@@ -184,7 +184,7 @@ name. Force-release notifies the holder immediately and **their unsaved input su
 
 ## Milestone 3 — What agents asked for (Tasks 13–17)
 
-### [ ] Task 13 — Marketers & commission ⭐
+### [x] Task 13 — Marketers & commission ⭐
 
 `Marketer` + `MarketerRate` per line · commission generation at issuance per 3.5 ·
 **down-payment slice payable immediately** · per-installment slices pending until settled ·
@@ -200,7 +200,7 @@ proportional on partial default, **no clawback** · payment batches · marketer 
 
 ---
 
-### [ ] Task 14 — api.ir client + SMS
+### [x] Task 14 — api.ir client + SMS
 
 Typed client · shared envelope with `success` checked · per-service caching · retry with backoff ·
 circuit breaker · cost logging · **Sandbox by default, paid endpoints behind an explicit flag**.

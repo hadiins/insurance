@@ -82,9 +82,18 @@ export const NAV: NavGroup[] = [
     items: [
       { navType: "sms-outbox", title: "صندوق ارسال", kind: "singleton", page: "blank" },
       { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "blank" },
-      { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "blank" },
+      { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "sms-reminders" },
       { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "blank" },
       { navType: "sms-credit", title: "اعتبار پنل", kind: "singleton", page: "blank" },
+    ],
+  },
+  {
+    id: "marketers",
+    label: "بازاریاب‌ها",
+    icon: ICONS.users,
+    items: [
+      { navType: "marketers-manage", title: "بازاریاب‌ها و پورسانت", kind: "singleton", page: "marketers" },
+      { navType: "marketer-panel", title: "پنل بازاریاب", kind: "singleton", page: "marketer-panel" },
     ],
   },
   {

@@ -6,6 +6,9 @@ import { InstallmentListPage } from "../installments/InstallmentListPage";
 import { CustomerDetailPage } from "../customers/CustomerDetailPage";
 import { FanavaranImportPage } from "../imports/FanavaranImportPage";
 import { ContractTemplatesPage } from "../imports/ContractTemplatesPage";
+import { MarketersPage } from "../marketers/MarketersPage";
+import { MarketerPanelPage } from "../marketers/MarketerPanelPage";
+import { SmsReminderPage } from "../sms/SmsReminderPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
 
@@ -23,6 +26,12 @@ function renderPage(tab: OpenTab) {
       return <FanavaranImportPage />;
     case "contract-templates":
       return <ContractTemplatesPage />;
+    case "marketers":
+      return <MarketersPage />;
+    case "marketer-panel":
+      return <MarketerPanelPage />;
+    case "sms-reminders":
+      return <SmsReminderPage />;
     case "blank":
     default:
       return <BlankPage title={tab.title} />;

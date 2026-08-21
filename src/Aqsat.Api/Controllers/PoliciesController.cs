@@ -1,5 +1,6 @@
 using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Application.Commission;
 using Aqsat.Application.Common;
 using Aqsat.Application.Schedule;
 using Aqsat.Domain;
@@ -296,6 +297,36 @@ public sealed class PoliciesController(
         policy.DownPayment = downPayment;
         policy.InstallmentCount = installmentCount;
         await dbContext.SaveChangesAsync(ct);
+
+        // docs/TASKS.md Task 13 — generation happens here, not at issuance, because it needs the
+        // actual per-installment amounts the schedule just produced. Only runs when a marketer and
+        // a locked-in rate were captured at issuance (Task 6); otherwise this policy simply has no
+        // commission entries, same as before Task 13 existed.
+        if (policy.MarketerId is { } marketerId && policy.MarketerRatePercent is { } ratePercent)
+        {
+            var slices = CommissionGenerator.Generate(
+                policy.NetPremium, ratePercent, policy.TotalReceivable, downPayment,
+                installments.Select(i => (i.Id, i.Amount)).ToList());
+
+            var now = DateTimeOffset.UtcNow;
+            foreach (var slice in slices)
+            {
+                dbContext.CommissionEntries.Add(new CommissionEntry
+                {
+                    AgencyId = policy.AgencyId,
+                    MarketerId = marketerId,
+                    PolicyId = policy.Id,
+                    InstallmentId = slice.InstallmentId,
+                    BasePortion = slice.BasePortion,
+                    RatePercent = ratePercent,
+                    Amount = slice.Amount,
+                    Status = slice.PayableImmediately ? CommissionStatus.Payable : CommissionStatus.Pending,
+                    EligibleAt = slice.PayableImmediately ? now : null,
+                });
+            }
+
+            await dbContext.SaveChangesAsync(ct);
+        }
 
         var dto = new ScheduleResultDto(
             policy.Id,

@@ -7,6 +7,9 @@ export type PageKind =
   | "customer-detail"
   | "import-fanavaran"
   | "contract-templates"
+  | "marketers"
+  | "marketer-panel"
+  | "sms-reminders"
   | "blank";
 
 export interface NavItem {
