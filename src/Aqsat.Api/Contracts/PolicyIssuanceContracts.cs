@@ -29,6 +29,9 @@ public sealed record CreatePolicyRequest(
     decimal ServiceFee,
     Guid? MarketerId,
     string? PreviousInsurer,
-    bool IsRenewal);
+    bool IsRenewal,
+    /// <summary>What the insurer pays the agency — docs/TASKS.md Task 15's P&amp;L income line.
+    /// Optional: a policy can be issued before this rate is known and backfilled later.</summary>
+    decimal? AgencyCommissionPercent = null);
 
 public sealed record CreatePolicyResultDto(Guid PolicyId, string PolicyNumber, Guid CustomerId);

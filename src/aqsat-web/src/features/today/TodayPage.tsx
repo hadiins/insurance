@@ -53,11 +53,18 @@ function daysLabel(row: CountdownRowDto): string {
   return diffDays <= 0 ? "سررسید مهلت" : `${fa(diffDays)} روز مانده`;
 }
 
+interface PnlSummaryDto {
+  totalIncome: number;
+  totalExpense: number;
+  netProfit: number;
+}
+
 export function TodayPage() {
   const openTab = useTabsStore((s) => s.openTab);
   const [data, setData] = useState<CountdownDashboardDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payingRow, setPayingRow] = useState<CountdownRowDto | null>(null);
+  const [pnl, setPnl] = useState<PnlSummaryDto | null>(null);
 
   const reload = useCallback(() => {
     api
@@ -69,6 +76,16 @@ export function TodayPage() {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const to = now.toISOString().slice(0, 10);
+    api
+      .get<PnlSummaryDto>(`/reports/pnl?from=${from}&to=${to}&basis=Accrual`)
+      .then(setPnl)
+      .catch(() => setPnl(null));
+  }, []);
 
   const overdueOrCriticalCount = data?.rows.filter((r) => r.urgency === "Overdue" || r.urgency === "Critical").length ?? 0;
 
@@ -87,6 +104,23 @@ export function TodayPage() {
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
+        </div>
+      )}
+
+      {pnl !== null && (
+        <div
+          onClick={() =>
+            openTab({ navType: "reports-pnl", page: "pnl", kind: "singleton", title: "سود و زیان" })
+          }
+          className="mb-4.5 flex cursor-pointer items-center justify-between rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 transition-colors hover:bg-(--hov)"
+        >
+          <div>
+            <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">سود و زیان این ماه (تعهدی)</div>
+            <div className={`text-[19px] font-extrabold ${pnl.netProfit >= 0 ? "text-(--mint)" : "text-(--ember)"}`}>
+              {money(pnl.netProfit)}
+            </div>
+          </div>
+          <div className="text-[11px] text-(--ice-3)">مشاهدهٔ گزارش کامل ←</div>
         </div>
       )}
 

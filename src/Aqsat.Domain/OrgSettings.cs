@@ -22,5 +22,10 @@ public class OrgSettings
     public decimal DefaultServiceFee { get; set; }
     public ServiceFeeMode ServiceFeeMode { get; set; } = ServiceFeeMode.Fixed;
 
+    /// <summary>docs/PHASE-1-SPEC.md §3.6 — after this many days overdue, an installment's unpaid
+    /// balance counts as "سوخت نکول" (default write-off) in the P&amp;L. Configurable per agency, not
+    /// a hard-coded constant.</summary>
+    public int DefaultWriteOffDays { get; set; } = 30;
+
     public byte[] RowVersion { get; set; } = default!;
 }

@@ -10,6 +10,7 @@ export type PageKind =
   | "marketers"
   | "marketer-panel"
   | "sms-reminders"
+  | "pnl"
   | "blank";
 
 export interface NavItem {

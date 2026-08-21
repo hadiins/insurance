@@ -21,7 +21,8 @@ namespace Aqsat.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration configuration, bool enableHangfireServer = true)
     {
         services.AddSingleton<AgencySessionContextInterceptor>();
         services.AddScoped<ICurrentAgencyAccessor, AgencyContextAccessor>();
@@ -67,7 +68,14 @@ public static class DependencyInjection
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings()
             .UseSqlServerStorage(configuration.GetConnectionString("Default")));
-        services.AddHangfireServer();
+
+        // The worker that actually executes jobs. Skipped under the test host — recurring jobs
+        // iterate every agency on a real timer and would write to the same shared LocalDB that test
+        // fixtures use, corrupting unrelated tests' freshly-seeded data.
+        if (enableHangfireServer)
+        {
+            services.AddHangfireServer();
+        }
 
         return services;
     }

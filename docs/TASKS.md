@@ -215,7 +215,7 @@ pre-scheduled — fix it.
 
 ---
 
-### [ ] Task 15 — Profit & loss ⭐ TOP-RANKED BY AGENTS
+### [x] Task 15 — Profit & loss ⭐ TOP-RANKED BY AGENTS
 
 Report per 3.6 · **accrual/cash toggle** · configurable default write-off threshold · breakdown by
 line, marketer, month · period comparison · dashboard summary card · xlsx export.

@@ -9,6 +9,7 @@ import { ContractTemplatesPage } from "../imports/ContractTemplatesPage";
 import { MarketersPage } from "../marketers/MarketersPage";
 import { MarketerPanelPage } from "../marketers/MarketerPanelPage";
 import { SmsReminderPage } from "../sms/SmsReminderPage";
+import { PnlPage } from "../reports/PnlPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
 
@@ -32,6 +33,8 @@ function renderPage(tab: OpenTab) {
       return <MarketerPanelPage />;
     case "sms-reminders":
       return <SmsReminderPage />;
+    case "pnl":
+      return <PnlPage />;
     case "blank":
     default:
       return <BlankPage title={tab.title} />;

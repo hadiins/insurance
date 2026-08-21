@@ -101,6 +101,7 @@ export const NAV: NavGroup[] = [
     label: "گزارش‌ها",
     icon: ICONS.chart,
     items: [
+      { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl" },
       { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
       { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "blank" },
       { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "blank" },

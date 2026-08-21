@@ -175,11 +175,36 @@ public sealed class PoliciesController(
             MarketerRatePercent = marketerRatePercent,
             PreviousInsurer = request.PreviousInsurer,
             IsRenewal = request.IsRenewal,
+            AgencyCommissionPercent = request.AgencyCommissionPercent,
+            AgencyCommissionAmount = request.AgencyCommissionPercent is { } pct ? request.NetPremium * pct / 100m : null,
         };
         dbContext.Policies.Add(policy);
         await dbContext.SaveChangesAsync(ct);
 
         return Ok(new CreatePolicyResultDto(policy.Id, policy.PolicyNumber, customerId));
+    }
+
+    /// <summary>Backfills the insurer's commission rate for a policy issued before it was known —
+    /// docs/TASKS.md Task 15's P&amp;L income line depends on this being set.</summary>
+    [HttpPut("{id:guid}/agency-commission")]
+    public async Task<ActionResult> SetAgencyCommission(Guid id, [FromBody] decimal agencyCommissionPercent, CancellationToken ct)
+    {
+        if (agencyCommissionPercent <= 0)
+        {
+            return ValidationProblem("درصد کارمزد باید مثبت باشد.");
+        }
+
+        var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        policy.AgencyCommissionPercent = agencyCommissionPercent;
+        policy.AgencyCommissionAmount = policy.NetPremium * agencyCommissionPercent / 100m;
+        await dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
     }
 
     private static bool IsEmptyVehicle(VehicleInput? vehicle) =>

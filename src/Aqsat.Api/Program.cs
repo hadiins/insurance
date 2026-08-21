@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Reflection;
 using System.Text;
 using Aqsat.Api.Hubs;
 using Aqsat.Api.Middleware;
@@ -23,6 +25,21 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    // CLAUDE.md's UI rule ("Latin digits in inputs and API payloads") only holds if the process
+    // itself parses/formats that way. On a Persian-locale host — this app's actual deployment
+    // target — the OS default culture uses the Persian calendar, so an unqualified DateOnly/decimal
+    // ToString or [FromQuery] bind silently produces or expects Jalali digits instead of ISO/Latin
+    // ones. Forcing invariant culture process-wide is what makes every query-string date filter
+    // (e.g. /api/reports/pnl?from=&to=) behave the same regardless of the server's OS locale.
+    CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+    CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
+    // dotnet test hosts the app in-process via WebApplicationFactory, which never sets a distinct
+    // environment name for it — the entry assembly is the only reliable signal. Hangfire's recurring
+    // jobs iterate every agency and write to the DB on a real timer, which would otherwise run
+    // against the same shared LocalDB that test fixtures write to.
+    var isTestHost = Assembly.GetEntryAssembly()?.GetName().Name == "testhost";
+
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -39,7 +56,7 @@ try
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
 
-    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration, enableHangfireServer: !isTestHost);
 
     var jwtSection = builder.Configuration.GetSection("Jwt");
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -122,20 +139,23 @@ try
     app.MapControllers();
     app.MapHub<PresenceHub>("/hubs/presence");
 
-    // Dashboard defaults to local-requests-only authorization — no extra filter needed for Phase 1.
-    app.UseHangfireDashboard();
-    RecurringJob.AddOrUpdate<DeadlineRecalculationJob>(
-        "settlement-deadline-recalculation",
-        job => job.RecalculateAsync(CancellationToken.None),
-        Cron.Daily);
-    RecurringJob.AddOrUpdate<PresenceAndLockSweepJob>(
-        "presence-and-lock-sweep",
-        job => job.SweepAsync(CancellationToken.None),
-        "*/2 * * * *");
-    RecurringJob.AddOrUpdate<SmsReminderJob>(
-        "sms-reminders",
-        job => job.RunAsync(CancellationToken.None),
-        Cron.Daily);
+    if (!isTestHost)
+    {
+        // Dashboard defaults to local-requests-only authorization — no extra filter needed for Phase 1.
+        app.UseHangfireDashboard();
+        RecurringJob.AddOrUpdate<DeadlineRecalculationJob>(
+            "settlement-deadline-recalculation",
+            job => job.RecalculateAsync(CancellationToken.None),
+            Cron.Daily);
+        RecurringJob.AddOrUpdate<PresenceAndLockSweepJob>(
+            "presence-and-lock-sweep",
+            job => job.SweepAsync(CancellationToken.None),
+            "*/2 * * * *");
+        RecurringJob.AddOrUpdate<SmsReminderJob>(
+            "sms-reminders",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily);
+    }
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
