@@ -30,6 +30,7 @@ public sealed class PlatformUpdatesController(
     IMaintenanceModeService maintenanceMode,
     IHubContext<PlatformHub> hub,
     IServiceScopeFactory scopeFactory,
+    IPackageSignatureVerifier signatureVerifier,
     IConfiguration configuration) : ControllerBase
 {
     [HttpGet("status")]
@@ -49,6 +50,61 @@ public sealed class PlatformUpdatesController(
             .ToListAsync(ct);
 
         return Ok(packages);
+    }
+
+    /// <summary>docs/TASKS.md Task 23 — called by scripts/release/register-package.sh. Not gated
+    /// by OTP (rule 2 only requires it for actually starting an update against production) — this
+    /// is a catalog write, run by CI/CD under its own Platform.Owner-authenticated credential, not
+    /// an interactive action against a live agency.</summary>
+    [HttpPost("register")]
+    public async Task<ActionResult<UpdatePackageDto>> Register(RegisterPackageRequest request, CancellationToken ct)
+    {
+        if (!signatureVerifier.Verify(request.Version, request.ImageTag, request.Sha256, request.SignatureBase64))
+        {
+            return ValidationProblem("امضای بسته نامعتبر است — بستهٔ ثبت نشد.");
+        }
+
+        var alreadyExists = await dbContext.UpdatePackages.AsNoTracking().AnyAsync(p => p.Version == request.Version, ct);
+        if (alreadyExists)
+        {
+            return ValidationProblem($"نسخهٔ {request.Version} قبلاً ثبت شده است.");
+        }
+
+        var package = new UpdatePackage
+        {
+            Version = request.Version,
+            ImageTag = request.ImageTag,
+            Sha256 = request.Sha256,
+            SignatureBase64 = request.SignatureBase64,
+            ReleaseNotesFa = request.ReleaseNotesFa,
+            MinimumFromVersion = request.MinimumFromVersion,
+            HasDbMigration = request.HasDbMigration,
+            IsSecurityUpdate = request.IsSecurityUpdate,
+            PublishedAt = DateTimeOffset.UtcNow,
+            IsYanked = false,
+        };
+        dbContext.UpdatePackages.Add(package);
+        await dbContext.SaveChangesAsync(ct);
+
+        return Ok(new UpdatePackageDto(package.Id, package.Version, package.ReleaseNotesFa, package.HasDbMigration, package.IsSecurityUpdate, package.PublishedAt));
+    }
+
+    /// <summary>docs/UPDATE-SYSTEM.md §8: "if a version turns out broken, flip IsYanked so it's
+    /// never offered to anyone else again." Never deletes the row — the audit trail of "this
+    /// version existed and was pulled" is itself useful, and any UpdateRun that already applied it
+    /// still needs a real FK target.</summary>
+    [HttpPost("packages/{packageId:guid}/yank")]
+    public async Task<ActionResult> Yank(Guid packageId, CancellationToken ct)
+    {
+        var package = await dbContext.UpdatePackages.FirstOrDefaultAsync(p => p.Id == packageId, ct);
+        if (package is null)
+        {
+            return NotFound();
+        }
+
+        package.IsYanked = true;
+        await dbContext.SaveChangesAsync(ct);
+        return Ok();
     }
 
     [HttpPost("otp")]

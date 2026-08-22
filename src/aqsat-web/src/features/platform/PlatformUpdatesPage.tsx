@@ -141,6 +141,16 @@ export function PlatformUpdatesPage() {
     }
   }
 
+  async function yankPackage(pkg: UpdatePackageDto) {
+    setError(null);
+    try {
+      await api.post(`/platform/updates/packages/${pkg.id}/yank`, {});
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "لغو نسخه ناموفق بود.");
+    }
+  }
+
   async function rollback() {
     if (!rollbackImageTag.trim()) return;
     setBusy(true);
@@ -248,14 +258,23 @@ export function PlatformUpdatesPage() {
                   </div>
                 </div>
                 <div className="mb-3 whitespace-pre-line text-[12px] text-(--ice-3)">{pkg.releaseNotesFa}</div>
-                <button
-                  type="button"
-                  disabled={Boolean(displayedRun && displayedRun.status === "Running")}
-                  onClick={() => requestOtp(pkg)}
-                  className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  اجرای به‌روزرسانی
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={Boolean(displayedRun && displayedRun.status === "Running")}
+                    onClick={() => requestOtp(pkg)}
+                    className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    اجرای به‌روزرسانی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => yankPackage(pkg)}
+                    className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[12px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                  >
+                    لغو این نسخه
+                  </button>
+                </div>
               </div>
             ))}
           </div>

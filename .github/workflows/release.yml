@@ -1,0 +1,78 @@
+# docs/TASKS.md Task 23 — automates docs/RELEASE-RUNBOOK.md's steps 1-4 (test, build+push, sign,
+# register). Triggered by pushing a tag like "v1.5.0". Deliberately stops at registration, not
+# rollout: applying a registered package to any given environment stays a deliberate, in-panel,
+# OTP-confirmed action a Platform.Owner takes (docs/UPDATE-SYSTEM.md §9's "no automatic update
+# without a human confirming"), never something CI does on its own.
+#
+# Requires these repository secrets before this workflow can actually run end-to-end:
+#   REGISTRY               e.g. registry.example.ir
+#   REGISTRY_USERNAME / REGISTRY_PASSWORD
+#   RELEASE_SIGNING_KEY     the private half from scripts/release/generate-signing-key.sh
+#   STAGING_API_BASE_URL    e.g. https://staging.example.ir
+#   PLATFORM_OWNER_MOBILE / PLATFORM_OWNER_PASSWORD   a Platform.Owner account on staging
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj
+
+  build-sign-register:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to registry
+        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "${{ secrets.REGISTRY }}" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+      - name: Build and push
+        id: image
+        run: |
+          set -euo pipefail
+          image_tag="${{ secrets.REGISTRY }}/aqsat-api:${{ steps.version.outputs.version }}"
+          docker build -f src/Aqsat.Api/Dockerfile -t "$image_tag" .
+          docker push "$image_tag"
+          sha256=$(docker inspect --format='{{index .RepoDigests 0}}' "$image_tag" | sed 's/^[^@]*@//')
+          echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Sign
+        run: |
+          echo "${{ secrets.RELEASE_SIGNING_KEY }}" > /tmp/release-signing-key.pem
+          chmod 600 /tmp/release-signing-key.pem
+          scripts/release/sign-package.sh \
+            "${{ steps.version.outputs.version }}" \
+            "${{ steps.image.outputs.image_tag }}" \
+            "${{ steps.image.outputs.sha256 }}" \
+            /tmp/release-signing-key.pem \
+            > /tmp/manifest.json
+          rm -f /tmp/release-signing-key.pem
+
+      - name: Register with staging
+        run: |
+          set -euo pipefail
+          token=$(curl -sf -X POST "${{ secrets.STAGING_API_BASE_URL }}/api/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"mobile\":\"${{ secrets.PLATFORM_OWNER_MOBILE }}\",\"password\":\"${{ secrets.PLATFORM_OWNER_PASSWORD }}\"}" \
+            | jq -r .token)
+          scripts/release/register-package.sh \
+            "${{ secrets.STAGING_API_BASE_URL }}" "$token" /tmp/manifest.json \
+            "Released from ${{ github.ref_name }}"
+
+      # Deliberately no further step here — see docs/RELEASE-RUNBOOK.md §5 for the staged-rollout
+      # procedure a Platform.Owner runs by hand from the panel, one environment at a time.

@@ -117,9 +117,11 @@ only to users whose role carries `Platform.Owner`, which nothing seeds by defaul
 (`DevSeeder`'s test fixture grants it purely for exercising these endpoints in tests). It's the only
 part of the main app that talks to `updater` at all, over plain HTTP with the same shared token.
 
-`UpdatePackage` rows (the catalog of what a Platform.Owner can even see to install) are not
-populated by anything yet — Task 23, the signed release pipeline that would build, sign, and
-register them, is not built. Until then, insert one manually to test the panel end-to-end.
+`UpdatePackage` rows come from `scripts/release/` — build, sign, and register a release with
+`docs/RELEASE-RUNBOOK.md`'s procedure (also `POST /api/platform/updates/register` and
+`POST /api/platform/updates/packages/{id}/yank` directly, if you're scripting your own pipeline
+instead). The signature is checked twice, independently: once by `Aqsat.Api` before a package is
+even allowed into the catalog, again by `Aqsat.Updater` immediately before it applies one.
 
 ## Data residency
 

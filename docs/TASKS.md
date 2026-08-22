@@ -283,7 +283,7 @@ Separate project with Docker socket access. The main API must **never** have it.
 `Platform.Owner` + 2FA · SignalR progress · maintenance mode with 60s warning · Persian error
 screen with copy-for-support · rollback · history.
 
-### [ ] Task 23 — Release pipeline
+### [x] Task 23 — Release pipeline
 Build + sign, package registration, staged rollout, yank, runbook.
 
 ---

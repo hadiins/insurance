@@ -63,6 +63,10 @@ public static class DependencyInjection
         // requests regardless — they live in IMemoryCache, which really is a singleton.
         services.AddScoped<IPlatformOtpService, PlatformOtpService>();
         services.AddSingleton<IMaintenanceModeService, MaintenanceModeService>();
+        // docs/TASKS.md Task 23 — only actually resolved when POST /api/platform/updates/register
+        // is hit, so an unset Updater:SigningPublicKeyPem (the normal state until Aqsat.Updater is
+        // deployed) never breaks startup, only that one endpoint.
+        services.AddSingleton<IPackageSignatureVerifier, PackageSignatureVerifier>();
 
         // docs/TASKS.md Task 22 — the only outbound call from Aqsat.Api to Aqsat.Updater. Base
         // address defaults to the compose service name; unset/misconfigured just means the panel's
