@@ -262,7 +262,7 @@ with rotation.
 
 **Check:** kill the database mid-session. **No blank screen anywhere.**
 
-### [ ] Task 20 — Deployment
+### [x] Task 20 — Deployment
 Multi-stage Dockerfile · prod compose · migration-on-startup with a lock · daily backup ·
 **documented and tested restore** · env configs · README runbook.
 

@@ -1,0 +1,52 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+      - sqlserver-backup:/var/opt/mssql/backup
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # No host port mapping — only the api container reaches SQL Server, over the private compose
+    # network. Nothing outside this host can ever see port 1433 (CLAUDE.md: data must stay in Iran,
+    # and the smaller the exposed surface the better regardless).
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Aqsat.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: "Server=sqlserver;Database=Aqsat;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Jwt__Key: ${JWT_KEY}
+      Encryption__NationalIdKey: ${NATIONAL_ID_KEY}
+      ApiIr__ApiKey: ${API_IR_KEY:-}
+      ApiIr__AllowPaidEndpoints: ${API_IR_ALLOW_PAID:-false}
+      Backup__Directory: /var/opt/mssql/backup
+      Backup__RetentionDays: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      # Shares the same physical files sqlserver writes backups into, so DatabaseBackupJob's
+      # retention sweep (plain File I/O, running inside this container) can see and delete them.
+      - sqlserver-backup:/var/opt/mssql/backup
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sqlserver-data:
+  sqlserver-backup:

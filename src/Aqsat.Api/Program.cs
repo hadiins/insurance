@@ -7,11 +7,13 @@ using Aqsat.Application.Auth;
 using Aqsat.Infrastructure;
 using Aqsat.Infrastructure.Auth;
 using Aqsat.Infrastructure.Jobs;
+using Aqsat.Infrastructure.Persistence;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Threading.RateLimiting;
@@ -159,6 +161,13 @@ try
 
     app.UseHttpsRedirection();
 
+    // docs/TASKS.md Task 20 — the production image builds the Vite frontend into this API's
+    // wwwroot (see src/Aqsat.Api/Dockerfile), so one container serves both. In local dev wwwroot
+    // doesn't exist (Vite's own dev server on :5173 serves the frontend instead) — both calls are
+    // no-ops against a missing folder, never an error.
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+
     app.UseCors(ViteDevCorsPolicy);
 
     app.UseRateLimiter();
@@ -172,6 +181,47 @@ try
 
     if (!isTestHost)
     {
+        // docs/TASKS.md Task 20 — migration-on-startup with a lock. A rolling deploy can start two
+        // replicas against the same database briefly overlapping; EF Core's own migration history
+        // table prevents double-applying, but the SAFEST way to avoid two containers racing DDL
+        // against each other is never letting them attempt it concurrently in the first place.
+        // sp_getapplock is SQL Server's own advisory lock — cheap, connection-scoped, released
+        // automatically if the process dies mid-migration instead of leaving a stale lock behind.
+        // Off by default only if an operator explicitly disables it (e.g. applying migrations out of
+        // band before a blue/green cutover).
+        // Same "log and keep starting" reasoning as the Hangfire registration below — a DB that
+        // isn't reachable yet must not take the whole process down with it.
+        if (app.Configuration.GetValue("Deployment:ApplyMigrationsOnStartup", true))
+        {
+            try
+            {
+                using var migrationScope = app.Services.CreateScope();
+                var migrationContext = migrationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var connection = migrationContext.Database.GetDbConnection();
+                await connection.OpenAsync();
+                await using (var acquire = connection.CreateCommand())
+                {
+                    acquire.CommandText = "EXEC sp_getapplock @Resource = 'AqsatMigration', @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 60000;";
+                    await acquire.ExecuteNonQueryAsync();
+                }
+
+                try
+                {
+                    await migrationContext.Database.MigrateAsync();
+                }
+                finally
+                {
+                    await using var release = connection.CreateCommand();
+                    release.CommandText = "EXEC sp_releaseapplock @Resource = 'AqsatMigration', @LockOwner = 'Session';";
+                    await release.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to apply database migrations at startup — the database may be unreachable. The API will continue starting.");
+            }
+        }
+
         // Dashboard defaults to local-requests-only authorization — no extra filter needed for Phase 1.
         app.UseHangfireDashboard();
 
@@ -201,6 +251,10 @@ try
                 "renewal-watches",
                 job => job.RunAsync(CancellationToken.None),
                 Cron.Daily);
+            RecurringJob.AddOrUpdate<DatabaseBackupJob>(
+                "database-backup",
+                job => job.RunAsync(CancellationToken.None),
+                Cron.Daily(3));
         }
         catch (Exception ex)
         {
@@ -220,6 +274,11 @@ try
             });
         },
     });
+
+    // Serves the SPA's entry point for any non-API GET — a plain static-file server would 404 a
+    // hard refresh once Vite's build hashes the asset filenames. No-op if wwwroot is empty (dev,
+    // where Vite's own dev server on :5173 handles this instead).
+    app.MapFallbackToFile("index.html");
 
     app.Run();
 }
