@@ -7,6 +7,7 @@ import { Stage } from "./Stage";
 import { ConfirmCloseDialog } from "./ConfirmCloseDialog";
 import { ThemeToggle } from "./ThemeToggle";
 import { Toast } from "./Toast";
+import { MaintenanceBanner } from "../platform/MaintenanceBanner";
 
 export function Shell() {
   const tabs = useTabsStore((s) => s.tabs);
@@ -45,6 +46,7 @@ export function Shell() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      <MaintenanceBanner />
       <div className="flex flex-none items-center gap-3.5 border-b border-(--edge) bg-(--slate) px-4 py-2.5">
         <div className="grid h-[30px] w-[30px] flex-none place-items-center rounded-[9px] bg-linear-to-br from-(--mint) to-(--mint-dim) text-[14px] font-black text-(--on-mint) shadow-[var(--gl-mint)]">
           ق

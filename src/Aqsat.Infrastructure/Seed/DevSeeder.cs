@@ -156,7 +156,7 @@ public static class DevSeeder
             context.RolePermissions.Add(new RolePermission { RoleId = managerRole.Id, Permission = permission });
         }
 
-        foreach (var permission in Permissions.All.Where(p => p is not (Permissions.PaymentWrite or Permissions.SettingsWrite)))
+        foreach (var permission in Permissions.All.Where(p => p is not (Permissions.PaymentWrite or Permissions.SettingsWrite or Permissions.PlatformOwner)))
         {
             context.RolePermissions.Add(new RolePermission { RoleId = staffRole.Id, Permission = permission });
         }

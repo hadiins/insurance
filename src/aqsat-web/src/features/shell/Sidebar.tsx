@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { NAV } from "../../app/navConfig";
 import { useTabsStore } from "../../app/store/tabsStore";
+import { useAuthStore } from "../../app/store/authStore";
 import type { NavItem } from "../../app/types";
 import { SidebarGroup } from "./SidebarGroup";
 
@@ -15,17 +16,18 @@ export function Sidebar() {
   const activeKey = useTabsStore((s) => s.activeKey);
   const openTab = useTabsStore((s) => s.openTab);
   const activeNavType = tabs.find((t) => t.key === activeKey)?.navType ?? null;
+  const permissions = useAuthStore((s) => s.user?.permissions) ?? [];
 
   const trimmedQuery = query.trim();
   const filteredGroups = useMemo(
     () =>
       NAV.map((g) => ({
         ...g,
-        items: trimmedQuery
-          ? g.items.filter((i) => i.title.includes(trimmedQuery))
-          : g.items,
+        items: g.items
+          .filter((i) => !i.requiresPermission || permissions.includes(i.requiresPermission))
+          .filter((i) => !trimmedQuery || i.title.includes(trimmedQuery)),
       })),
-    [trimmedQuery],
+    [trimmedQuery, permissions],
   );
   const hasResults = filteredGroups.some((g) => g.items.length > 0);
 

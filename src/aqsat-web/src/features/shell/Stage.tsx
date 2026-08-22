@@ -15,6 +15,7 @@ import { PnlPage } from "../reports/PnlPage";
 import { RenewalWatchesPage } from "../renewals/RenewalWatchesPage";
 import { CollateralPage } from "../collateral/CollateralPage";
 import { CollectionsReportPage } from "../reports/CollectionsReportPage";
+import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
 
@@ -50,6 +51,8 @@ function renderPage(tab: OpenTab) {
       return <CollateralPage />;
     case "collections-report":
       return <CollectionsReportPage />;
+    case "platform-updates":
+      return <PlatformUpdatesPage />;
     case "blank":
     default:
       return <BlankPage title={tab.title} />;

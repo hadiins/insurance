@@ -279,7 +279,7 @@ this opens a security-sensitive path earlier than necessary.
 ### [x] Task 21 — `Aqsat.Updater` service
 Separate project with Docker socket access. The main API must **never** have it.
 
-### [ ] Task 22 — Update panel
+### [x] Task 22 — Update panel
 `Platform.Owner` + 2FA · SignalR progress · maintenance mode with 60s warning · Persian error
 screen with copy-for-support · rollback · history.
 

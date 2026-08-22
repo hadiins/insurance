@@ -137,6 +137,10 @@ export const NAV: NavGroup[] = [
       { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },
       { navType: "settings-sms-panel", title: "پنل پیامک", kind: "singleton", page: "blank" },
       { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "blank" },
+      {
+        navType: "platform-updates", title: "به‌روزرسانی سیستم", kind: "singleton", page: "platform-updates",
+        requiresPermission: "Platform.Owner",
+      },
     ],
   },
 ];

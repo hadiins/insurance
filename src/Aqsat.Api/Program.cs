@@ -175,9 +175,13 @@ try
     app.UseAuthentication();
     app.UseMiddleware<ScopeResolutionMiddleware>();
     app.UseAuthorization();
+    // After authorization (needs the resolved "permission" claims) so Platform.Owner's own bypass
+    // check has something to read.
+    app.UseMiddleware<MaintenanceModeMiddleware>();
 
     app.MapControllers();
     app.MapHub<PresenceHub>("/hubs/presence");
+    app.MapHub<PlatformHub>("/hubs/platform");
 
     if (!isTestHost)
     {

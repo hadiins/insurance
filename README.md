@@ -68,6 +68,7 @@ domain) in front of it for anything beyond local testing.
 | `BACKUP_RETENTION_DAYS` | no, default `14` | How long `DatabaseBackupJob` keeps old `.bak` files before deleting them |
 | `UPDATER_SHARED_TOKEN` | only if using `updater` | Bearer token `Aqsat.Updater` requires on every request (`X-Updater-Token` header) — see "Update service" below |
 | `UPDATER_SIGNING_PUBLIC_KEY_PEM` | only if using `updater` | RSA public key (PEM) `Aqsat.Updater` verifies release package signatures against |
+| `APP_VERSION` | only if using `updater` | This deployment's own version string, e.g. `1.5.0` — drives the update panel's minimum-version prerequisite check |
 
 Never commit a real `.env` — it holds the encryption key.
 
@@ -109,9 +110,16 @@ narrow API (`GET /status`, `POST /update`, `POST /rollback`, `GET /progress/{id}
 arbitrary command, never an arbitrary uploaded file. A package whose signature doesn't verify
 against `UPDATER_SIGNING_PUBLIC_KEY_PEM` is rejected outright.
 
-Task 22 (the update panel UI, `Platform.Owner` + 2FA, SignalR progress, maintenance mode) and Task
-23 (the signed release pipeline that actually produces packages `updater` will accept) are not built
-yet — this is the isolated service alone.
+The update panel (`Platform.Owner` + SMS-based 2FA, live SignalR progress, a 60-second maintenance
+warning broadcast to every active user, automatic rollback on a failed health check, history) lives
+in the main API under `/api/platform/updates` and the frontend's "به‌روزرسانی سیستم" page — visible
+only to users whose role carries `Platform.Owner`, which nothing seeds by default in production
+(`DevSeeder`'s test fixture grants it purely for exercising these endpoints in tests). It's the only
+part of the main app that talks to `updater` at all, over plain HTTP with the same shared token.
+
+`UpdatePackage` rows (the catalog of what a Platform.Owner can even see to install) are not
+populated by anything yet — Task 23, the signed release pipeline that would build, sign, and
+register them, is not built. Until then, insert one manually to test the panel end-to-end.
 
 ## Data residency
 

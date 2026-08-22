@@ -37,6 +37,14 @@ services:
       ApiIr__AllowPaidEndpoints: ${API_IR_ALLOW_PAID:-false}
       Backup__Directory: /var/opt/mssql/backup
       Backup__RetentionDays: ${BACKUP_RETENTION_DAYS:-14}
+      # docs/TASKS.md Task 22 — the panel's own outbound call to Aqsat.Updater. Same shared token
+      # on both sides; App__Version drives the "can't jump straight from 1.0 to 3.0" prerequisite
+      # check in PlatformUpdatesController, so it must actually be set at deploy time, not left to
+      # default to "unknown" (which the version-compatibility check treats as unparseable, and
+      # fails closed on — see PlatformUpdatesController.IsOlderThan).
+      Updater__BaseUrl: http://aqsat-updater:8081
+      Updater__SharedToken: ${UPDATER_SHARED_TOKEN}
+      App__Version: ${APP_VERSION:-unknown}
     volumes:
       # Shares the same physical files sqlserver writes backups into, so DatabaseBackupJob's
       # retention sweep (plain File I/O, running inside this container) can see and delete them.

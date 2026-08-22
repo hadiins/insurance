@@ -14,9 +14,15 @@ public static class Permissions
     public const string MarketerManage = "Marketer.Manage";
     public const string MarketerSelfView = "Marketer.SelfView";
 
+    /// <summary>docs/UPDATE-SYSTEM.md rule 1: "belongs to you, not any agency." Granted via a Role
+    /// assigned at the Headquarters organization — never seeded for an agency's own staff, and
+    /// agency users never even see the update panel exists (rule 2: no read access, not even
+    /// read-only).</summary>
+    public const string PlatformOwner = "Platform.Owner";
+
     public static readonly IReadOnlyList<string> All =
     [
         PolicyRead, PolicyWrite, PaymentWrite, ImportRun, SettingsWrite, LockForceRelease, ReportRead,
-        FinanceRead, MarketerManage, MarketerSelfView,
+        FinanceRead, MarketerManage, MarketerSelfView, PlatformOwner,
     ];
 }

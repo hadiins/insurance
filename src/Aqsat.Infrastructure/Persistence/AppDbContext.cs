@@ -49,6 +49,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<RecordPresence> RecordPresences => Set<RecordPresence>();
     public DbSet<RecordLock> RecordLocks => Set<RecordLock>();
 
+    // Platform-level (docs/TASKS.md Task 22) — no AgencyId, not RLS-scoped, same as
+    // Organization/AppUser/Role above.
+    public DbSet<UpdatePackage> UpdatePackages => Set<UpdatePackage>();
+    public DbSet<UpdateRun> UpdateRuns => Set<UpdateRun>();
+    public DbSet<UpdateStageLog> UpdateStageLogs => Set<UpdateStageLog>();
+
     private static readonly ConcurrentDictionary<Type, string[]> SensitivePropertyCache = new();
 
     /// <summary>

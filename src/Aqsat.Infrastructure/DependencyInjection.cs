@@ -1,6 +1,7 @@
 using Aqsat.Application.ApiIr;
 using Aqsat.Application.Common;
 using Aqsat.Application.Concurrency;
+using Aqsat.Application.Platform;
 using Aqsat.Application.Schedule;
 using Aqsat.Application.Sms;
 using Aqsat.Infrastructure.ApiIr;
@@ -9,6 +10,7 @@ using Aqsat.Infrastructure.Concurrency;
 using Aqsat.Infrastructure.Import;
 using Aqsat.Infrastructure.Jobs;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Platform;
 using Aqsat.Infrastructure.Schedule;
 using Aqsat.Infrastructure.Security;
 using Hangfire;
@@ -54,6 +56,22 @@ public static class DependencyInjection
             })
             .AddStandardResilienceHandler();
         services.AddScoped<ISmsSender, ApiIrSmsSender>();
+        // Scoped, not Singleton — it depends on the Scoped ISmsSender, and a Singleton capturing a
+        // Scoped dependency is exactly the captive-dependency bug ASP.NET Core's DI validation
+        // (ValidateScopes, on by default under the Development environment every test runs under)
+        // catches at builder.Build() time. The OTP codes themselves still persist correctly across
+        // requests regardless — they live in IMemoryCache, which really is a singleton.
+        services.AddScoped<IPlatformOtpService, PlatformOtpService>();
+        services.AddSingleton<IMaintenanceModeService, MaintenanceModeService>();
+
+        // docs/TASKS.md Task 22 — the only outbound call from Aqsat.Api to Aqsat.Updater. Base
+        // address defaults to the compose service name; unset/misconfigured just means the panel's
+        // calls fail closed (no update can start), never silently no-ops.
+        services.AddHttpClient<IUpdaterClient, UpdaterClient>((sp, http) =>
+        {
+            var baseUrl = sp.GetRequiredService<IConfiguration>()["Updater:BaseUrl"] ?? "http://aqsat-updater:8081";
+            http.BaseAddress = new Uri(baseUrl);
+        });
         services.AddScoped<IHolidayChecker, ApiIrHolidayChecker>();
 
         services.AddScoped<ILockService, RecordLockService>();

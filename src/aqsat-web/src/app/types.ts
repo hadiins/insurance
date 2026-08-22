@@ -16,6 +16,7 @@ export type PageKind =
   | "renewal-watches"
   | "collateral"
   | "collections-report"
+  | "platform-updates"
   | "blank";
 
 export interface NavItem {
@@ -25,6 +26,10 @@ export interface NavItem {
   page: PageKind;
   pinned?: boolean;
   payload?: unknown;
+  /** Hidden from the sidebar entirely unless the logged-in user's permissions include this —
+   * e.g. "Platform.Owner" (docs/UPDATE-SYSTEM.md rule 1: agency users must never even see this
+   * page exists, not just be blocked from using it). */
+  requiresPermission?: string;
 }
 
 export interface NavGroup {
