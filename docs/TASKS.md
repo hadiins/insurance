@@ -276,7 +276,7 @@ not a backup.
 Full spec: `docs/UPDATE-SYSTEM.md`. Until you run multiple servers, a deploy script is enough and
 this opens a security-sensitive path earlier than necessary.
 
-### [ ] Task 21 — `Aqsat.Updater` service
+### [x] Task 21 — `Aqsat.Updater` service
 Separate project with Docker socket access. The main API must **never** have it.
 
 ### [ ] Task 22 — Update panel

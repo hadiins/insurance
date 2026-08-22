@@ -18,6 +18,11 @@ services:
     # and the smaller the exposed surface the better regardless).
 
   api:
+    # Fixed name, not compose's auto-generated one — Aqsat.Updater's DockerContainerOrchestrator
+    # targets this exact container by name (both to recreate it and for its own health-check calls
+    # over the compose network), so it must be predictable. This container never mounts the Docker
+    # socket and never will — see docs/UPDATE-SYSTEM.md §1 and the "updater" service below.
+    container_name: aqsat-api
     build:
       context: .
       dockerfile: src/Aqsat.Api/Dockerfile
@@ -46,6 +51,33 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
+
+  # docs/TASKS.md Task 21 — separate, internal-only service. This is the ONLY place in the whole
+  # deployment that mounts the Docker socket; "api" above never does. If a vulnerability were ever
+  # found in the internet-facing api container, an attacker who compromised it still could not
+  # reach the host through this — there is no code path, credential, or network route from "api" to
+  # "updater" other than the narrow, token-authenticated HTTP API updater.md documents.
+  updater:
+    container_name: aqsat-updater
+    build:
+      context: .
+      dockerfile: src/Aqsat.Updater/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:8081
+      ConnectionStrings__Default: "Server=sqlserver;Database=Aqsat;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Backup__Directory: /var/opt/mssql/backup
+      Updater__SharedToken: ${UPDATER_SHARED_TOKEN}
+      Updater__SigningPublicKeyPem: ${UPDATER_SIGNING_PUBLIC_KEY_PEM}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - sqlserver-backup:/var/opt/mssql/backup
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    # No "ports:" — reachable only from other containers on this compose network (i.e. "api"),
+    # never from the host's public interface, matching docs/UPDATE-SYSTEM.md §1's diagram exactly:
+    # "بدون پورت عمومی".
 
 volumes:
   sqlserver-data:

@@ -66,6 +66,8 @@ domain) in front of it for anything beyond local testing.
 | `API_IR_KEY` | no | api.ir API key. Leave unset and every call routes to `/api/Sandbox/Echo` (CLAUDE.md's "ask before calling a paid endpoint outside Sandbox") |
 | `API_IR_ALLOW_PAID` | no, default `false` | Set `true` only once an agency has a real, funded api.ir key — this is the switch that turns on real per-call billing (SMS, Shahkar, ChequeColor; see `docs/PHASE-1-SPEC.md` §6 for the price list) |
 | `BACKUP_RETENTION_DAYS` | no, default `14` | How long `DatabaseBackupJob` keeps old `.bak` files before deleting them |
+| `UPDATER_SHARED_TOKEN` | only if using `updater` | Bearer token `Aqsat.Updater` requires on every request (`X-Updater-Token` header) — see "Update service" below |
+| `UPDATER_SIGNING_PUBLIC_KEY_PEM` | only if using `updater` | RSA public key (PEM) `Aqsat.Updater` verifies release package signatures against |
 
 Never commit a real `.env` — it holds the encryption key.
 
@@ -89,6 +91,27 @@ this exact failure mode was found and fixed by testing it directly).
 Backups run daily and automatically. **Restoring one has an actual tested procedure** —
 [`docs/RESTORE-RUNBOOK.md`](docs/RESTORE-RUNBOOK.md) — not just a `BACKUP DATABASE` line and a
 hope. Read it before you need it, not during an incident.
+
+## Update service (`Aqsat.Updater`)
+
+**Deferred by default** — `docs/TASKS.md`/`docs/UPDATE-SYSTEM.md` both recommend skipping this
+until you're running multiple servers or ~20 customers; a manual `docker compose pull && up -d` is
+enough before that. The `updater` service in `docker-compose.prod.yml` only starts if you bring it
+up explicitly (`docker compose -f docker-compose.prod.yml up -d updater`) and configure the two
+`UPDATER_*` env vars above — omit them and nothing about normal operation changes.
+
+The security model is one strict rule: **`api` never has Docker socket access, only `updater`
+does.** They're separate images built from separate Dockerfiles with no shared code — `updater`
+doesn't reference any of `Aqsat.Api`'s project files, so there's no path by which a vulnerability in
+the internet-facing API could reach the host through it. `updater` has no published port either; it
+only accepts requests from `api`, authenticated by `X-Updater-Token`, and only ever executes a
+narrow API (`GET /status`, `POST /update`, `POST /rollback`, `GET /progress/{id}`) — never an
+arbitrary command, never an arbitrary uploaded file. A package whose signature doesn't verify
+against `UPDATER_SIGNING_PUBLIC_KEY_PEM` is rejected outright.
+
+Task 22 (the update panel UI, `Platform.Owner` + 2FA, SignalR progress, maintenance mode) and Task
+23 (the signed release pipeline that actually produces packages `updater` will accept) are not built
+yet — this is the isolated service alone.
 
 ## Data residency
 

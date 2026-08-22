@@ -35,7 +35,10 @@ public class DatabaseBackupJobTests
             })
             .Build();
 
-        var originalOrgCount = await context.Organizations.AsNoTracking().CountAsync();
+        // Scoped to this fixture's own four org rows, not a global COUNT(*) — Organizations grows
+        // constantly from every other test's own DevSeeder call running concurrently in the same
+        // shared LocalDB, so a global count read here and re-read after restore is inherently racy.
+        var fixtureOrgIds = new[] { fixture.HeadquartersId, fixture.RegionalId, fixture.AgencyAId, fixture.AgencyBId };
 
         var job = new DatabaseBackupJob(context, configuration, TimeProvider.System, NullLogger<DatabaseBackupJob>.Instance);
 
@@ -98,11 +101,15 @@ public class DatabaseBackupJobTests
                     $"Server=(localdb)\\MSSQLLocalDB;Database={restoredDbName};Trusted_Connection=True;TrustServerCertificate=True");
                 await restoredConnection.OpenAsync();
                 await using var countCommand = restoredConnection.CreateCommand();
-                countCommand.CommandText = "SELECT COUNT(*) FROM Organizations;";
-                var restoredOrgCount = (int)(await countCommand.ExecuteScalarAsync())!;
+                countCommand.CommandText = "SELECT COUNT(*) FROM Organizations WHERE Id IN (@id0, @id1, @id2, @id3);";
+                for (var i = 0; i < fixtureOrgIds.Length; i++)
+                {
+                    countCommand.Parameters.AddWithValue($"@id{i}", fixtureOrgIds[i]);
+                }
 
-                Assert.Equal(originalOrgCount, restoredOrgCount);
-                Assert.True(restoredOrgCount > 0);
+                var restoredFixtureOrgCount = (int)(await countCommand.ExecuteScalarAsync())!;
+
+                Assert.Equal(fixtureOrgIds.Length, restoredFixtureOrgCount);
             }
             finally
             {

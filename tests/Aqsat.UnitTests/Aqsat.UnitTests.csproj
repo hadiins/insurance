@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\src\Aqsat.Application\Aqsat.Application.csproj" />
     <ProjectReference Include="..\..\src\Aqsat.Infrastructure\Aqsat.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Aqsat.Api\Aqsat.Api.csproj" />
+    <ProjectReference Include="..\..\src\Aqsat.Updater\Aqsat.Updater.csproj" />
   </ItemGroup>
 
 </Project>
