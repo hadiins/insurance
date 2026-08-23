@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
+import { isValidNationalId } from "../../lib/persian";
 
 interface InsuranceLineDto {
   id: string;
@@ -102,6 +103,10 @@ export function NewPolicyPage() {
       setError("تاریخ پایان الزامی است.");
       return;
     }
+    if (form.customerNationalId.trim() && !isValidNationalId(form.customerNationalId)) {
+      setError("کد ملی بیمه‌گذار نامعتبر است.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -112,7 +117,7 @@ export function NewPolicyPage() {
         customerId: null,
         customerFullName: form.customerFullName.trim(),
         customerMobile: form.customerMobile || null,
-        customerNationalId: form.customerNationalId || null,
+        customerNationalId: form.customerNationalId.trim() ? form.customerNationalId.trim() : null,
         vehicle: selectedLine.requiresVehicle || form.vehiclePlate
           ? { plate: form.vehiclePlate || null, vin: null, chassis: null, make: null, model: null, year: null }
           : null,

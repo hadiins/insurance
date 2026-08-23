@@ -93,8 +93,14 @@ public sealed class PoliciesController(
 
             if (!string.IsNullOrWhiteSpace(request.CustomerNationalId))
             {
-                customer.NationalId = request.CustomerNationalId;
-                customer.NationalIdHash = fieldEncryptor.Hash(request.CustomerNationalId);
+                var normalizedNationalId = DigitNormalizer.ToLatin(request.CustomerNationalId).Trim();
+                if (!NationalIdValidator.IsValid(normalizedNationalId))
+                {
+                    return ValidationProblem("کد ملی وارد شده نامعتبر است.");
+                }
+
+                customer.NationalId = normalizedNationalId;
+                customer.NationalIdHash = fieldEncryptor.Hash(normalizedNationalId);
             }
 
             dbContext.Customers.Add(customer);
