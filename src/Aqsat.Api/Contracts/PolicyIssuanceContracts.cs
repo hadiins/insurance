@@ -32,6 +32,24 @@ public sealed record CreatePolicyRequest(
     bool IsRenewal,
     /// <summary>What the insurer pays the agency — docs/TASKS.md Task 15's P&amp;L income line.
     /// Optional: a policy can be issued before this rate is known and backfilled later.</summary>
-    decimal? AgencyCommissionPercent = null);
+    decimal? AgencyCommissionPercent = null,
+    /// <summary>docs/TASK-24-POLICY-NUMBER.md §2 — set when the number came from the "ورود دستی
+    /// شمارهٔ کامل" escape hatch instead of the locked line/agency/year segments.</summary>
+    bool PnManualEntry = false);
 
 public sealed record CreatePolicyResultDto(Guid PolicyId, string PolicyNumber, Guid CustomerId);
+
+/// <summary>docs/TASK-24-POLICY-NUMBER.md §2/§3 — everything the issuance form needs to render the
+/// locked segments and a live composed preview, without generating the official number itself.</summary>
+public sealed record PolicyNumberSuggestionDto(
+    string InsurerName,
+    string Separator,
+    string? LineCode,
+    string? AgencyCode,
+    string YearDisplay,
+    int SerialLength,
+    string SuggestedSerial,
+    string? LastSerial,
+    DateOnly? LastIssueDate,
+    string? ComposedPreview,
+    bool CanCompose);

@@ -2,9 +2,11 @@ using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Commission;
 using Aqsat.Application.Common;
+using Aqsat.Application.Numbering;
 using Aqsat.Application.Schedule;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
+using Aqsat.Infrastructure.Numbering;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,9 +24,25 @@ namespace Aqsat.Api.Controllers;
 [Route("api/policies")]
 [Authorize(Policy = Permissions.PolicyWrite)]
 public sealed class PoliciesController(
-    AppDbContext dbContext, IHolidayChecker holidayChecker, ICurrentUserContext currentUser, IFieldEncryptor fieldEncryptor)
+    AppDbContext dbContext, IHolidayChecker holidayChecker, ICurrentUserContext currentUser,
+    IFieldEncryptor fieldEncryptor, PolicyNumberSuggestionService numberSuggestionService)
     : ControllerBase
 {
+    /// <summary>docs/TASK-24-POLICY-NUMBER.md §2/§3 — backs the issuance form's locked
+    /// line/agency/year display and its serial suggestion.</summary>
+    [HttpGet("number-suggestion")]
+    public async Task<ActionResult<PolicyNumberSuggestionDto>> NumberSuggestion(
+        [FromQuery] Guid insuranceLineId, [FromQuery] DateOnly issueDate, CancellationToken ct)
+    {
+        var suggestion = await numberSuggestionService.GetSuggestionAsync(
+            currentUser.ActiveOrganizationId, insuranceLineId, issueDate, ct);
+
+        return Ok(new PolicyNumberSuggestionDto(
+            suggestion.InsurerName, suggestion.Separator, suggestion.LineCode, suggestion.AgencyCode,
+            suggestion.YearDisplay, suggestion.SerialLength, suggestion.SuggestedSerial,
+            suggestion.LastSerial, suggestion.LastIssueDate, suggestion.ComposedPreview, suggestion.CanCompose));
+    }
+
     /// <summary>
     /// docs/TASKS.md Task 6 — manual issuance, fixed field order per docs/PHASE-1-SPEC.md §5. Only
     /// creates the Policy (+ Customer/Vehicle/PropertySubject as needed) — down payment and
@@ -38,6 +56,23 @@ public sealed class PoliciesController(
         if (string.IsNullOrWhiteSpace(request.PolicyNumber))
         {
             return ValidationProblem("شمارهٔ بیمه‌نامه الزامی است.");
+        }
+
+        // docs/TASK-24-POLICY-NUMBER.md §4.4 — PolicyNumber is the source of truth and is "هرگز
+        // بازنویسی نمی‌شود" (never rewritten); only trimmed, never separator-normalized. Normalize()
+        // is applied separately below, only to derive the parsed Pn* search/report columns.
+        var policyNumber = request.PolicyNumber.Trim();
+
+        // docs/TASK-24-POLICY-NUMBER.md §6 — "تنها خطای مسدودکننده: شمارهٔ تکراری در همان
+        // نمایندگی" — the unique index would also catch this, but only as a raw SQL exception with
+        // no link to the existing policy for the agent to go look at.
+        var duplicate = await dbContext.Policies.AsNoTracking()
+            .Where(p => p.PolicyNumber == policyNumber)
+            .Select(p => new { p.Id })
+            .FirstOrDefaultAsync(ct);
+        if (duplicate is not null)
+        {
+            return ValidationProblem($"این شماره قبلاً برای بیمه‌نامهٔ دیگری ثبت شده است: {duplicate.Id}");
         }
 
         var line = await dbContext.InsuranceLines.AsNoTracking().FirstOrDefaultAsync(l => l.Id == request.InsuranceLineId, ct);
@@ -158,10 +193,20 @@ public sealed class PoliciesController(
                 .FirstOrDefaultAsync(ct);
         }
 
+        // docs/TASK-24-POLICY-NUMBER.md §5 — parsing never blocks issuance; a failed parse just
+        // leaves PnIsParsed=false with a note while PolicyNumber itself is still saved verbatim.
+        // Ensures the format/line-code defaults exist even if this agency's very first action is
+        // issuing a policy without ever hitting the number-suggestion endpoint first.
+        await PolicyNumberDefaultsSeeder.EnsureAgencyDefaultsAsync(dbContext, agencyId, ct);
+        var format = await dbContext.PolicyNumberFormats.AsNoTracking().FirstOrDefaultAsync(f => f.IsActive, ct);
+        var parts = format is not null
+            ? PolicyNumberParser.Parse(policyNumber, format)
+            : new PolicyNumberParts(policyNumber, null, null, null, null, false, "الگوی شماره‌ای برای این نمایندگی تنظیم نشده است.");
+
         var policy = new Policy
         {
             AgencyId = agencyId,
-            PolicyNumber = request.PolicyNumber.Trim(),
+            PolicyNumber = policyNumber,
             InsuranceLineId = request.InsuranceLineId,
             CustomerId = customerId,
             VehicleId = vehicleId,
@@ -183,6 +228,13 @@ public sealed class PoliciesController(
             IsRenewal = request.IsRenewal,
             AgencyCommissionPercent = request.AgencyCommissionPercent,
             AgencyCommissionAmount = request.AgencyCommissionPercent is { } pct ? request.NetPremium * pct / 100m : null,
+            PnLineCode = parts.LineCode,
+            PnAgencyCode = parts.AgencyCode,
+            PnYear = parts.Year,
+            PnSerial = parts.Serial,
+            PnIsParsed = parts.IsParsed,
+            PnParseNote = parts.Note,
+            PnManualEntry = request.PnManualEntry,
         };
         dbContext.Policies.Add(policy);
         await dbContext.SaveChangesAsync(ct);

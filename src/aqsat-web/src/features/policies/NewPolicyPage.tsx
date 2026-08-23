@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
-import { isValidNationalId } from "../../lib/persian";
+import { fa, isValidNationalId, toLatinDigits } from "../../lib/persian";
+import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
 
 interface InsuranceLineDto {
   id: string;
@@ -23,7 +24,6 @@ interface CreatePolicyResultDto {
 const TODAY = new Date().toISOString().slice(0, 10);
 
 interface FormState {
-  policyNumber: string;
   insuranceLineId: string;
   customerFullName: string;
   customerMobile: string;
@@ -39,7 +39,6 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
-  policyNumber: "",
   insuranceLineId: "",
   customerFullName: "",
   customerMobile: "",
@@ -64,6 +63,16 @@ export function NewPolicyPage() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<CreatePolicyResultDto | null>(null);
 
+  // docs/TASK-24-POLICY-NUMBER.md §2 — the number is composed from three locked segments plus one
+  // editable serial, unless the "ورود دستی شمارهٔ کامل" escape hatch is on.
+  const [suggestion, setSuggestion] = useState<PolicyNumberSuggestionDto | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [serialInput, setSerialInput] = useState("");
+  const [manualEntry, setManualEntry] = useState(false);
+  const [manualNumberInput, setManualNumberInput] = useState("");
+  const [gapConfirmed, setGapConfirmed] = useState(false);
+  const [gapPrompt, setGapPrompt] = useState<string[] | null>(null);
+
   useEffect(() => {
     api
       .get<InsuranceLineDto[]>("/insurance-lines")
@@ -73,19 +82,74 @@ export function NewPolicyPage() {
 
   const selectedLine = lines?.find((l) => l.id === form.insuranceLineId) ?? null;
 
+  useEffect(() => {
+    if (manualEntry || !form.insuranceLineId || !form.issueDate) {
+      return;
+    }
+    setSuggestionLoading(true);
+    api
+      .get<PolicyNumberSuggestionDto>(
+        `/policies/number-suggestion?insuranceLineId=${form.insuranceLineId}&issueDate=${form.issueDate}`,
+      )
+      .then((s) => {
+        setSuggestion(s);
+        setSerialInput((prev) => (prev.trim() ? prev : s.suggestedSerial));
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت پیشنهاد شمارهٔ بیمه‌نامه"))
+      .finally(() => setSuggestionLoading(false));
+  }, [form.insuranceLineId, form.issueDate, manualEntry]);
+
+  const composedNumber = useMemo(() => {
+    if (!suggestion?.canCompose || !serialInput.trim()) {
+      return null;
+    }
+    const padded = serialInput.trim().padStart(suggestion.serialLength, "0");
+    return [suggestion.lineCode, suggestion.agencyCode, suggestion.yearDisplay, padded].join(suggestion.separator);
+  }, [suggestion, serialInput]);
+
+  // §3 — a gap between the suggested next serial and what the user actually typed usually means a
+  // policy was issued in Fanavaran but never entered here.
+  const gapWarning = useMemo(() => {
+    if (!suggestion || manualEntry || !serialInput.trim()) {
+      return null;
+    }
+    const entered = Number(serialInput.trim());
+    const suggested = Number(suggestion.suggestedSerial);
+    if (!Number.isFinite(entered) || !Number.isFinite(suggested) || entered <= suggested) {
+      return null;
+    }
+    const missing: string[] = [];
+    for (let n = suggested; n < entered; n++) {
+      missing.push(n.toString().padStart(suggestion.serialLength, "0"));
+    }
+    return missing;
+  }, [suggestion, serialInput, manualEntry]);
+
+  useEffect(() => {
+    setGapConfirmed(false);
+  }, [gapWarning?.join(",")]);
+
+  const finalPolicyNumber = manualEntry ? manualNumberInput.trim() : (composedNumber ?? "");
+
+  useEffect(() => {
+    setTitle(tabKey, finalPolicyNumber ? `بیمه‌نامه — ${finalPolicyNumber}` : "ثبت بیمه‌نامه");
+  }, [finalPolicyNumber, tabKey, setTitle]);
+
   function update<K extends keyof FormState>(field: K, value: string) {
     const next = { ...form, [field]: value };
     setForm(next);
     setDirty(tabKey, true);
-    if (field === "policyNumber") {
-      setTitle(tabKey, value.trim() ? `بیمه‌نامه — ${value.trim()}` : "ثبت بیمه‌نامه");
-    }
   }
 
   function reset() {
     setForm(EMPTY);
     setResult(null);
     setError(null);
+    setSuggestion(null);
+    setSerialInput("");
+    setManualEntry(false);
+    setManualNumberInput("");
+    setGapConfirmed(false);
     setDirty(tabKey, false);
     setTitle(tabKey, "ثبت بیمه‌نامه");
   }
@@ -107,12 +171,25 @@ export function NewPolicyPage() {
       setError("کد ملی بیمه‌گذار نامعتبر است.");
       return;
     }
+    if (!finalPolicyNumber) {
+      setError(
+        manualEntry
+          ? "شمارهٔ بیمه‌نامه را وارد کنید."
+          : "کد رشته یا کد نمایندگی تنظیم نشده — از «ورود دستی شمارهٔ کامل» استفاده کنید یا سریال را وارد کنید.",
+      );
+      return;
+    }
+    if (gapWarning && gapWarning.length > 0 && !gapConfirmed) {
+      setGapPrompt(gapWarning);
+      return;
+    }
 
     setSaving(true);
     setError(null);
     try {
       const created = await api.post<CreatePolicyResultDto>("/policies", {
-        policyNumber: form.policyNumber.trim(),
+        policyNumber: finalPolicyNumber,
+        pnManualEntry: manualEntry,
         insuranceLineId: form.insuranceLineId,
         customerId: null,
         customerFullName: form.customerFullName.trim(),
@@ -135,6 +212,8 @@ export function NewPolicyPage() {
       });
       setResult(created);
       setDirty(tabKey, false);
+      setGapPrompt(null);
+      setGapConfirmed(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت بیمه‌نامه ناموفق بود.");
     } finally {
@@ -187,7 +266,27 @@ export function NewPolicyPage() {
                 ))}
               </select>
             </div>
-            <Field label="شمارهٔ بیمه‌نامه" value={form.policyNumber} onChange={(v) => update("policyNumber", v)} />
+            <PolicyNumberField
+              disabled={!form.insuranceLineId || !form.issueDate}
+              loading={suggestionLoading}
+              suggestion={suggestion}
+              serialInput={serialInput}
+              onSerialChange={(v) => {
+                setSerialInput(toLatinDigits(v).replace(/\D/g, ""));
+                setDirty(tabKey, true);
+              }}
+              composedNumber={composedNumber}
+              manualEntry={manualEntry}
+              onToggleManual={(v) => {
+                setManualEntry(v);
+                setDirty(tabKey, true);
+              }}
+              manualNumberInput={manualNumberInput}
+              onManualNumberChange={(v) => {
+                setManualNumberInput(v);
+                setDirty(tabKey, true);
+              }}
+            />
 
             <Field label="نام بیمه‌گذار" value={form.customerFullName} onChange={(v) => update("customerFullName", v)} />
             <Field label="شمارهٔ همراه" value={form.customerMobile} onChange={(v) => update("customerMobile", v)} placeholder="۰۹۱۲۳۴۵۶۷۸۹" />
@@ -230,6 +329,41 @@ export function NewPolicyPage() {
           </div>
           <div className="mt-2.5 border-s-2 border-(--edge-2) ps-3 text-[11.5px] leading-loose text-(--ice-3)">
             این فرم فیلد متن آزاد دربارهٔ <b className="font-bold">شخص</b> ندارد — فقط دربارهٔ بیمه‌نامه.
+          </div>
+        </div>
+      )}
+
+      {gapPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
+            <div className="mb-2 text-[14px] font-bold text-(--ember)">
+              ⚠️ {fa(gapPrompt.length)} شماره جا افتاده
+            </div>
+            <div className="mb-4 text-[13px] tabular-nums text-(--ice-2)" dir="ltr">
+              {gapPrompt.map(fa).join(" و ")}
+            </div>
+            <div className="mb-4 text-[12px] leading-relaxed text-(--ice-3)">
+              اگر عمدی است ادامه دهید. معمولاً این یعنی بیمه‌نامه‌ای در فناوران هست که هنوز در سیستم ثبت نشده.
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setGapConfirmed(true);
+                  setGapPrompt(null);
+                }}
+                className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+              >
+                ادامه
+              </button>
+              <button
+                type="button"
+                onClick={() => setGapPrompt(null)}
+                className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+              >
+                اصلاح
+              </button>
+            </div>
           </div>
         </div>
       )}

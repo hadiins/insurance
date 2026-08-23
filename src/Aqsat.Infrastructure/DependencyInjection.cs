@@ -9,6 +9,7 @@ using Aqsat.Infrastructure.Auth;
 using Aqsat.Infrastructure.Concurrency;
 using Aqsat.Infrastructure.Import;
 using Aqsat.Infrastructure.Jobs;
+using Aqsat.Infrastructure.Numbering;
 using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Platform;
 using Aqsat.Infrastructure.Schedule;
@@ -37,6 +38,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IWorkbookReader, ClosedXmlWorkbookReader>();
         services.AddScoped<ImportService>();
+        services.AddScoped<PolicyNumberSuggestionService>();
 
         services.AddSingleton(TimeProvider.System);
 
