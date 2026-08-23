@@ -26,6 +26,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<PropertySubject> PropertySubjects => Set<PropertySubject>();
     public DbSet<InsuranceLine> InsuranceLines => Set<InsuranceLine>();
+    public DbSet<InsuranceLineCode> InsuranceLineCodes => Set<InsuranceLineCode>();
+    public DbSet<PolicyNumberFormat> PolicyNumberFormats => Set<PolicyNumberFormat>();
     public DbSet<ContractTemplate> ContractTemplates => Set<ContractTemplate>();
     public DbSet<Policy> Policies => Set<Policy>();
     public DbSet<Installment> Installments => Set<Installment>();

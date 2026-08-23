@@ -76,6 +76,23 @@ public class Policy : AgencyOwnedEntity, IAuditableEntity
     public Guid? ImportBatchId { get; set; }
     public ImportBatch? ImportBatch { get; set; }
 
+    // docs/TASK-24-POLICY-NUMBER.md §4.4 — derived parts of PolicyNumber, for search/reporting
+    // only. PolicyNumber itself stays the source of truth and is never rewritten from these.
+    public string? PnLineCode { get; set; }
+    public string? PnAgencyCode { get; set; }
+    public int? PnYear { get; set; }
+
+    /// <summary>String, deliberately — a leading zero ("000248") must never round-trip through
+    /// int and come back as "248", or the number stops matching Fanavaran's.</summary>
+    public string? PnSerial { get; set; }
+
+    public bool PnIsParsed { get; set; }
+    public string? PnParseNote { get; set; }
+
+    /// <summary>Entered via the "manual full number" escape hatch rather than composed from the
+    /// locked line/agency/year parts — logged, per §2.</summary>
+    public bool PnManualEntry { get; set; }
+
     Guid IAuditableEntity.PolicyId => Id;
 
     string IAuditableEntity.DescribeChange(AuditAction action) => action switch

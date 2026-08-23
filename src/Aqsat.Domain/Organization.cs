@@ -18,4 +18,10 @@ public class Organization : SoftDeletableEntity
     public string? City { get; set; }
     public string? InsurerName { get; set; }
     public bool IsActive { get; set; } = true;
+
+    /// <summary>docs/TASK-24-POLICY-NUMBER.md §4.3 — the code embedded in the official policy
+    /// number (e.g. "576210"), distinct from <see cref="Code"/> which is this org's own internal
+    /// reference. Locked at the service layer once the agency's first policy exists — changing it
+    /// would make every prior policy number meaningless.</summary>
+    public string? AgencyCode { get; set; }
 }

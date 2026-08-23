@@ -271,6 +271,11 @@ try
         {
             Log.Error(ex, "Failed to register Hangfire recurring jobs at startup — the database may be unreachable. The API will continue starting.");
         }
+
+        // The one-time PolicyNumberBackfillJob/VehiclePlateBackfillJob enqueue that lived here has
+        // been removed — confirmed successful in production (docs/TASK-24-POLICY-NUMBER.md §9 step
+        // 5, docs/TASK-25-IDENTITY-VEHICLE.md §7 step 6). Both jobs are still idempotent and
+        // re-runnable by hand later (e.g. from a future "بازتجزیهٔ شماره‌ها" admin action) if needed.
     }
 
     app.MapHealthChecks("/health", new HealthCheckOptions

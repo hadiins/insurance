@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
+using Aqsat.Application.Schedule;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -82,8 +83,11 @@ public class PolicyScheduleEndpointTests : IClassFixture<WebApplicationFactory<P
         Assert.False(result!.ExceedsMaxInstallments);
         Assert.Equal(9, result.Installments.Count);
         Assert.All(result.Installments, i => Assert.Equal(1_000_000m, i.Amount));
-        Assert.Equal(new DateOnly(2026, 2, 1), result.Installments[0].DueDate);
-        Assert.Equal(new DateOnly(2026, 10, 1), result.Installments[8].DueDate);
+        // docs/TASK-25-IDENTITY-VEHICLE.md §6.2 — due dates are Jalali-month math now, not
+        // Gregorian, so the expected values are derived the same way the endpoint computes them
+        // rather than hand-coded Gregorian literals that would silently re-encode the old behavior.
+        Assert.Equal(DueDateCalculator.CalculateDueDate(policy.StartDate, 1), result.Installments[0].DueDate);
+        Assert.Equal(DueDateCalculator.CalculateDueDate(policy.StartDate, 9), result.Installments[8].DueDate);
 
         AgencyContext.Current = fixture.AgencyAId;
         var persistedCount = await seedContext.Installments.AsNoTracking().CountAsync(i => i.PolicyId == policy.Id);

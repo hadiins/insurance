@@ -25,4 +25,21 @@ public class Customer : AgencyOwnedEntity
 
     public string? Mobile { get; set; }
     public DateTimeOffset? MobileVerifiedAt { get; set; }
+
+    // docs/TASK-25-IDENTITY-VEHICLE.md §2/§7 — FullName is split going forward; the original value
+    // is preserved in FullNameLegacy rather than destroyed, and FirstName/LastName are populated by
+    // a data step in step 5, not by this schema change.
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? FullNameLegacy { get; set; }
+
+    /// <summary>Deliberately must never equal <see cref="Mobile"/> — see §2's rule.</summary>
+    public string? EmergencyMobile { get; set; }
+
+    public string? Address { get; set; }
+    public string? PostalCode { get; set; }
+
+    /// <summary>Persisted computed column (SQL-generated, §3) — never set from C#. The private
+    /// setter is EF's hook for materializing query results, not a real write path.</summary>
+    public bool IsProfileComplete { get; private set; }
 }
