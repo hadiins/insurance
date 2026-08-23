@@ -38,6 +38,11 @@ public sealed class SmsReminderJob(AppDbContext dbContext, ISmsSender smsSender,
                 continue;
             }
 
+            var customBody = await dbContext.SmsTemplates.AsNoTracking()
+                .Where(t => t.Key == InstallmentReminderTemplate.Key)
+                .Select(t => t.Body)
+                .FirstOrDefaultAsync(ct);
+
             var candidates = await dbContext.Installments
                 .Where(i => i.Status != InstallmentStatus.Settled)
                 .Include(i => i.Policy).ThenInclude(p => p.Customer)
@@ -66,7 +71,8 @@ public sealed class SmsReminderJob(AppDbContext dbContext, ISmsSender smsSender,
                     continue;
                 }
 
-                var text = InstallmentReminderTemplate.Render(installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance, installment.DueDate);
+                var text = InstallmentReminderTemplate.Render(
+                    installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance, installment.DueDate, customBody);
                 var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
 
                 dbContext.ReminderLogs.Add(new ReminderLog
@@ -111,12 +117,20 @@ public sealed class SmsReminderJob(AppDbContext dbContext, ISmsSender smsSender,
             .ToHashSet();
 }
 
-/// <summary>Placeholder-driven, not a DB-configurable template — a template management screen is
-/// out of this pass's scope.</summary>
+/// <summary>{PolicyNumber}/{SeqNo}/{Balance}/{DueDate} placeholders — an agency's own SmsTemplate
+/// row (Key = installment-reminder-v1) overrides DefaultBody; absence of a row falls back to it,
+/// so customizing a template is optional, never required for sending to keep working.</summary>
 public static class InstallmentReminderTemplate
 {
     public const string Key = "installment-reminder-v1";
 
-    public static string Render(string policyNumber, int seqNo, decimal balance, DateOnly dueDate) =>
-        $"بیمه‌گذار گرامی، قسط شمارهٔ {seqNo} بیمه‌نامهٔ {policyNumber} به مبلغ {balance:N0} تومان تا تاریخ {dueDate:yyyy-MM-dd} سررسید دارد.";
+    public const string DefaultBody =
+        "بیمه‌گذار گرامی، قسط شمارهٔ {SeqNo} بیمه‌نامهٔ {PolicyNumber} به مبلغ {Balance} تومان تا تاریخ {DueDate} سررسید دارد.";
+
+    public static string Render(string policyNumber, int seqNo, decimal balance, DateOnly dueDate, string? customBody = null) =>
+        (customBody ?? DefaultBody)
+            .Replace("{PolicyNumber}", policyNumber)
+            .Replace("{SeqNo}", seqNo.ToString())
+            .Replace("{Balance}", balance.ToString("N0"))
+            .Replace("{DueDate}", dueDate.ToString("yyyy-MM-dd"));
 }

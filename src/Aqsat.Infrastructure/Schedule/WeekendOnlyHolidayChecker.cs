@@ -6,5 +6,6 @@ namespace Aqsat.Infrastructure.Schedule;
 /// official calendar holidays until Task 12/13 wires the real api.ir IsHoliday service.</summary>
 public sealed class WeekendOnlyHolidayChecker : IHolidayChecker
 {
-    public bool IsHoliday(DateOnly date) => date.DayOfWeek == DayOfWeek.Friday;
+    public Task<bool> IsHolidayAsync(DateOnly date, CancellationToken ct = default) =>
+        Task.FromResult(date.DayOfWeek == DayOfWeek.Friday);
 }

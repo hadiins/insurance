@@ -1,0 +1,69 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using Aqsat.Api.Contracts;
+using Aqsat.Infrastructure.Seed;
+using Aqsat.UnitTests.DataModel;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+
+namespace Aqsat.UnitTests.Customers;
+
+/// <summary>مشتریان پرریسک — risk is read off existing data: a currently-overdue installment and a
+/// bounced cheque, no separate score to maintain.</summary>
+[Collection("WebApplicationFactory")]
+public class HighRiskCustomersEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public HighRiskCustomersEndpointTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+    }
+
+    [Fact]
+    public async Task A_customer_with_an_overdue_installment_and_a_bounced_cheque_is_flagged()
+    {
+        await using var seedContext = TestDbContextFactory.Create();
+        var fixture = await DevSeeder.SeedAuthFixtureAsync(seedContext);
+        await InsuranceLineSeeder.EnsureSeededAsync(seedContext);
+        var lineId = await seedContext.InsuranceLines
+            .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
+
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(fixture.DualAgencyManagerMobile, DevSeeder.SeededUserPassword));
+        loginResponse.EnsureSuccessStatusCode();
+        var token = (await loginResponse.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var uniqueTag = Guid.NewGuid().ToString("N")[..8];
+
+        var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-RISK-{uniqueTag}", lineId, null, $"مشتری ریسک {uniqueTag}", null, null,
+            Vehicle: new VehicleInput("۱۲ز۳۴۵", null, null, null, null, null), Property: null,
+            today.AddMonths(-3), today.AddMonths(-3), today.AddYears(1), 6_000_000m, 0m, null, null, false));
+        policyResponse.EnsureSuccessStatusCode();
+        var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+
+        var scheduleResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(0m, 2));
+        scheduleResponse.EnsureSuccessStatusCode();
+
+        var collateralResponse = await client.PostAsJsonAsync("/api/collateral", new CreateCollateralRequest(
+            policy.PolicyId, "ChequeSayadi", "1234567890123456789012345", "بانک آزمایشی", 1_000_000m, today));
+        collateralResponse.EnsureSuccessStatusCode();
+        var collateral = await collateralResponse.Content.ReadFromJsonAsync<CollateralDto>();
+
+        var bounceResponse = await client.PutAsJsonAsync($"/api/collateral/{collateral!.Id}/status", new UpdateCollateralStatusRequest("Bounced"));
+        bounceResponse.EnsureSuccessStatusCode();
+
+        var highRisk = await client.GetFromJsonAsync<List<HighRiskCustomerDto>>("/api/customers/high-risk");
+        var flagged = highRisk!.Single(c => c.CustomerId == policy.CustomerId);
+
+        Assert.True(flagged.OverdueInstallmentCount > 0);
+        Assert.Equal(1, flagged.BouncedChequeCount);
+    }
+}

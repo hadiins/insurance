@@ -46,9 +46,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`/api${path}`, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, { ...options, headers });
+  } catch {
+    // fetch() itself throws only for a connectivity failure (server unreachable, DNS, CORS) —
+    // never for a non-2xx HTTP response, which is handled below instead. Distinguishing this from
+    // a generic server error is the whole point: "the backend isn't running" is diagnosable, an
+    // unlabeled "خطای غیرمنتظره" is not.
+    throw new ApiError(0, "امکان برقراری ارتباط با سرور نیست. از اجرا بودن سرویس backend مطمئن شوید.");
+  }
 
-  if (response.status === 401) {
+  // The login endpoint's own 401 means "wrong mobile/password", not "your session expired" — only
+  // treat a 401 on an already-authenticated request as session expiry.
+  if (response.status === 401 && path !== "/auth/login") {
     setToken(null);
     setActiveOrgId(null);
     window.dispatchEvent(new Event(AUTH_CLEARED_EVENT));
@@ -57,6 +68,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const problem = (await response.json().catch(() => null)) as { title?: string } | null;
+    // 502/503/504 with no parseable JSON body means the request never reached the API at all —
+    // Vite's dev proxy (or a production reverse proxy) generated the error page itself because the
+    // backend process is down/unreachable. That is a distinct, diagnosable situation from an actual
+    // application error and deserves its own message, not the generic fallback.
+    if (problem === null && [502, 503, 504].includes(response.status)) {
+      throw new ApiError(response.status, "سرور در دسترس نیست. از اجرا بودن سرویس backend مطمئن شوید.");
+    }
+    // [Authorize(Policy = ...)] failures are handled by ASP.NET Core's own authorization
+    // middleware, not our controllers — its default 403 response has no JSON body at all, so
+    // without this the generic fallback would fire on every ordinary "you don't have this
+    // permission" case, which is common and expected (e.g. a Platform.Owner-only account browsing
+    // an agency page), not actually unexpected.
+    if (problem === null && response.status === 403) {
+      throw new ApiError(403, "شما دسترسی لازم برای این بخش را ندارید.");
+    }
     throw new ApiError(response.status, problem?.title ?? "خطای غیرمنتظره رخ داد.");
   }
 
@@ -73,5 +99,7 @@ export const api = {
     request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) }),
   put: <T,>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: body === undefined ? undefined : JSON.stringify(body) }),
+  delete: <T,>(path: string, body?: unknown) =>
+    request<T>(path, { method: "DELETE", body: body === undefined ? undefined : JSON.stringify(body) }),
   postForm: <T,>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form }),
 };

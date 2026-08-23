@@ -83,6 +83,10 @@ public sealed class RenewalWatchJob(AppDbContext dbContext, ISmsSender smsSender
 
     private async Task SendDueRemindersAsync(Guid agencyId, DateOnly today, CancellationToken ct)
     {
+        var customBodies = await dbContext.SmsTemplates.AsNoTracking()
+            .Where(t => t.Key == RenewalReminderTemplate.CustomerKey || t.Key == RenewalReminderTemplate.MarketerKey)
+            .ToDictionaryAsync(t => t.Key, t => t.Body, ct);
+
         var candidates = await dbContext.RenewalWatches
             .Where(w => w.Status == RenewalWatchStatus.Watching || w.Status == RenewalWatchStatus.Notified)
             .Include(w => w.Customer)
@@ -102,13 +106,15 @@ public sealed class RenewalWatchJob(AppDbContext dbContext, ISmsSender smsSender
             if (!string.IsNullOrWhiteSpace(customerMobile))
             {
                 await SendIfNotAlreadySentAsync(
-                    agencyId, watch, daysUntilExpiry, ReminderRecipientType.Customer, customerMobile, ct);
+                    agencyId, watch, daysUntilExpiry, ReminderRecipientType.Customer, customerMobile,
+                    customBodies.GetValueOrDefault(RenewalReminderTemplate.CustomerKey), ct);
             }
 
             if (watch.Marketer is { Mobile: var marketerMobile } && !string.IsNullOrWhiteSpace(marketerMobile))
             {
                 await SendIfNotAlreadySentAsync(
-                    agencyId, watch, daysUntilExpiry, ReminderRecipientType.Marketer, marketerMobile, ct);
+                    agencyId, watch, daysUntilExpiry, ReminderRecipientType.Marketer, marketerMobile,
+                    customBodies.GetValueOrDefault(RenewalReminderTemplate.MarketerKey), ct);
             }
 
             if (watch.Status == RenewalWatchStatus.Watching)
@@ -124,7 +130,8 @@ public sealed class RenewalWatchJob(AppDbContext dbContext, ISmsSender smsSender
     }
 
     private async Task SendIfNotAlreadySentAsync(
-        Guid agencyId, RenewalWatch watch, int offsetDays, ReminderRecipientType recipientType, string mobile, CancellationToken ct)
+        Guid agencyId, RenewalWatch watch, int offsetDays, ReminderRecipientType recipientType, string mobile,
+        string? customBody, CancellationToken ct)
     {
         var alreadySent = await dbContext.ReminderLogs.AsNoTracking().AnyAsync(
             r => r.RenewalWatchId == watch.Id && r.OffsetDays == offsetDays && r.RecipientType == recipientType, ct);
@@ -133,7 +140,7 @@ public sealed class RenewalWatchJob(AppDbContext dbContext, ISmsSender smsSender
             return;
         }
 
-        var text = RenewalReminderTemplate.Render(recipientType, watch.InsuranceLine?.NameFa, watch.CurrentExpiryDate);
+        var text = RenewalReminderTemplate.Render(recipientType, watch.InsuranceLine?.NameFa, watch.CurrentExpiryDate, customBody);
         var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
 
         dbContext.ReminderLogs.Add(new ReminderLog
@@ -168,13 +175,26 @@ public sealed class RenewalWatchJob(AppDbContext dbContext, ISmsSender smsSender
     }
 }
 
-/// <summary>Placeholder-driven, not a DB-configurable template, same as InstallmentReminderTemplate.</summary>
+/// <summary>Two separately editable SmsTemplate keys (customer/marketer get different wording,
+/// docs/PHASE-1-SPEC.md niaz #6/#13 — "to customers and to marketers"), both {LineName}/{ExpiryDate}
+/// placeholders. ReminderLog.TemplateKey stays the single Key constant below regardless of which
+/// SmsTemplate row rendered it — that field identifies the render function for dedup, not the
+/// customized text.</summary>
 public static class RenewalReminderTemplate
 {
     public const string Key = "renewal-reminder-v1";
 
-    public static string Render(ReminderRecipientType recipientType, string? lineNameFa, DateOnly expiryDate) =>
-        recipientType == ReminderRecipientType.Marketer
-            ? $"بازاریاب گرامی، بیمهٔ {lineNameFa} یکی از مشتریان معرفی‌شدهٔ شما تا تاریخ {expiryDate:yyyy-MM-dd} سررسید تمدید دارد."
-            : $"بیمه‌گذار گرامی، بیمهٔ {lineNameFa} شما تا تاریخ {expiryDate:yyyy-MM-dd} سررسید تمدید دارد.";
+    public const string CustomerKey = "renewal-reminder-customer-v1";
+    public const string MarketerKey = "renewal-reminder-marketer-v1";
+
+    public const string CustomerDefaultBody = "بیمه‌گذار گرامی، بیمهٔ {LineName} شما تا تاریخ {ExpiryDate} سررسید تمدید دارد.";
+    public const string MarketerDefaultBody = "بازاریاب گرامی، بیمهٔ {LineName} یکی از مشتریان معرفی‌شدهٔ شما تا تاریخ {ExpiryDate} سررسید تمدید دارد.";
+
+    public static string Render(ReminderRecipientType recipientType, string? lineNameFa, DateOnly expiryDate, string? customBody = null)
+    {
+        var body = customBody ?? (recipientType == ReminderRecipientType.Marketer ? MarketerDefaultBody : CustomerDefaultBody);
+        return body
+            .Replace("{LineName}", lineNameFa)
+            .Replace("{ExpiryDate}", expiryDate.ToString("yyyy-MM-dd"));
+    }
 }

@@ -3,17 +3,55 @@ using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Application.Import;
+using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Import;
+using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aqsat.Api.Controllers;
 
 [ApiController]
 [Route("api/imports")]
 [Authorize(Policy = Permissions.ImportRun)]
-public sealed class ImportsController(ImportService importService, ICurrentUserContext currentUser) : ControllerBase
+public sealed class ImportsController(ImportService importService, ICurrentUserContext currentUser, AppDbContext dbContext) : ControllerBase
 {
+    [HttpGet("history")]
+    public async Task<ActionResult<IReadOnlyList<ImportBatchDto>>> History(CancellationToken ct)
+    {
+        var batches = await dbContext.ImportBatches.AsNoTracking()
+            .OrderByDescending(b => b.BizId)
+            .Take(100)
+            .Select(b => new ImportBatchDto(b.Id, b.FileName, b.NewCount, b.DuplicateCount, b.FailedCount))
+            .ToListAsync(ct);
+
+        return Ok(batches);
+    }
+
+    [HttpGet("mismatches")]
+    public async Task<ActionResult<IReadOnlyList<ImportMismatchRowDto>>> Mismatches([FromQuery] Guid? batchId, CancellationToken ct)
+    {
+        var query = dbContext.ImportRows.AsNoTracking()
+            .Where(r => r.Status == ImportRowStatus.Failed)
+            .Include(r => r.ImportBatch)
+            .AsQueryable();
+
+        if (batchId is { } id)
+        {
+            query = query.Where(r => r.ImportBatchId == id);
+        }
+
+        var rows = await query
+            .OrderByDescending(r => r.BizId)
+            .Take(300)
+            .Select(r => new ImportMismatchRowDto(r.Id, r.ImportBatchId, r.ImportBatch.FileName, r.RowNumber, r.ErrorMessage))
+            .ToListAsync(ct);
+
+        return Ok(rows);
+    }
+
+
     // Generous for a few-hundred-row xlsx; guards against an accidental huge upload.
     private const long MaxFileSizeBytes = 20 * 1024 * 1024;
 

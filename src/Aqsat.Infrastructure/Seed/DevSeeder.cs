@@ -36,10 +36,12 @@ public static class DevSeeder
     private static async Task<SeededAgency> SeedOneAgencyAsync(
         AppDbContext context, string code, string city, Guid insuranceLineId, CancellationToken ct)
     {
+        // Code carries a random suffix — Organization.Code is now globally unique in the schema,
+        // and this seeder is called fresh by many tests against the same persistent dev database.
         var org = new Organization
         {
             Level = OrganizationLevel.Agency,
-            Code = code,
+            Code = $"{code}-{Guid.NewGuid():N}"[..12],
             Name = $"نمایندگی {code}",
             City = city,
             InsurerName = "شرکت بیمهٔ آزمایشی",
@@ -127,22 +129,23 @@ public static class DevSeeder
     /// </summary>
     public static async Task<SeededAuthFixture> SeedAuthFixtureAsync(AppDbContext context, CancellationToken ct = default)
     {
-        // Role.Name and AppUser.Mobile are globally unique (neither table carries AgencyId, so
-        // there's no per-agency scope to make repeats safe the way SeedTwoAgenciesAsync's Customer
-        // rows are) — a random suffix keeps this seeder safely re-runnable against a persistent dev
-        // database, same spirit as Task 3's seeder relying on a fresh AgencyId per run.
+        // Role.Name, AppUser.Mobile, and Organization.Code are all globally unique (neither table
+        // carries AgencyId, so there's no per-agency scope to make repeats safe the way
+        // SeedTwoAgenciesAsync's Customer rows are) — a random suffix keeps this seeder safely
+        // re-runnable against a persistent dev database, same spirit as Task 3's seeder relying on a
+        // fresh AgencyId per run.
         var suffix = Guid.NewGuid().ToString("N")[..6];
 
-        var hq = new Organization { Level = OrganizationLevel.Headquarters, Code = "HQ", Name = "دفتر مرکزی", IsActive = true };
+        var hq = new Organization { Level = OrganizationLevel.Headquarters, Code = $"HQ-{suffix}", Name = "دفتر مرکزی", IsActive = true };
         context.Organizations.Add(hq);
         await context.SaveChangesAsync(ct);
 
-        var regional = new Organization { Level = OrganizationLevel.Regional, ParentId = hq.Id, Code = "REG-1", Name = "منطقهٔ یک", IsActive = true };
+        var regional = new Organization { Level = OrganizationLevel.Regional, ParentId = hq.Id, Code = $"REG-{suffix}", Name = "منطقهٔ یک", IsActive = true };
         context.Organizations.Add(regional);
         await context.SaveChangesAsync(ct);
 
-        var agencyA = new Organization { Level = OrganizationLevel.Agency, ParentId = regional.Id, Code = "4001", Name = "نمایندگی ۴۰۰۱", City = "تهران", InsurerName = "شرکت بیمهٔ آزمایشی", IsActive = true };
-        var agencyB = new Organization { Level = OrganizationLevel.Agency, ParentId = regional.Id, Code = "4002", Name = "نمایندگی ۴۰۰۲", City = "مشهد", InsurerName = "شرکت بیمهٔ آزمایشی", IsActive = true };
+        var agencyA = new Organization { Level = OrganizationLevel.Agency, ParentId = regional.Id, Code = $"4001-{suffix}", Name = "نمایندگی ۴۰۰۱", City = "تهران", InsurerName = "شرکت بیمهٔ آزمایشی", IsActive = true };
+        var agencyB = new Organization { Level = OrganizationLevel.Agency, ParentId = regional.Id, Code = $"4002-{suffix}", Name = "نمایندگی ۴۰۰۲", City = "مشهد", InsurerName = "شرکت بیمهٔ آزمایشی", IsActive = true };
         context.Organizations.AddRange(agencyA, agencyB);
         await context.SaveChangesAsync(ct);
 

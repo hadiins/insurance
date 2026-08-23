@@ -16,6 +16,23 @@ import { RenewalWatchesPage } from "../renewals/RenewalWatchesPage";
 import { CollateralPage } from "../collateral/CollateralPage";
 import { CollectionsReportPage } from "../reports/CollectionsReportPage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
+import { PaymentRecordPage } from "../payments/PaymentRecordPage";
+import { AgencySettingsPage } from "../settings/AgencySettingsPage";
+import { DeskFeedPage } from "../desk/DeskFeedPage";
+import { PoliciesListPage } from "../policies/PoliciesListPage";
+import { InstallmentsWorklistPage } from "../installments/InstallmentsWorklistPage";
+import { CustomerLookupPage } from "../customers/CustomerLookupPage";
+import { ImportHistoryPage } from "../imports/ImportHistoryPage";
+import { ImportMismatchesPage } from "../imports/ImportMismatchesPage";
+import { UsersPage } from "../settings/UsersPage";
+import { AuditLogPage } from "../settings/AuditLogPage";
+import { HighRiskCustomersPage } from "../customers/HighRiskCustomersPage";
+import { SmsOutboxPage } from "../sms/SmsOutboxPage";
+import { SmsTemplatesPage } from "../sms/SmsTemplatesPage";
+import { SmsDeliveryReportPage } from "../sms/SmsDeliveryReportPage";
+import { RoleManagementPage } from "../platform/RoleManagementPage";
+import { AgenciesManagementPage } from "../platform/AgenciesManagementPage";
+import { ChangePasswordPage } from "../settings/ChangePasswordPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
 
@@ -53,6 +70,40 @@ function renderPage(tab: OpenTab) {
       return <CollectionsReportPage />;
     case "platform-updates":
       return <PlatformUpdatesPage />;
+    case "payment-record":
+      return <PaymentRecordPage />;
+    case "agency-settings":
+      return <AgencySettingsPage />;
+    case "desk-feed":
+      return <DeskFeedPage />;
+    case "policy-list":
+      return <PoliciesListPage />;
+    case "installment-worklist":
+      return <InstallmentsWorklistPage />;
+    case "customer-lookup":
+      return <CustomerLookupPage />;
+    case "import-history":
+      return <ImportHistoryPage />;
+    case "import-mismatches":
+      return <ImportMismatchesPage />;
+    case "settings-users":
+      return <UsersPage />;
+    case "settings-audit-log":
+      return <AuditLogPage />;
+    case "high-risk-customers":
+      return <HighRiskCustomersPage />;
+    case "sms-outbox":
+      return <SmsOutboxPage />;
+    case "sms-templates":
+      return <SmsTemplatesPage />;
+    case "sms-delivery-report":
+      return <SmsDeliveryReportPage />;
+    case "role-management":
+      return <RoleManagementPage />;
+    case "agencies-management":
+      return <AgenciesManagementPage />;
+    case "change-password":
+      return <ChangePasswordPage />;
     case "blank":
     default:
       return <BlankPage title={tab.title} />;

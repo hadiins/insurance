@@ -12,3 +12,5 @@ public sealed record MeResponse(
     Guid ActiveOrganizationId,
     IReadOnlyList<string> Permissions,
     IReadOnlyList<OrganizationMembership> Organizations);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

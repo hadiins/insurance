@@ -184,6 +184,47 @@ public sealed class PoliciesController(
         return Ok(new CreatePolicyResultDto(policy.Id, policy.PolicyNumber, customerId));
     }
 
+    /// <summary>در انتظار تأیید مشتری — the agent flags a freshly-issued policy as awaiting the
+    /// customer's sign-off. Purely an internal worklist marker; nothing customer-facing changes.</summary>
+    [HttpPut("{id:guid}/mark-pending-confirmation")]
+    public async Task<ActionResult> MarkPendingConfirmation(Guid id, CancellationToken ct)
+    {
+        var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        if (policy.Status != PolicyStatus.Active)
+        {
+            return ValidationProblem("فقط بیمه‌نامهٔ فعال قابل انتقال به «در انتظار تأیید» است.");
+        }
+
+        policy.Status = PolicyStatus.PendingConfirmation;
+        await dbContext.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    /// <summary>The customer confirmed — back to Active.</summary>
+    [HttpPut("{id:guid}/confirm")]
+    public async Task<ActionResult> Confirm(Guid id, CancellationToken ct)
+    {
+        var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        if (policy.Status != PolicyStatus.PendingConfirmation)
+        {
+            return ValidationProblem("این بیمه‌نامه در وضعیت «در انتظار تأیید» نیست.");
+        }
+
+        policy.Status = PolicyStatus.Active;
+        await dbContext.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     /// <summary>Backfills the insurer's commission rate for a policy issued before it was known —
     /// docs/TASKS.md Task 15's P&amp;L income line depends on this being set.</summary>
     [HttpPut("{id:guid}/agency-commission")]
@@ -205,6 +246,50 @@ public sealed class PoliciesController(
         await dbContext.SaveChangesAsync(ct);
 
         return NoContent();
+    }
+
+    /// <summary>Backs فهرست بیمه‌نامه‌ها / بیمه‌نامه‌های اقساطی / باطل‌شده‌ها — one filtered list,
+    /// same shape the CollateralPage payload pattern already established for one page serving
+    /// several nav items.</summary>
+    [HttpGet]
+    [Authorize(Policy = Permissions.PolicyRead)]
+    public async Task<ActionResult<IReadOnlyList<PolicyListItemDto>>> List(
+        [FromQuery] string? search, [FromQuery] string? status, [FromQuery] bool? isInstallment, CancellationToken ct)
+    {
+        var query = dbContext.Policies.AsNoTracking().Include(p => p.InsuranceLine).Include(p => p.Customer).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(p => p.PolicyNumber.Contains(term) || p.Customer.FullName.Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PolicyStatus>(status, ignoreCase: true, out var parsedStatus))
+        {
+            query = query.Where(p => p.Status == parsedStatus);
+        }
+
+        if (isInstallment is { } flag)
+        {
+            query = query.Where(p => p.IsInstallment == flag);
+        }
+
+        var policies = await query.OrderByDescending(p => p.IssueDate).Take(300).ToListAsync(ct);
+        var policyIds = policies.Select(p => p.Id).ToList();
+
+        var balanceByPolicy = await dbContext.Installments.AsNoTracking()
+            .Where(i => policyIds.Contains(i.PolicyId))
+            .GroupBy(i => i.PolicyId)
+            .Select(g => new { PolicyId = g.Key, Balance = g.Sum(i => i.Amount - i.PaidAmount) })
+            .ToDictionaryAsync(g => g.PolicyId, g => g.Balance, ct);
+
+        var result = policies
+            .Select(p => new PolicyListItemDto(
+                p.Id, p.PolicyNumber, p.Customer.FullName, p.InsuranceLine.NameFa, p.Status.ToString(),
+                p.IsInstallment, p.TotalReceivable, balanceByPolicy.GetValueOrDefault(p.Id), p.IssueDate))
+            .ToList();
+
+        return Ok(result);
     }
 
     private static bool IsEmptyVehicle(VehicleInput? vehicle) =>
@@ -304,7 +389,7 @@ public sealed class PoliciesController(
         for (var seq = 1; seq <= installmentCount; seq++)
         {
             var dueDate = DueDateCalculator.CalculateDueDate(policy.StartDate, seq);
-            var deadline = DueDateCalculator.CalculateSettlementDeadline(dueDate, deadlineDays, shiftOnHoliday, holidayChecker);
+            var deadline = await DueDateCalculator.CalculateSettlementDeadlineAsync(dueDate, deadlineDays, shiftOnHoliday, holidayChecker, ct);
 
             installments.Add(new Installment
             {

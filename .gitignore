@@ -24,4 +24,9 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+.vs/
 *.swp
+
+# deployment artifacts / scripts with embedded secrets — never committed
+publish-monsterasp/
+deploy-ftp*.ps1

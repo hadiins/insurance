@@ -18,3 +18,11 @@ public sealed record ColumnMappingResponse(Dictionary<string, string>? Mapping);
 public sealed record ImportCommitMeta(string ImportType, Dictionary<string, string> Mapping, string DateFormat, bool AmountsAreInRials);
 
 public sealed record ImportCommitResponse(Guid BatchId, int NewCount, int DuplicateCount, int FailedCount);
+
+/// <summary>تاریخچهٔ ورود داده — every batch ever committed, most recent first (BizId order, since
+/// ImportBatch carries no CreatedAt of its own).</summary>
+public sealed record ImportBatchDto(Guid Id, string FileName, int NewCount, int DuplicateCount, int FailedCount);
+
+/// <summary>رکوردهای ناسازگار — rows a commit could not place, with the reason (ImportRow.ErrorMessage
+/// is composed at write time by ImportService, never reconstructed here).</summary>
+public sealed record ImportMismatchRowDto(Guid Id, Guid ImportBatchId, string FileName, int RowNumber, string? ErrorMessage);

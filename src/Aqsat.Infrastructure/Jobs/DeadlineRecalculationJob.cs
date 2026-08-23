@@ -42,8 +42,8 @@ public sealed class DeadlineRecalculationJob(AppDbContext dbContext, IHolidayChe
 
             foreach (var installment in openInstallments)
             {
-                installment.SettlementDeadline = DueDateCalculator.CalculateSettlementDeadline(
-                    installment.DueDate, deadlineDays, shiftOnHoliday, holidayChecker);
+                installment.SettlementDeadline = await DueDateCalculator.CalculateSettlementDeadlineAsync(
+                    installment.DueDate, deadlineDays, shiftOnHoliday, holidayChecker, ct);
             }
 
             if (dbContext.ChangeTracker.HasChanges())

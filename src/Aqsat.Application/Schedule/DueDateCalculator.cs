@@ -23,8 +23,8 @@ public static class DueDateCalculator
     /// is a placeholder (Aqsat.Infrastructure.Schedule.WeekendOnlyHolidayChecker) until Task 12
     /// wires the real api.ir IsHoliday service — see docs/PHASE-1-SPEC.md §1's "Blocked" table.
     /// </summary>
-    public static DateOnly CalculateSettlementDeadline(
-        DateOnly dueDate, int settlementDeadlineDays, bool shiftOnHoliday, IHolidayChecker holidayChecker)
+    public static async Task<DateOnly> CalculateSettlementDeadlineAsync(
+        DateOnly dueDate, int settlementDeadlineDays, bool shiftOnHoliday, IHolidayChecker holidayChecker, CancellationToken ct = default)
     {
         var deadline = dueDate.AddDays(settlementDeadlineDays);
         if (!shiftOnHoliday)
@@ -32,7 +32,7 @@ public static class DueDateCalculator
             return deadline;
         }
 
-        while (holidayChecker.IsHoliday(deadline))
+        while (await holidayChecker.IsHolidayAsync(deadline, ct))
         {
             deadline = deadline.AddDays(1);
         }

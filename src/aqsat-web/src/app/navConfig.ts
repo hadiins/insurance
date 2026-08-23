@@ -21,9 +21,18 @@ export const NAV: NavGroup[] = [
     defaultOpen: true,
     items: [
       { navType: "today", title: "امروز", kind: "singleton", page: "today", pinned: true },
-      { navType: "today-reminders", title: "یادآوری‌های امروز", kind: "singleton", page: "blank" },
-      { navType: "overdue-tasks", title: "کارهای معوق", kind: "singleton", page: "blank" },
-      { navType: "notifications", title: "اعلان‌ها", kind: "singleton", page: "blank" },
+      {
+        navType: "today-reminders", title: "یادآوری‌های امروز", kind: "singleton", page: "desk-feed",
+        payload: { mode: "reminders" },
+      },
+      {
+        navType: "overdue-tasks", title: "کارهای معوق", kind: "singleton", page: "desk-feed",
+        payload: { mode: "overdue" },
+      },
+      {
+        navType: "notifications", title: "اعلان‌ها", kind: "singleton", page: "desk-feed",
+        payload: { mode: "notifications" },
+      },
     ],
   },
   {
@@ -32,10 +41,19 @@ export const NAV: NavGroup[] = [
     icon: ICONS.doc,
     items: [
       { navType: "policy-new", title: "ثبت بیمه‌نامه", kind: "multi-create", page: "new-policy" },
-      { navType: "policies-list", title: "فهرست بیمه‌نامه‌ها", kind: "singleton", page: "blank" },
-      { navType: "policies-installment", title: "بیمه‌نامه‌های اقساطی", kind: "singleton", page: "blank" },
-      { navType: "policies-pending", title: "در انتظار تأیید مشتری", kind: "singleton", page: "blank" },
-      { navType: "policies-cancelled", title: "باطل‌شده‌ها", kind: "singleton", page: "blank" },
+      { navType: "policies-list", title: "فهرست بیمه‌نامه‌ها", kind: "singleton", page: "policy-list" },
+      {
+        navType: "policies-installment", title: "بیمه‌نامه‌های اقساطی", kind: "singleton", page: "policy-list",
+        payload: { isInstallment: true },
+      },
+      {
+        navType: "policies-pending", title: "در انتظار تأیید مشتری", kind: "singleton", page: "policy-list",
+        payload: { status: "PendingConfirmation" },
+      },
+      {
+        navType: "policies-cancelled", title: "باطل‌شده‌ها", kind: "singleton", page: "policy-list",
+        payload: { status: "Cancelled" },
+      },
       { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "renewal-watches" },
     ],
   },
@@ -45,11 +63,20 @@ export const NAV: NavGroup[] = [
     icon: ICONS.coin,
     items: [
       { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-list" },
-      { navType: "installments-overdue", title: "اقساط معوق", kind: "singleton", page: "blank" },
-      { navType: "payment-record", title: "ثبت پرداخت", kind: "singleton", page: "blank" },
+      {
+        navType: "installments-overdue", title: "اقساط معوق", kind: "singleton", page: "installment-worklist",
+        payload: { overdueOnly: true },
+      },
+      { navType: "payment-record", title: "ثبت پرداخت", kind: "singleton", page: "payment-record" },
       { navType: "payment-online", title: "پرداخت‌های آنلاین", kind: "singleton", page: "blank" },
-      { navType: "settlement-partial", title: "تسویه‌های جزئی", kind: "singleton", page: "blank" },
-      { navType: "customer-statement", title: "صورت‌حساب مشتری", kind: "singleton", page: "blank" },
+      {
+        navType: "settlement-partial", title: "تسویه‌های جزئی", kind: "singleton", page: "installment-worklist",
+        payload: { status: "Partial" },
+      },
+      {
+        navType: "customer-statement", title: "صورت‌حساب مشتری", kind: "singleton", page: "customer-lookup",
+        payload: { mode: "statement" },
+      },
     ],
   },
   {
@@ -76,9 +103,12 @@ export const NAV: NavGroup[] = [
     icon: ICONS.users,
     items: [
       { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "customers-list" },
-      { navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "blank" },
+      {
+        navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "customer-lookup",
+        payload: { mode: "payments" },
+      },
       { navType: "customer-consents", title: "رضایت‌نامه‌های ثبت‌شده", kind: "singleton", page: "blank" },
-      { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "blank" },
+      { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "high-risk-customers" },
     ],
   },
   {
@@ -86,10 +116,10 @@ export const NAV: NavGroup[] = [
     label: "پیامک و اطلاع‌رسانی",
     icon: ICONS.msg,
     items: [
-      { navType: "sms-outbox", title: "صندوق ارسال", kind: "singleton", page: "blank" },
-      { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "blank" },
+      { navType: "sms-outbox", title: "صندوق ارسال", kind: "singleton", page: "sms-outbox" },
+      { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "sms-templates" },
       { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "sms-reminders" },
-      { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "blank" },
+      { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "sms-delivery-report" },
       { navType: "sms-credit", title: "اعتبار پنل", kind: "singleton", page: "blank" },
     ],
   },
@@ -123,8 +153,8 @@ export const NAV: NavGroup[] = [
     items: [
       { navType: "import-fanavaran", title: "آپلود فایل فناوران", kind: "singleton", page: "import-fanavaran" },
       { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "contract-templates" },
-      { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "blank" },
-      { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "blank" },
+      { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "import-history" },
+      { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "import-mismatches" },
     ],
   },
   {
@@ -132,11 +162,20 @@ export const NAV: NavGroup[] = [
     label: "تنظیمات",
     icon: ICONS.gear,
     items: [
-      { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "blank" },
-      { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "blank" },
+      { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "agency-settings" },
+      { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users" },
+      { navType: "change-password", title: "تغییر رمز عبور", kind: "singleton", page: "change-password" },
       { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },
       { navType: "settings-sms-panel", title: "پنل پیامک", kind: "singleton", page: "blank" },
-      { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "blank" },
+      { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "settings-audit-log" },
+      {
+        navType: "agencies-management", title: "نمایندگی‌ها", kind: "singleton", page: "agencies-management",
+        requiresPermission: "Platform.Owner",
+      },
+      {
+        navType: "role-management", title: "مدیریت نقش‌ها", kind: "singleton", page: "role-management",
+        requiresPermission: "Platform.Owner",
+      },
       {
         navType: "platform-updates", title: "به‌روزرسانی سیستم", kind: "singleton", page: "platform-updates",
         requiresPermission: "Platform.Owner",

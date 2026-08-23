@@ -1,5 +1,6 @@
 using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Application.Countdown;
 using Aqsat.Application.Schedule;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -19,8 +20,45 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/installments")]
 [Authorize(Policy = Permissions.PolicyWrite)]
-public sealed class InstallmentsController(AppDbContext dbContext, IHolidayChecker holidayChecker) : ControllerBase
+public sealed class InstallmentsController(AppDbContext dbContext, IHolidayChecker holidayChecker, TimeProvider timeProvider) : ControllerBase
 {
+    /// <summary>Backs اقساط معوق / تسویه‌های جزئی. Unlike /api/countdown, this has no date window —
+    /// every unsettled installment past its deadline, or every partially-paid one, regardless of
+    /// how far in the past or future its due date sits.</summary>
+    [HttpGet]
+    [Authorize(Policy = Permissions.PolicyRead)]
+    public async Task<ActionResult<IReadOnlyList<InstallmentWorklistRowDto>>> List(
+        [FromQuery] bool? overdueOnly, [FromQuery] string? status, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var query = dbContext.Installments.AsNoTracking().Where(i => i.Status != InstallmentStatus.Settled).AsQueryable();
+
+        if (overdueOnly == true)
+        {
+            query = query.Where(i => i.SettlementDeadline < today);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<InstallmentStatus>(status, ignoreCase: true, out var parsedStatus))
+        {
+            query = query.Where(i => i.Status == parsedStatus);
+        }
+
+        var rows = await query
+            .Include(i => i.Policy).ThenInclude(p => p.Customer)
+            .OrderBy(i => i.SettlementDeadline)
+            .Take(300)
+            .ToListAsync(ct);
+
+        var dtos = rows
+            .Select(i => new InstallmentWorklistRowDto(
+                i.Id, i.PolicyId, i.Policy.PolicyNumber, i.Policy.Customer.FullName, i.SeqNo, i.DueDate, i.SettlementDeadline,
+                i.Amount, i.PaidAmount, i.Balance, i.Status.ToString(),
+                CountdownUrgencyClassifier.Classify(today, i.DueDate, i.SettlementDeadline).ToString()))
+            .ToList();
+
+        return Ok(dtos);
+    }
+
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<InstallmentDetailDto>> Update(Guid id, UpdateInstallmentRequest request, CancellationToken ct)
     {
@@ -66,8 +104,8 @@ public sealed class InstallmentsController(AppDbContext dbContext, IHolidayCheck
             var deadlineDays = orgSettings?.SettlementDeadlineDays ?? 3;
 
             installment.DueDate = newDueDate;
-            installment.SettlementDeadline = DueDateCalculator.CalculateSettlementDeadline(
-                newDueDate, deadlineDays, shiftOnHoliday, holidayChecker);
+            installment.SettlementDeadline = await DueDateCalculator.CalculateSettlementDeadlineAsync(
+                newDueDate, deadlineDays, shiftOnHoliday, holidayChecker, ct);
         }
 
         installment.IsManuallyEdited = true;

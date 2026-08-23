@@ -47,7 +47,7 @@ public class DueDateCalculatorTests
     }
 
     [Fact]
-    public void Deadline_shifts_past_a_holiday_but_due_date_never_moves()
+    public async Task Deadline_shifts_past_a_holiday_but_due_date_never_moves()
     {
         // 2026-08-20 is a Thursday; 2026-08-21 is a Friday (verified against a real calendar,
         // not assumed) — the case this test is built around.
@@ -55,15 +55,15 @@ public class DueDateCalculatorTests
         var holidayChecker = new WeekendOnlyHolidayChecker();
 
         // +3 days lands on Sunday Aug 23 — not a Friday, no shift needed.
-        var deadline = DueDateCalculator.CalculateSettlementDeadline(dueDate, 3, shiftOnHoliday: true, holidayChecker);
+        var deadline = await DueDateCalculator.CalculateSettlementDeadlineAsync(dueDate, 3, shiftOnHoliday: true, holidayChecker);
         Assert.Equal(new DateOnly(2026, 8, 23), deadline);
 
         // +1 day lands on Friday Aug 21 — must shift to Saturday Aug 22.
-        var deadlineOnFriday = DueDateCalculator.CalculateSettlementDeadline(dueDate, 1, shiftOnHoliday: true, holidayChecker);
+        var deadlineOnFriday = await DueDateCalculator.CalculateSettlementDeadlineAsync(dueDate, 1, shiftOnHoliday: true, holidayChecker);
         Assert.Equal(new DateOnly(2026, 8, 22), deadlineOnFriday);
 
         // Without shiftOnHoliday, the deadline is never moved even if it lands on a holiday.
-        var unshifted = DueDateCalculator.CalculateSettlementDeadline(dueDate, 1, shiftOnHoliday: false, holidayChecker);
+        var unshifted = await DueDateCalculator.CalculateSettlementDeadlineAsync(dueDate, 1, shiftOnHoliday: false, holidayChecker);
         Assert.Equal(new DateOnly(2026, 8, 21), unshifted);
     }
 }

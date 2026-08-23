@@ -40,6 +40,11 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
             .Include(i => i.Policy).ThenInclude(p => p.Customer)
             .ToListAsync(ct);
 
+        var customBody = await dbContext.SmsTemplates.AsNoTracking()
+            .Where(t => t.Key == InstallmentReminderTemplate.Key)
+            .Select(t => t.Body)
+            .FirstOrDefaultAsync(ct);
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var sentCount = 0;
         var skippedCount = 0;
@@ -65,7 +70,8 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
                 continue;
             }
 
-            var text = InstallmentReminderTemplate.Render(installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance, installment.DueDate);
+            var text = InstallmentReminderTemplate.Render(
+                installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance, installment.DueDate, customBody);
             var sent = await smsSender.SendAsync(mobile, text, currentUser.ActiveOrganizationId, ct);
 
             dbContext.ReminderLogs.Add(new ReminderLog
@@ -113,6 +119,22 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
             .ToListAsync(ct);
 
         return Ok(log);
+    }
+
+    /// <summary>گزارش تحویل پیامک — a summary over the whole log, distinct from /log's paginated
+    /// list which صندوق ارسال reads directly.</summary>
+    [HttpGet("delivery-report")]
+    public async Task<ActionResult<SmsDeliveryReportDto>> DeliveryReport(CancellationToken ct)
+    {
+        var logs = await dbContext.ReminderLogs.AsNoTracking().ToListAsync(ct);
+
+        return Ok(new SmsDeliveryReportDto(
+            logs.Count(l => l.Status == ReminderSendStatus.Sent),
+            logs.Count(l => l.Status == ReminderSendStatus.Failed),
+            logs.Count(l => l.RecipientType == ReminderRecipientType.Customer),
+            logs.Count(l => l.RecipientType == ReminderRecipientType.Marketer),
+            logs.Count(l => l.InstallmentId != null),
+            logs.Count(l => l.RenewalWatchId != null)));
     }
 
     private IQueryable<Installment> BuildQuery(SmsFilterRequest filter)

@@ -20,10 +20,18 @@ interface TabsState {
   dismissToast: () => void;
 }
 
+/// crypto.randomUUID() only exists in a secure context (HTTPS or localhost) — plain HTTP throws
+/// "crypto.randomUUID is not a function", silently breaking every multi-create tab (e.g. "ثبت
+/// بیمه‌نامه" never opens). This tab key has no security requirement, just uniqueness, so a
+/// dependency-free fallback avoids the secure-context requirement entirely.
+function uniqueId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function keyFor(request: OpenTabRequest): string {
   switch (request.kind) {
     case "multi-create":
-      return `${request.navType}:${crypto.randomUUID()}`;
+      return `${request.navType}:${uniqueId()}`;
     case "multi-record":
       return `${request.navType}:${request.recordId}`;
     case "singleton":

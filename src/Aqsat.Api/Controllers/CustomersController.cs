@@ -1,5 +1,6 @@
 using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,8 +16,58 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/customers")]
 [Authorize(Policy = Permissions.PolicyRead)]
-public sealed class CustomersController(AppDbContext dbContext) : ControllerBase
+public sealed class CustomersController(AppDbContext dbContext, TimeProvider timeProvider) : ControllerBase
 {
+    /// <summary>مشتریان پرریسک — every customer with at least one currently-overdue installment or
+    /// a bounced cheque, worst first.</summary>
+    [HttpGet("high-risk")]
+    public async Task<ActionResult<IReadOnlyList<HighRiskCustomerDto>>> HighRisk(CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+
+        var overdueByCustomer = await dbContext.Installments.AsNoTracking()
+            .Where(i => i.Status != InstallmentStatus.Settled && i.SettlementDeadline < today)
+            .Select(i => new { i.Policy.CustomerId, i.SettlementDeadline })
+            .ToListAsync(ct);
+
+        var bouncedByCustomer = await dbContext.Collaterals.AsNoTracking()
+            .Where(c => c.Status == CollateralStatus.Bounced)
+            .Select(c => c.Policy.CustomerId)
+            .ToListAsync(ct);
+
+        var overdueGroups = overdueByCustomer
+            .GroupBy(x => x.CustomerId)
+            .ToDictionary(g => g.Key, g => (Count: g.Count(), MaxDays: g.Max(x => today.DayNumber - x.SettlementDeadline.DayNumber)));
+        var bouncedCounts = bouncedByCustomer
+            .GroupBy(x => x)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var customerIds = overdueGroups.Keys.Union(bouncedCounts.Keys).ToList();
+        if (customerIds.Count == 0)
+        {
+            return Ok(Array.Empty<HighRiskCustomerDto>());
+        }
+
+        var customers = await dbContext.Customers.AsNoTracking()
+            .Where(c => customerIds.Contains(c.Id))
+            .Select(c => new { c.Id, c.FullName, c.Mobile })
+            .ToListAsync(ct);
+
+        var result = customers
+            .Select(c =>
+            {
+                var overdue = overdueGroups.GetValueOrDefault(c.Id);
+                var bounced = bouncedCounts.GetValueOrDefault(c.Id);
+                return new HighRiskCustomerDto(c.Id, c.FullName, c.Mobile, overdue.Count, overdue.MaxDays, bounced);
+            })
+            .OrderByDescending(r => r.OverdueInstallmentCount + r.BouncedChequeCount)
+            .ThenByDescending(r => r.MaxDaysOverdue)
+            .ToList();
+
+        return Ok(result);
+    }
+
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CustomerListItemDto>>> List([FromQuery] string? search, CancellationToken ct)
     {
@@ -95,6 +146,31 @@ public sealed class CustomersController(AppDbContext dbContext) : ControllerBase
             customer.Id, customer.FullName, customer.Mobile, MaskNationalId(customer.NationalId),
             policySummaries.Sum(p => p.Balance),
             policySummaries, paymentDtos, collateral, timeline));
+    }
+
+    [HttpGet("{id:guid}/open-installments")]
+    public async Task<ActionResult<IReadOnlyList<OpenInstallmentDto>>> OpenInstallments(Guid id, CancellationToken ct)
+    {
+        var customerExists = await dbContext.Customers.AsNoTracking().AnyAsync(c => c.Id == id, ct);
+        if (!customerExists)
+        {
+            return NotFound();
+        }
+
+        var policyIds = await dbContext.Policies.AsNoTracking()
+            .Where(p => p.CustomerId == id)
+            .Select(p => p.Id)
+            .ToListAsync(ct);
+
+        var openInstallments = await dbContext.Installments.AsNoTracking()
+            .Where(i => policyIds.Contains(i.PolicyId) && i.Status != InstallmentStatus.Settled)
+            .Include(i => i.Policy).ThenInclude(p => p.InsuranceLine)
+            .OrderBy(i => i.DueDate)
+            .Select(i => new OpenInstallmentDto(
+                i.Id, i.Policy.PolicyNumber, i.Policy.InsuranceLine.NameFa, i.SeqNo, i.DueDate, i.Balance, i.Status.ToString()))
+            .ToListAsync(ct);
+
+        return Ok(openInstallments);
     }
 
     /// <summary>CLAUDE.md rule 12 — national ID is decrypted in memory by the EF value converter on

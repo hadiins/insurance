@@ -17,6 +17,23 @@ export type PageKind =
   | "collateral"
   | "collections-report"
   | "platform-updates"
+  | "payment-record"
+  | "agency-settings"
+  | "desk-feed"
+  | "policy-list"
+  | "installment-worklist"
+  | "customer-lookup"
+  | "import-history"
+  | "import-mismatches"
+  | "settings-users"
+  | "settings-audit-log"
+  | "high-risk-customers"
+  | "sms-outbox"
+  | "sms-templates"
+  | "sms-delivery-report"
+  | "role-management"
+  | "agencies-management"
+  | "change-password"
   | "blank";
 
 export interface NavItem {

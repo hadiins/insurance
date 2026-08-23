@@ -3,6 +3,7 @@ import { useAuthStore } from "./app/store/authStore";
 import { AUTH_CLEARED_EVENT } from "./lib/api";
 import { Shell } from "./features/shell/Shell";
 import { LoginPage } from "./features/auth/LoginPage";
+import { OwnerSetupPage } from "./features/auth/OwnerSetupPage";
 
 function App() {
   const status = useAuthStore((s) => s.status);
@@ -18,6 +19,11 @@ function App() {
     window.addEventListener(AUTH_CLEARED_EVENT, onAuthCleared);
     return () => window.removeEventListener(AUTH_CLEARED_EVENT, onAuthCleared);
   }, [loadMe]);
+
+  // Standalone, never linked from the sidebar — reached only by typing the URL directly.
+  if (window.location.pathname === "/owner-setup") {
+    return <OwnerSetupPage />;
+  }
 
   if (status !== "ready") {
     return <div className="grid h-full place-items-center bg-(--void) text-(--ice-3)">در حال بارگذاری…</div>;

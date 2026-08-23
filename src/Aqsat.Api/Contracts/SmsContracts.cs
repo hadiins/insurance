@@ -13,3 +13,8 @@ public sealed record SmsSendResultDto(int SentCount, int SkippedCount, int Alrea
 public sealed record ReminderLogDto(
     Guid Id, Guid? InstallmentId, string? PolicyNumber, int? SeqNo, string RecipientType, string Mobile,
     int OffsetDays, string Status, DateTimeOffset SentAt);
+
+/// <summary>گزارش تحویل پیامک — aggregated over every ReminderLog row, not just the last page of
+/// the outbox, so the delivery rate is accurate even once the log is thousands of rows long.</summary>
+public sealed record SmsDeliveryReportDto(
+    int TotalSent, int TotalFailed, int CustomerRecipientCount, int MarketerRecipientCount, int InstallmentReminderCount, int RenewalReminderCount);

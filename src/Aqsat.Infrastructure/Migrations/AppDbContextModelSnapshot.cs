@@ -1133,6 +1133,10 @@ namespace Aqsat.Infrastructure.Migrations
 
                     SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
 
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.HasIndex("ParentId");
 
                     b.ToTable("Organizations");
@@ -1768,6 +1772,9 @@ namespace Aqsat.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystemRole")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -1840,6 +1847,62 @@ namespace Aqsat.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("RolePermissions");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.SmsTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("AgencyId");
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("AgencyId", "Key")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("SmsTemplates");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.UpdatePackage", b =>

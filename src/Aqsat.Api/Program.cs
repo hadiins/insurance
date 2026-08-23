@@ -212,6 +212,13 @@ try
                 try
                 {
                     await migrationContext.Database.MigrateAsync();
+
+                    // Global reference data (no AgencyId) that every policy-issuance flow depends
+                    // on — idempotent get-or-create, so running it on every startup is safe and is
+                    // the only thing that actually seeds it outside of dev/test fixtures. Without
+                    // this, a freshly deployed production database has zero InsuranceLine rows and
+                    // "ثبت بیمه‌نامه" renders with nothing selectable.
+                    await Aqsat.Infrastructure.Seed.InsuranceLineSeeder.EnsureSeededAsync(migrationContext);
                 }
                 finally
                 {

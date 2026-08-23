@@ -6,3 +6,11 @@ public sealed record UpdateInstallmentRequest(decimal? Amount, DateOnly? DueDate
 public sealed record InstallmentDetailDto(
     Guid Id, int SeqNo, DateOnly DueDate, DateOnly SettlementDeadline, decimal Amount, decimal PaidAmount,
     string Status, bool IsManuallyEdited);
+
+/// <summary>Backs اقساط معوق / تسویه‌های جزئی — the countdown dashboard's window is deliberately
+/// narrow (30 days back, 7 ahead); this worklist has no window at all, since "every overdue
+/// installment" and "every partially-settled installment" are open-ended by nature.</summary>
+public sealed record InstallmentWorklistRowDto(
+    Guid InstallmentId, Guid PolicyId, string PolicyNumber, string CustomerFullName, int SeqNo,
+    DateOnly DueDate, DateOnly SettlementDeadline, decimal Amount, decimal PaidAmount, decimal Balance,
+    string Status, string Urgency);

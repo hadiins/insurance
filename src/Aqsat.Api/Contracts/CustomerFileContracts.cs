@@ -21,3 +21,16 @@ public sealed record CustomerPaymentDto(
 
 public sealed record CustomerCollateralDto(
     Guid Id, string PolicyNumber, string Type, decimal Amount, DateOnly? DueDate, string Status);
+
+/// <summary>The standalone "ثبت پرداخت مستقل" flow — recording a payment without coming from the
+/// countdown dashboard first. Only installments still owed (Unpaid/Partial) across every one of the
+/// customer's policies, oldest due date first, matching the same allocation order Task 10's payment
+/// recording already applies by default.</summary>
+public sealed record OpenInstallmentDto(
+    Guid InstallmentId, string PolicyNumber, string InsuranceLineNameFa, int SeqNo, DateOnly DueDate, decimal Balance, string Status);
+
+/// <summary>مشتریان پرریسک — risk is read directly off existing data (overdue installments +
+/// bounced cheques), never a separate score anyone has to maintain: currently-overdue installments
+/// past their settlement deadline, and any cheque that has ever bounced.</summary>
+public sealed record HighRiskCustomerDto(
+    Guid CustomerId, string FullName, string? Mobile, int OverdueInstallmentCount, int MaxDaysOverdue, int BouncedChequeCount);

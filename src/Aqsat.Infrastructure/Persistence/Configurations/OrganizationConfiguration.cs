@@ -15,6 +15,8 @@ public sealed class OrganizationConfiguration : AqsatEntityConfiguration<Organiz
         builder.Property(o => o.City).HasMaxLength(100);
         builder.Property(o => o.InsurerName).HasMaxLength(80);
 
+        builder.HasIndex(o => o.Code).IsUnique().HasFilter("[IsDeleted] = 0");
+
         builder.HasOne(o => o.Parent)
             .WithMany()
             .HasForeignKey(o => o.ParentId);

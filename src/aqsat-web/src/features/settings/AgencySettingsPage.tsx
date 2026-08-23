@@ -1,0 +1,257 @@
+import { useEffect, useState } from "react";
+import { api, ApiError } from "../../lib/api";
+import { fa } from "../../lib/persian";
+
+interface AgencySettingsDto {
+  code: string;
+  name: string;
+  city: string | null;
+  insurerName: string | null;
+  settlementDeadlineDays: number;
+  lockScope: "Full" | "InstallmentOnly";
+  dueDateRule: string;
+  shiftOnHoliday: boolean;
+  maxInstallments: number;
+  reminderDaysBefore: string;
+  maxOpenTabs: number;
+  defaultServiceFee: number;
+  serviceFeeMode: "Fixed" | "Percent";
+  defaultWriteOffDays: number;
+  renewalAutoWatchLeadDays: number;
+}
+
+export function AgencySettingsPage() {
+  const [form, setForm] = useState<AgencySettingsDto | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<AgencySettingsDto>("/settings/agency")
+      .then(setForm)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری تنظیمات"));
+  }, []);
+
+  function update<K extends keyof AgencySettingsDto>(key: K, value: AgencySettingsDto[K]) {
+    setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setSaved(false);
+  }
+
+  async function save() {
+    if (!form) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await api.put<AgencySettingsDto>("/settings/agency", {
+        name: form.name,
+        city: form.city,
+        insurerName: form.insurerName,
+        settlementDeadlineDays: Number(form.settlementDeadlineDays),
+        lockScope: form.lockScope,
+        shiftOnHoliday: form.shiftOnHoliday,
+        maxInstallments: Number(form.maxInstallments),
+        reminderDaysBefore: form.reminderDaysBefore,
+        maxOpenTabs: Number(form.maxOpenTabs),
+        defaultServiceFee: Number(form.defaultServiceFee),
+        serviceFeeMode: form.serviceFeeMode,
+        defaultWriteOffDays: Number(form.defaultWriteOffDays),
+        renewalAutoWatchLeadDays: Number(form.renewalAutoWatchLeadDays),
+      });
+      setForm(updated);
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ذخیرهٔ تنظیمات ناموفق بود.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!form) {
+    return (
+      <div>
+        <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">مشخصات نمایندگی</h2>
+        {error ? (
+          <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+        ) : (
+          <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
+        مشخصات <em className="font-extralight not-italic text-(--ice-2)">نمایندگی</em>
+      </h2>
+      <div className="mb-4.5 text-xs text-(--ice-3)">کد نمایندگی: {fa(form.code)}</div>
+
+      {error && (
+        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          {error}
+        </div>
+      )}
+      {saved && (
+        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
+          تنظیمات ذخیره شد.
+        </div>
+      )}
+
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">هویت نمایندگی</div>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="نام نمایندگی">
+            <input value={form.name} onChange={(e) => update("name", e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="شهر">
+            <input value={form.city ?? ""} onChange={(e) => update("city", e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="شرکت بیمهٔ طرف قرارداد">
+            <input value={form.insurerName ?? ""} onChange={(e) => update("insurerName", e.target.value)} className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">شمارش‌معکوس تسویه</div>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="مهلت تسویه (روز)">
+            <input
+              value={form.settlementDeadlineDays}
+              onChange={(e) => update("settlementDeadlineDays", Number(e.target.value) as never)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="محدودهٔ قفل">
+            <select value={form.lockScope} onChange={(e) => update("lockScope", e.target.value as AgencySettingsDto["lockScope"])} className={inputClass}>
+              <option value="Full">کامل</option>
+              <option value="InstallmentOnly">فقط قسط</option>
+            </select>
+          </Field>
+          <Field label="جابه‌جایی مهلت در تعطیلات">
+            <select
+              value={form.shiftOnHoliday ? "yes" : "no"}
+              onChange={(e) => update("shiftOnHoliday", e.target.value === "yes")}
+              className={inputClass}
+            >
+              <option value="yes">فعال</option>
+              <option value="no">غیرفعال</option>
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">اقساط و یادآوری</div>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="سقف تعداد اقساط">
+            <input value={form.maxInstallments} onChange={(e) => update("maxInstallments", Number(e.target.value) as never)} className={inputClass} />
+          </Field>
+          <Field label="روزهای یادآوری (با ویرگول)">
+            <input value={form.reminderDaysBefore} onChange={(e) => update("reminderDaysBefore", e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="سقف تب‌های باز">
+            <input value={form.maxOpenTabs} onChange={(e) => update("maxOpenTabs", Number(e.target.value) as never)} className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">کارمزد خدمات و سود و زیان</div>
+        <div className="grid grid-cols-4 gap-3">
+          <Field label="کارمزد خدمات پیش‌فرض">
+            <input value={form.defaultServiceFee} onChange={(e) => update("defaultServiceFee", Number(e.target.value) as never)} className={inputClass} />
+          </Field>
+          <Field label="حالت کارمزد">
+            <select value={form.serviceFeeMode} onChange={(e) => update("serviceFeeMode", e.target.value as AgencySettingsDto["serviceFeeMode"])} className={inputClass}>
+              <option value="Fixed">مبلغ ثابت</option>
+              <option value="Percent">درصدی</option>
+            </select>
+          </Field>
+          <Field label="آستانهٔ سوخت نکول (روز)">
+            <input value={form.defaultWriteOffDays} onChange={(e) => update("defaultWriteOffDays", Number(e.target.value) as never)} className={inputClass} />
+          </Field>
+          <Field label="پیش‌آگهی تمدید (روز)">
+            <input value={form.renewalAutoWatchLeadDays} onChange={(e) => update("renewalAutoWatchLeadDays", Number(e.target.value) as never)} className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        disabled={busy}
+        onClick={save}
+        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
+      </button>
+
+      <DangerZone code={form.code} />
+    </div>
+  );
+}
+
+function DangerZone({ code }: { code: string }) {
+  const [confirmText, setConfirmText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  async function clearData() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.delete("/settings/agency/data", { confirmCode: confirmText.trim() });
+      setDone(true);
+      setConfirmText("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "پاکسازی ناموفق بود.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl border border-(--ember)/30 bg-(--ember)/5 p-5">
+      <div className="mb-1 text-[12.5px] font-semibold text-(--ember)">منطقهٔ خطر</div>
+      <div className="mb-3 text-[11.5px] text-(--ice-3)">
+        پاک‌کردن کامل داده‌های این نمایندگی — همهٔ بیمه‌نامه‌ها، اقساط، پرداخت‌ها و وثیقه‌ها. مشتریان و کاربران دست‌نخورده می‌مانند. غیرقابل بازگشت از داخل برنامه.
+      </div>
+      {error && (
+        <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+      )}
+      {done && (
+        <div className="mb-3 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">داده‌ها پاک شدند.</div>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder={`برای تأیید، «${code}» را تایپ کنید`}
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--ember)"
+        />
+        <button
+          type="button"
+          disabled={busy || confirmText.trim() !== code}
+          onClick={clearData}
+          className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? "در حال پاکسازی…" : "پاک‌کردن کامل داده‌ها"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const inputClass =
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      {children}
+    </div>
+  );
+}

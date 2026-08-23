@@ -44,6 +44,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
 
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
     public DbSet<ApiIrCallLog> ApiIrCallLogs => Set<ApiIrCallLog>();
+    public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
 
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<RecordPresence> RecordPresences => Set<RecordPresence>();

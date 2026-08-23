@@ -69,6 +69,36 @@ public sealed class AuthController(
             memberships));
     }
 
+    /// <summary>Self-service — any logged-in user (owner, agency manager, staff, or a marketer with
+    /// a login) changes their own password. Requires the current password, same as any other
+    /// account-security-sensitive action; there is no separate "admin resets someone else's
+    /// password" endpoint yet.</summary>
+    [HttpPut("change-password")]
+    [Authorize]
+    public async Task<ActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+        {
+            return ValidationProblem("رمز عبور جدید باید حداقل ۸ کاراکتر باشد.");
+        }
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, ct);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+        {
+            return ValidationProblem("رمز عبور فعلی نادرست است.");
+        }
+
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        await dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {
         Status = StatusCodes.Status400BadRequest,
