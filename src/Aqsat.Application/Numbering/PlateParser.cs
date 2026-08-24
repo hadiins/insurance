@@ -75,4 +75,10 @@ public static class PlateParser
     }
 
     private static PlateParts Fail(string raw, string note) => new(raw, null, null, null, null, null, false, note);
+
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §5.3 — the same composition the plate component
+    /// itself builds from its four structured inputs, kept here so the backend never re-derives it
+    /// differently. Digits are normalized to Latin since the component may forward Persian digits.</summary>
+    public static string Compose(string twoDigit, string letter, string threeDigit, string iranCode) =>
+        $"{DigitNormalizer.ToLatin(twoDigit)}{letter}{DigitNormalizer.ToLatin(threeDigit)}-{DigitNormalizer.ToLatin(iranCode)}";
 }

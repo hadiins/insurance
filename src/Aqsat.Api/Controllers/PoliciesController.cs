@@ -146,16 +146,30 @@ public sealed class PoliciesController(
         Guid? vehicleId = null;
         if (!IsEmptyVehicle(request.Vehicle))
         {
+            var v = request.Vehicle!;
+            var hasStructuredPlate = !string.IsNullOrWhiteSpace(v.PlateTwoDigit) && !string.IsNullOrWhiteSpace(v.PlateLetter)
+                && !string.IsNullOrWhiteSpace(v.PlateThreeDigit) && !string.IsNullOrWhiteSpace(v.PlateIranCode);
+
             var vehicle = new Vehicle
             {
                 AgencyId = agencyId,
-                Plate = request.Vehicle!.Plate,
-                Vin = request.Vehicle.Vin,
-                Chassis = request.Vehicle.Chassis,
-                Make = request.Vehicle.Make,
-                Model = request.Vehicle.Model,
-                Year = request.Vehicle.Year,
+                // docs/TASK-25-IDENTITY-VEHICLE.md §5.3 — PlateNormalized is always derived
+                // server-side from the four structured parts, never trusted as a client-sent string.
+                Plate = hasStructuredPlate
+                    ? PlateParser.Compose(v.PlateTwoDigit!, v.PlateLetter!, v.PlateThreeDigit!, v.PlateIranCode!)
+                    : v.Plate,
+                Vin = v.Vin,
+                Chassis = v.Chassis,
+                Make = v.Make,
+                Model = v.Model,
+                Year = v.Year,
+                PlateType = v.PlateType is { } pt ? (PlateType)pt : PlateType.Personal,
+                PlateTwoDigit = hasStructuredPlate ? DigitNormalizer.ToLatin(v.PlateTwoDigit!) : null,
+                PlateLetter = hasStructuredPlate ? v.PlateLetter : null,
+                PlateThreeDigit = hasStructuredPlate ? DigitNormalizer.ToLatin(v.PlateThreeDigit!) : null,
+                PlateIranCode = hasStructuredPlate ? DigitNormalizer.ToLatin(v.PlateIranCode!) : null,
             };
+            vehicle.PlateNormalized = hasStructuredPlate ? vehicle.Plate : null;
             dbContext.Vehicles.Add(vehicle);
             await dbContext.SaveChangesAsync(ct);
             vehicleId = vehicle.Id;
@@ -352,7 +366,7 @@ public sealed class PoliciesController(
 
     private static bool IsEmptyVehicle(VehicleInput? vehicle) =>
         vehicle is null || (string.IsNullOrWhiteSpace(vehicle.Plate) && string.IsNullOrWhiteSpace(vehicle.Vin)
-            && string.IsNullOrWhiteSpace(vehicle.Chassis));
+            && string.IsNullOrWhiteSpace(vehicle.Chassis) && string.IsNullOrWhiteSpace(vehicle.PlateTwoDigit));
 
     /// <summary>Imported policies flagged installment but not yet scheduled — the batch grid's
     /// worklist. InstallmentCount == 0 is the "not yet scheduled" marker Task 6/7's import commit

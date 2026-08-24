@@ -83,6 +83,34 @@ public class PolicyIssuanceEndpointTests : IClassFixture<WebApplicationFactory<P
         Assert.NotNull(policy.VehicleId);
     }
 
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §5.3 — the structured plate component's four
+    /// parts, composed server-side into PlateNormalized, digits normalized to Latin.</summary>
+    [Fact]
+    public async Task Structured_plate_parts_are_composed_into_plate_normalized()
+    {
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری پلاک", null, null,
+            Vehicle: new VehicleInput(
+                null, null, null, null, null, null,
+                PlateType: 1, PlateTwoDigit: "۵۵", PlateLetter: "الف", PlateThreeDigit: "۵۵۵", PlateIranCode: "۶۳"),
+            Property: null,
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1),
+            9_000_000m, 500_000m, null, null, false));
+
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = (await client.GetFromJsonAsync<MeResponse>("/api/auth/me"))!.ActiveOrganizationId;
+        var policy = await verify.Policies.AsNoTracking().Include(p => p.Vehicle).SingleAsync(p => p.Id == result!.PolicyId);
+        Assert.Equal("55الف555-63", policy.Vehicle!.PlateNormalized);
+        Assert.Equal("55", policy.Vehicle.PlateTwoDigit);
+        Assert.Equal("555", policy.Vehicle.PlateThreeDigit);
+        Assert.Equal("63", policy.Vehicle.PlateIranCode);
+    }
+
     private async Task<(HttpClient Client, Guid SalisLineId, Guid AtashLineId)> SeedAsync()
     {
         await using var seedContext = TestDbContextFactory.Create();

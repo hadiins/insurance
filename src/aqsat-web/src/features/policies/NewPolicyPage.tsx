@@ -4,6 +4,7 @@ import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, isValidNationalId, toLatinDigits } from "../../lib/persian";
 import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
+import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./PlateField";
 
 interface InsuranceLineDto {
   id: string;
@@ -28,7 +29,6 @@ interface FormState {
   customerFullName: string;
   customerMobile: string;
   customerNationalId: string;
-  vehiclePlate: string;
   propertyAddress: string;
   propertyPostalCode: string;
   netPremium: string;
@@ -43,7 +43,6 @@ const EMPTY: FormState = {
   customerFullName: "",
   customerMobile: "",
   customerNationalId: "",
-  vehiclePlate: "",
   propertyAddress: "",
   propertyPostalCode: "",
   netPremium: "",
@@ -62,6 +61,7 @@ export function NewPolicyPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<CreatePolicyResultDto | null>(null);
+  const [plate, setPlate] = useState<PlateParts>(EMPTY_PLATE);
 
   // docs/TASK-24-POLICY-NUMBER.md §2 — the number is composed from three locked segments plus one
   // editable serial, unless the "ورود دستی شمارهٔ کامل" escape hatch is on.
@@ -150,6 +150,7 @@ export function NewPolicyPage() {
     setManualEntry(false);
     setManualNumberInput("");
     setGapConfirmed(false);
+    setPlate(EMPTY_PLATE);
     setDirty(tabKey, false);
     setTitle(tabKey, "ثبت بیمه‌نامه");
   }
@@ -169,6 +170,10 @@ export function NewPolicyPage() {
     }
     if (form.customerNationalId.trim() && !isValidNationalId(form.customerNationalId)) {
       setError("کد ملی بیمه‌گذار نامعتبر است.");
+      return;
+    }
+    if (selectedLine.requiresVehicle && !isPlateFilled(plate)) {
+      setError("شماره پلاک کامل نیست.");
       return;
     }
     if (!finalPolicyNumber) {
@@ -195,8 +200,20 @@ export function NewPolicyPage() {
         customerFullName: form.customerFullName.trim(),
         customerMobile: form.customerMobile || null,
         customerNationalId: form.customerNationalId.trim() ? form.customerNationalId.trim() : null,
-        vehicle: selectedLine.requiresVehicle || form.vehiclePlate
-          ? { plate: form.vehiclePlate || null, vin: null, chassis: null, make: null, model: null, year: null }
+        vehicle: selectedLine.requiresVehicle || isPlateFilled(plate)
+          ? {
+              plate: null,
+              vin: null,
+              chassis: null,
+              make: null,
+              model: null,
+              year: null,
+              plateType: plate.plateType,
+              plateTwoDigit: plate.twoDigit || null,
+              plateLetter: plate.letter || null,
+              plateThreeDigit: plate.threeDigit || null,
+              plateIranCode: plate.iranCode || null,
+            }
           : null,
         property: selectedLine.requiresProperty
           ? { address: form.propertyAddress, postalCode: form.propertyPostalCode || null, type: null, value: null }
@@ -293,7 +310,13 @@ export function NewPolicyPage() {
             <Field label="کد ملی بیمه‌گذار" value={form.customerNationalId} onChange={(v) => update("customerNationalId", v)} placeholder="۰۰۷۲۳۴۵۴۵۳" />
 
             {selectedLine?.requiresVehicle && (
-              <Field label="شماره پلاک" value={form.vehiclePlate} onChange={(v) => update("vehiclePlate", v)} placeholder="۷۴ ب ۳۲۱ ایران ۶۳" />
+              <PlateField
+                value={plate}
+                onChange={(v) => {
+                  setPlate(v);
+                  setDirty(tabKey, true);
+                }}
+              />
             )}
             {selectedLine?.requiresProperty && (
               <>

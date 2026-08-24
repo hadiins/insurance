@@ -3,7 +3,13 @@ namespace Aqsat.Api.Contracts;
 public sealed record InsuranceLineDto(
     Guid Id, Guid? ParentId, string Code, string NameFa, bool RequiresVehicle, bool RequiresProperty, int SortOrder);
 
-public sealed record VehicleInput(string? Plate, string? Vin, string? Chassis, string? Make, string? Model, int? Year);
+/// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §5 — Plate is kept for the rare free-text/legacy path,
+/// but the issuance form's plate component always sends the four structured parts, from which
+/// PlateNormalized is derived server-side (never trusted from the client as a single string).</summary>
+public sealed record VehicleInput(
+    string? Plate, string? Vin, string? Chassis, string? Make, string? Model, int? Year,
+    byte? PlateType = null, string? PlateTwoDigit = null, string? PlateLetter = null,
+    string? PlateThreeDigit = null, string? PlateIranCode = null);
 
 public sealed record PropertySubjectInput(string Address, string? PostalCode, string? Type, decimal? Value);
 
