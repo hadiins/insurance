@@ -3,7 +3,6 @@ export type TabKind = "singleton" | "multi-create" | "multi-record";
 export type PageKind =
   | "today"
   | "new-policy"
-  | "installment-list"
   | "customer-file"
   | "policy-file"
   | "customers-list"

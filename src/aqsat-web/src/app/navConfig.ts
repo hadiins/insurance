@@ -62,7 +62,7 @@ export const NAV: NavGroup[] = [
     label: "اقساط و وصول",
     icon: ICONS.coin,
     items: [
-      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-list" },
+      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-worklist" },
       {
         navType: "installments-overdue", title: "اقساط معوق", kind: "singleton", page: "installment-worklist",
         payload: { overdueOnly: true },

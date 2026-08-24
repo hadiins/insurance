@@ -2,7 +2,6 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import type { OpenTab } from "../../app/types";
 import { TodayPage } from "../today/TodayPage";
 import { NewPolicyPage } from "../policies/NewPolicyPage";
-import { InstallmentListPage } from "../installments/InstallmentListPage";
 import { CustomerFilePage } from "../customers/CustomerFilePage";
 import { CustomersListPage } from "../customers/CustomersListPage";
 import { PolicyFilePage } from "../policies/PolicyFilePage";
@@ -45,8 +44,6 @@ function renderPage(tab: OpenTab) {
       return <TodayPage />;
     case "new-policy":
       return <NewPolicyPage />;
-    case "installment-list":
-      return <InstallmentListPage />;
     case "customer-file":
       return <CustomerFilePage />;
     case "policy-file":
