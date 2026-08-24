@@ -3,6 +3,8 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
+import { JalaliDateField } from "../../components/JalaliDateField";
 
 interface CollateralFilterPayload {
   type?: string;
@@ -176,10 +178,9 @@ export function CollateralPage() {
             placeholder="مبلغ"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
-          <input
-            type="date"
+          <JalaliDateField
             value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
+            onChange={setDueDate}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
           />
         </div>
@@ -264,7 +265,7 @@ export function CollateralPage() {
                   <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{TYPE_LABEL[c.type]}</td>
                   <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{c.bankName ?? "—"}</td>
                   <td className="px-3 py-2.5 text-[13px] font-bold">{money(c.amount)}</td>
-                  <td className="px-3 py-2.5 text-[13px]">{c.dueDate ? fa(c.dueDate) : "—"}</td>
+                  <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(c.dueDate)}</td>
                   <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{c.colorCode ?? "—"}</td>
                   <td className="px-3 py-2.5 text-[13px]">
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL_CLASS[c.status]}`}>

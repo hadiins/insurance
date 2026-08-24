@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 
 interface ReminderLogDto {
   id: string;
@@ -16,10 +17,7 @@ interface ReminderLogDto {
 const STATUS_LABEL: Record<string, string> = { Sent: "ارسال‌شده", Failed: "ناموفق" };
 const RECIPIENT_LABEL: Record<string, string> = { Customer: "مشتری", Marketer: "بازاریاب" };
 
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return fa(`${d.toLocaleDateString("en-CA")} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`);
-}
+const timeLabel = toJalaliDateTimeDisplay;
 
 export function SmsOutboxPage() {
   const [log, setLog] = useState<ReminderLogDto[] | null>(null);

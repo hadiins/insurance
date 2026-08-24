@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
+import { JalaliDateField } from "../../components/JalaliDateField";
 
 interface CollectionsReportRow {
   policyNumber: string;
@@ -109,11 +111,11 @@ export function CollectionsReportPage() {
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
           </div>
         </div>
         <div className="flex gap-2">
@@ -172,7 +174,7 @@ export function CollectionsReportPage() {
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.customerFullName}</td>
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.insuranceLineNameFa}</td>
                       <td className="px-3 py-2.5 text-[13px]">{fa(r.seqNo)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(r.dueDate)}</td>
+                      <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(r.dueDate)}</td>
                       <td className="px-3 py-2.5 text-[13px] font-bold">{money(r.balance)}</td>
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{STATUS_LABEL[r.status] ?? r.status}</td>
                     </tr>

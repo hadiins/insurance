@@ -3,6 +3,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
 
 interface PolicyFilePayload {
   policyId: string;
@@ -68,10 +69,7 @@ const INSTALLMENT_STATUS_LABEL: Record<string, string> = {
   Settled: "تسویه‌شده",
 };
 
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return fa(`${d.toLocaleDateString("en-CA")} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`);
-}
+const timeLabel = toJalaliDateTimeDisplay;
 
 export function PolicyFilePage() {
   const tabKey = useTabKey();
@@ -166,8 +164,8 @@ export function PolicyFilePage() {
               empty="قسطی ثبت نشده."
               rows={file.installments.map((i) => [
                 fa(i.seqNo),
-                fa(i.dueDate),
-                fa(i.settlementDeadline),
+                toJalaliDisplay(i.dueDate),
+                toJalaliDisplay(i.settlementDeadline),
                 money(i.amount),
                 money(i.paidAmount),
                 money(i.balance),
@@ -184,7 +182,7 @@ export function PolicyFilePage() {
               rows={file.endorsements.map((e) => [
                 e.endorsementNo,
                 e.type,
-                fa(e.issueDate),
+                toJalaliDisplay(e.issueDate),
                 money(e.premiumDelta),
                 money(e.serviceFeeDelta),
                 e.description ?? "—",

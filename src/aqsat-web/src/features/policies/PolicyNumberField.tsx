@@ -1,4 +1,5 @@
 import { fa } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
 
 export interface PolicyNumberSuggestionDto {
   insurerName: string;
@@ -105,7 +106,7 @@ export function PolicyNumberField({
                   {suggestion?.lastSerial && (
                     <div className="mt-2 text-[11.5px] text-(--ice-3)">
                       آخرین ثبت‌شده: <span className="tabular-nums">{fa(suggestion.lastSerial)}</span>
-                      {suggestion.lastIssueDate ? ` · ${suggestion.lastIssueDate}` : ""}
+                      {suggestion.lastIssueDate ? ` · ${toJalaliDisplay(suggestion.lastIssueDate)}` : ""}
                     </div>
                   )}
                   {!suggestion?.canCompose && (

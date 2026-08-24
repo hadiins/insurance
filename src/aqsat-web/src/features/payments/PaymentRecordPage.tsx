@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
 
 interface CustomerListItemDto {
@@ -152,7 +153,7 @@ export function PaymentRecordPage() {
                       <td className="px-3 py-2.5 text-[13px] font-semibold">{i.policyNumber}</td>
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{i.insuranceLineNameFa}</td>
                       <td className="px-3 py-2.5 text-[13px]">{fa(i.seqNo)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(i.dueDate)}</td>
+                      <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(i.dueDate)}</td>
                       <td className="px-3 py-2.5 text-[13px] font-bold">{money(i.balance)}</td>
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{STATUS_LABEL[i.status]}</td>
                       <td className="px-3 py-2.5 text-[13px]">

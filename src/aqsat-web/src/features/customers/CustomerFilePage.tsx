@@ -3,6 +3,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
 
 interface CustomerFilePayload {
   customerId: string;
@@ -53,10 +54,7 @@ interface CustomerFileDto {
   timeline: TimelineEntryDto[];
 }
 
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return fa(`${d.toLocaleDateString("en-CA")} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`);
-}
+const timeLabel = toJalaliDateTimeDisplay;
 
 export function CustomerFilePage() {
   const tabKey = useTabKey();
@@ -209,7 +207,7 @@ export function CustomerFilePage() {
                   <tbody>
                     {file.payments.map((p) => (
                       <tr key={p.id} className="border-t border-(--edge) first:border-t-0">
-                        <td className="px-3 py-2.75 text-[13px]">{fa(p.paidOn)}</td>
+                        <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(p.paidOn)}</td>
                         <td className="px-3 py-2.75 text-[13px] font-bold">{money(p.amount)}</td>
                         <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.method}</td>
                         <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.referenceNo ? fa(p.referenceNo) : "—"}</td>
@@ -242,7 +240,7 @@ export function CustomerFilePage() {
                         <td className="px-3 py-2.75 text-[13px]">{fa(c.policyNumber)}</td>
                         <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{c.type}</td>
                         <td className="px-3 py-2.75 text-[13px] font-bold">{money(c.amount)}</td>
-                        <td className="px-3 py-2.75 text-[13px]">{c.dueDate ? fa(c.dueDate) : "—"}</td>
+                        <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(c.dueDate)}</td>
                         <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{c.status}</td>
                       </tr>
                     ))}

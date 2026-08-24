@@ -3,6 +3,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
 
 type Mode = "payments" | "statement";
 
@@ -194,7 +195,7 @@ export function CustomerLookupPage() {
                 <tbody>
                   {selected.payments.map((p) => (
                     <tr key={p.id} className="border-t border-(--edge) first:border-t-0">
-                      <td className="px-3 py-2.5 text-[13px]">{fa(p.paidOn)}</td>
+                      <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(p.paidOn)}</td>
                       <td className="px-3 py-2.5 text-[13px] font-bold">{money(p.amount)}</td>
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.method}</td>
                       <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.referenceNo ?? "—"}</td>

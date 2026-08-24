@@ -3,6 +3,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
 
 interface WorklistFilterPayload {
@@ -112,7 +113,7 @@ export function InstallmentsWorklistPage() {
                       <td className="px-3 py-2.75 text-[13px] font-semibold">{r.policyNumber}</td>
                       <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{r.customerFullName}</td>
                       <td className="px-3 py-2.75 text-[13px]">{fa(r.seqNo)}</td>
-                      <td className="px-3 py-2.75 text-[13px]">{fa(r.dueDate)}</td>
+                      <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(r.dueDate)}</td>
                       <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{URGENCY_LABEL[r.urgency]}</td>
                       <td className="px-3 py-2.75 text-[13px] font-bold">{money(r.balance)}</td>
                       <td className="px-3 py-2.75 text-[13px]">

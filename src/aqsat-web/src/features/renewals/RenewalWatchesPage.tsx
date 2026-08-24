@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
+import { JalaliDateField } from "../../components/JalaliDateField";
 
 interface InsuranceLineDto {
   id: string;
@@ -165,10 +167,9 @@ export function RenewalWatchesPage() {
             placeholder="بیمه‌گر فعلی"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
-          <input
-            type="date"
+          <JalaliDateField
             value={expiryDate}
-            onChange={(e) => setExpiryDate(e.target.value)}
+            onChange={setExpiryDate}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
           />
         </div>
@@ -230,7 +231,7 @@ export function RenewalWatchesPage() {
                   <td className="px-3 py-2.75 text-[13px] font-semibold">{w.customerFullName ?? w.prospectName}</td>
                   <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{w.insuranceLineNameFa}</td>
                   <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{w.currentInsurer ?? "—"}</td>
-                  <td className="px-3 py-2.75 text-[13px]">{fa(w.currentExpiryDate)}</td>
+                  <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(w.currentExpiryDate)}</td>
                   <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{w.marketerFullName ?? "—"}</td>
                   <td className="px-3 py-2.75 text-[13px]">
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL_CLASS[w.status]}`}>

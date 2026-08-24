@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { JalaliDateField } from "../../components/JalaliDateField";
 
 interface InsuranceLineDto {
   id: string;
@@ -134,19 +135,17 @@ export function SmsReminderPage() {
         <div className="mb-3.5 grid grid-cols-3 gap-3">
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">سررسید از</label>
-            <input
-              type="date"
+            <JalaliDateField
               value={filter.dueFrom}
-              onChange={(e) => setFilter((f) => ({ ...f, dueFrom: e.target.value }))}
+              onChange={(v) => setFilter((f) => ({ ...f, dueFrom: v }))}
               className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">سررسید تا</label>
-            <input
-              type="date"
+            <JalaliDateField
               value={filter.dueTo}
-              onChange={(e) => setFilter((f) => ({ ...f, dueTo: e.target.value }))}
+              onChange={(v) => setFilter((f) => ({ ...f, dueTo: v }))}
               className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
             />
           </div>

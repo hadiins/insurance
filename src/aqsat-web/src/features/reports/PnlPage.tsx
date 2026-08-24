@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { money } from "../../lib/persian";
+import { JalaliDateField } from "../../components/JalaliDateField";
 
 interface PnlBreakdownRow {
   groupKey: string;
@@ -97,11 +98,11 @@ export function PnlPage() {
         <div className="mb-3.5 grid grid-cols-4 gap-3">
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">مبنا</label>

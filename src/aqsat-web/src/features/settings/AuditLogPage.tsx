@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 
 interface AuditLogRowDto {
   id: number;
@@ -18,10 +19,7 @@ const ACTION_LABEL: Record<string, string> = {
   LockForceReleased: "رفع قفل اجباری",
 };
 
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return fa(`${d.toLocaleDateString("en-CA")} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`);
-}
+const timeLabel = toJalaliDateTimeDisplay;
 
 export function AuditLogPage() {
   const [search, setSearch] = useState("");
