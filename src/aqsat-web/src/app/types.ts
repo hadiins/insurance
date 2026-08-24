@@ -16,6 +16,7 @@ export type PageKind =
   | "renewal-watches"
   | "collateral"
   | "collections-report"
+  | "missing-serials"
   | "platform-updates"
   | "payment-record"
   | "agency-settings"

@@ -12,6 +12,7 @@ import { MarketersPage } from "../marketers/MarketersPage";
 import { MarketerPanelPage } from "../marketers/MarketerPanelPage";
 import { SmsReminderPage } from "../sms/SmsReminderPage";
 import { PnlPage } from "../reports/PnlPage";
+import { MissingSerialsPage } from "../reports/MissingSerialsPage";
 import { RenewalWatchesPage } from "../renewals/RenewalWatchesPage";
 import { CollateralPage } from "../collateral/CollateralPage";
 import { CollectionsReportPage } from "../reports/CollectionsReportPage";
@@ -62,6 +63,8 @@ function renderPage(tab: OpenTab) {
       return <SmsReminderPage />;
     case "pnl":
       return <PnlPage />;
+    case "missing-serials":
+      return <MissingSerialsPage />;
     case "renewal-watches":
       return <RenewalWatchesPage />;
     case "collateral":
