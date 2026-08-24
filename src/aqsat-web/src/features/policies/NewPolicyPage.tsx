@@ -6,6 +6,7 @@ import { fa, isValidNationalId, toLatinDigits } from "../../lib/persian";
 import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
 import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./PlateField";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { MoneyInput } from "../../components/MoneyInput";
 
 interface InsuranceLineDto {
   id: string;
@@ -397,8 +398,14 @@ export function NewPolicyPage() {
               </>
             )}
 
-            <Field label="حق بیمه (تومان)" value={form.netPremium} onChange={(v) => update("netPremium", v)} placeholder="۹٬۰۰۰٬۰۰۰" />
-            <Field label="کارمزد خدمات (تومان)" value={form.serviceFee} onChange={(v) => update("serviceFee", v)} placeholder="۵۰۰٬۰۰۰" />
+            <div>
+              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حق بیمه (تومان)</label>
+              <MoneyInput value={form.netPremium} onChange={(v) => update("netPremium", v)} placeholder="۹٬۰۰۰٬۰۰۰" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">کارمزد خدمات (تومان)</label>
+              <MoneyInput value={form.serviceFee} onChange={(v) => update("serviceFee", v)} placeholder="۵۰۰٬۰۰۰" />
+            </div>
 
             <DateField label="تاریخ صدور" value={form.issueDate} onChange={(v) => update("issueDate", v)} />
             <DateField label="تاریخ شروع" value={form.startDate} onChange={(v) => update("startDate", v)} />

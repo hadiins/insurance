@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
-import { fa, money } from "../../lib/persian";
+import { fa, money, toLatinDigits } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
+import { MoneyInput } from "../../components/MoneyInput";
 
 interface PendingSchedulePolicyDto {
   policyId: string;
@@ -167,22 +168,22 @@ export function SchedulePolicyPage() {
                   <div>
                     <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تعداد اقساط</label>
                     <input
-                      value={installmentCount}
-                      onChange={(e) => setInstallmentCount(e.target.value.replace(/[^\d]/g, ""))}
+                      value={fa(installmentCount)}
+                      onChange={(e) => setInstallmentCount(toLatinDigits(e.target.value).replace(/[^\d]/g, ""))}
                       placeholder="۹"
-                      className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                      inputMode="numeric"
+                      className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
                     />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">پیش‌پرداخت (تومان)</label>
-                    <input
+                    <MoneyInput
                       value={downPayment}
-                      onChange={(e) => {
-                        setDownPayment(e.target.value.replace(/[^\d]/g, ""));
+                      onChange={(v) => {
+                        setDownPayment(v);
                         setDownPaymentTouched(true);
                       }}
                       placeholder="پیشنهاد خودکار"
-                      className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                     />
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { MoneyInput } from "../../components/MoneyInput";
 
 interface AgencySettingsDto {
   code: string;
@@ -210,7 +211,11 @@ export function AgencySettingsPage() {
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">کارمزد خدمات و سود و زیان</div>
         <div className="grid grid-cols-4 gap-3">
           <Field label="کارمزد خدمات پیش‌فرض">
-            <input value={form.defaultServiceFee} onChange={(e) => update("defaultServiceFee", Number(e.target.value) as never)} className={inputClass} />
+            <MoneyInput
+              value={String(form.defaultServiceFee)}
+              onChange={(v) => update("defaultServiceFee", Number(v) as never)}
+              className={inputClass}
+            />
           </Field>
           <Field label="حالت کارمزد">
             <select value={form.serviceFeeMode} onChange={(e) => update("serviceFeeMode", e.target.value as AgencySettingsDto["serviceFeeMode"])} className={inputClass}>

@@ -5,6 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { MoneyInput } from "../../components/MoneyInput";
 
 interface CollateralFilterPayload {
   type?: string;
@@ -172,11 +173,11 @@ export function CollateralPage() {
             placeholder="نام بانک"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
-          <input
+          <MoneyInput
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="مبلغ"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
           />
           <JalaliDateField
             value={dueDate}

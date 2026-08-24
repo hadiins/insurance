@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { MoneyInput } from "../../components/MoneyInput";
 
 interface ContractTemplateDto {
   id: string;
@@ -213,14 +214,13 @@ export function ContractTemplatesPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input
+                  <MoneyInput
                     value={rowInputs[p.policyId]?.downPayment ?? "0"}
-                    onChange={(e) =>
-                      setRowInputs((prev) => ({ ...prev, [p.policyId]: { ...prev[p.policyId], downPayment: e.target.value } }))
+                    onChange={(v) =>
+                      setRowInputs((prev) => ({ ...prev, [p.policyId]: { ...prev[p.policyId], downPayment: v } }))
                     }
-                    type="number"
                     placeholder="پیش‌پرداخت"
-                    className="w-32 rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+                    className="w-32 rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
                   />
                   <input
                     value={rowInputs[p.policyId]?.count ?? "9"}

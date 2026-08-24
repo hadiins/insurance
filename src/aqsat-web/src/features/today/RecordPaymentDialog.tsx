@@ -2,6 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { MoneyInput } from "../../components/MoneyInput";
 
 interface AllocationLineDto {
   installmentId: string;
@@ -106,11 +107,10 @@ export function RecordPaymentDialog({
                 )}
 
                 <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">مبلغ (تومان)</label>
-                <input
+                <MoneyInput
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  inputMode="numeric"
-                  className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                  onChange={setAmount}
+                  className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
                 />
 
                 <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">روش پرداخت</label>
