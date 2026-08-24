@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
-import { fa } from "../../lib/persian";
 
 interface InsuranceLineDto {
   id: string;
