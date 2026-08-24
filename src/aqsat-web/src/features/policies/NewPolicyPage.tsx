@@ -6,6 +6,7 @@ import { fa, isValidNationalId, toLatinDigits } from "../../lib/persian";
 import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
 import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./PlateField";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { addOneJalaliYear } from "../../lib/jalali";
 import { MoneyInput } from "../../components/MoneyInput";
 
 interface InsuranceLineDto {
@@ -59,7 +60,7 @@ const EMPTY: FormState = {
   serviceFee: "",
   issueDate: TODAY,
   startDate: TODAY,
-  endDate: "",
+  endDate: addOneJalaliYear(TODAY) ?? "",
 };
 
 export function NewPolicyPage() {
@@ -174,6 +175,11 @@ export function NewPolicyPage() {
 
   function update<K extends keyof FormState>(field: K, value: string) {
     const next = { ...form, [field]: value };
+    // تاریخ پایان همیشه یک سال شمسی بعد از تاریخ صدور پیش‌فرض می‌شود — کاربر هنوز می‌تواند بعداً
+    // آن را دستی تغییر دهد.
+    if (field === "issueDate") {
+      next.endDate = addOneJalaliYear(value) ?? next.endDate;
+    }
     setForm(next);
     setDirty(tabKey, true);
   }

@@ -54,6 +54,19 @@ export function jalaliPartsToIso(jy: number, jm: number, jd: number): string {
   return `${gy.toString().padStart(4, "0")}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`;
 }
 
+/** Iranian third-party motor policies always run a full Jalali year — same Jalali month/day, one
+ * Jalali year later, clamped for the rare Esfand-30-in-a-leap-year case (mirrors the backend's own
+ * AddPersianMonths clamp in Aqsat.Application/Schedule/DueDateCalculator.cs). */
+export function addOneJalaliYear(iso: string): string | null {
+  const parts = isoToJalaliParts(iso);
+  if (!parts) return null;
+
+  const targetYear = parts.jy + 1;
+  const maxDay = jalaaliMonthLength(targetYear, parts.jm);
+  const day = Math.min(parts.jd, maxDay);
+  return jalaliPartsToIso(targetYear, parts.jm, day);
+}
+
 /** 0-6, Saturday-first (the Jalali week's own start day), for laying out a calendar grid. */
 export function jalaliFirstWeekdayOffset(jy: number, jm: number): number {
   const { gy, gm, gd } = toGregorian(jy, jm, 1);
