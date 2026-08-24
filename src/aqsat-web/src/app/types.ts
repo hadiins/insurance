@@ -18,6 +18,7 @@ export type PageKind =
   | "collections-report"
   | "missing-serials"
   | "policy-number-settings"
+  | "customer-completion"
   | "platform-updates"
   | "payment-record"
   | "agency-settings"

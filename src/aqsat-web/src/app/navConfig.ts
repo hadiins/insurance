@@ -109,6 +109,7 @@ export const NAV: NavGroup[] = [
       },
       { navType: "customer-consents", title: "رضایت‌نامه‌های ثبت‌شده", kind: "singleton", page: "blank" },
       { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "high-risk-customers" },
+      { navType: "customer-completion", title: "تکمیل پروندهٔ مشتریان", kind: "singleton", page: "customer-completion" },
     ],
   },
   {

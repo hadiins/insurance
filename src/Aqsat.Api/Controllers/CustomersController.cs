@@ -1,5 +1,6 @@
 using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Application.Common;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -16,8 +17,140 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/customers")]
 [Authorize(Policy = Permissions.PolicyRead)]
-public sealed class CustomersController(AppDbContext dbContext, TimeProvider timeProvider) : ControllerBase
+public sealed class CustomersController(AppDbContext dbContext, TimeProvider timeProvider, IFieldEncryptor fieldEncryptor) : ControllerBase
 {
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the dashboard widget's two counts.</summary>
+    [HttpGet("incomplete-summary")]
+    public async Task<ActionResult<IncompleteProfileSummaryDto>> IncompleteSummary(CancellationToken ct)
+    {
+        var total = await dbContext.Customers.AsNoTracking().CountAsync(c => !c.IsProfileComplete, ct);
+        var withoutMobile = await dbContext.Customers.AsNoTracking().CountAsync(c => c.Mobile == null, ct);
+        var withoutNationalId = await dbContext.Customers.AsNoTracking().CountAsync(c => c.NationalId == null, ct);
+
+        return Ok(new IncompleteProfileSummaryDto(total, withoutMobile, withoutNationalId));
+    }
+
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — "شبیه اکسل، نه ۱۳۷ فرم": one paginated grid,
+    /// 50 rows per page, optionally narrowed to whichever single field is missing.</summary>
+    [HttpGet("incomplete")]
+    public async Task<ActionResult<IReadOnlyList<CustomerIncompleteRowDto>>> Incomplete(
+        [FromQuery] string? filter, [FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+    {
+        var query = dbContext.Customers.AsNoTracking().Where(c => !c.IsProfileComplete);
+
+        query = filter switch
+        {
+            "no-mobile" => query.Where(c => c.Mobile == null),
+            "no-national-id" => query.Where(c => c.NationalId == null),
+            _ => query,
+        };
+
+        var effectivePage = page <= 0 ? 1 : page;
+        var effectivePageSize = pageSize is <= 0 or > 200 ? 50 : pageSize;
+
+        var rows = await query
+            .OrderBy(c => c.FullName)
+            .Skip((effectivePage - 1) * effectivePageSize)
+            .Take(effectivePageSize)
+            .Select(c => new CustomerIncompleteRowDto(
+                c.Id, c.FullName, c.FirstName, c.LastName, c.NationalId != null,
+                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete))
+            .ToListAsync(ct);
+
+        return Ok(rows);
+    }
+
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — every present field is validated and written;
+    /// a field left out of this request is untouched, so a row can be completed across more than one
+    /// save. §2's format rules apply here exactly as they do on manual customer entry.</summary>
+    [HttpPut("{id:guid}/complete-profile")]
+    [Authorize(Policy = Permissions.PolicyWrite)]
+    public async Task<ActionResult<CustomerIncompleteRowDto>> CompleteProfile(
+        Guid id, CompleteCustomerProfileRequest request, CancellationToken ct)
+    {
+        var customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (customer is null)
+        {
+            return NotFound();
+        }
+
+        if (request.Mobile is not null)
+        {
+            if (!MobileNumberValidator.IsValid(request.Mobile))
+            {
+                return ValidationProblem("شمارهٔ موبایل نامعتبر است.");
+            }
+
+            customer.Mobile = MobileNumberValidator.Normalize(request.Mobile);
+        }
+
+        if (request.EmergencyMobile is not null)
+        {
+            if (!MobileNumberValidator.IsValid(request.EmergencyMobile))
+            {
+                return ValidationProblem("شمارهٔ موبایل اضطراری نامعتبر است.");
+            }
+
+            var normalizedEmergency = MobileNumberValidator.Normalize(request.EmergencyMobile);
+            var mainMobile = request.Mobile is not null ? MobileNumberValidator.Normalize(request.Mobile) : customer.Mobile;
+            if (normalizedEmergency == mainMobile)
+            {
+                return ValidationProblem("موبایل اضطراری نباید با موبایل اصلی یکسان باشد.");
+            }
+
+            customer.EmergencyMobile = normalizedEmergency;
+        }
+
+        if (request.NationalId is not null)
+        {
+            if (!NationalIdValidator.IsValid(request.NationalId))
+            {
+                return ValidationProblem("کد ملی نامعتبر است.");
+            }
+
+            var normalizedNationalId = DigitNormalizer.ToLatin(request.NationalId).Trim();
+            customer.NationalId = normalizedNationalId;
+            customer.NationalIdHash = fieldEncryptor.Hash(normalizedNationalId);
+        }
+
+        if (request.PostalCode is not null)
+        {
+            var normalizedPostalCode = DigitNormalizer.ToLatin(request.PostalCode).Trim();
+            if (normalizedPostalCode.Length != 10 || !normalizedPostalCode.All(char.IsAsciiDigit))
+            {
+                return ValidationProblem("کد پستی باید دقیقاً ۱۰ رقم باشد.");
+            }
+
+            customer.PostalCode = normalizedPostalCode;
+        }
+
+        if (request.Address is not null)
+        {
+            if (request.Address.Trim().Length < 10)
+            {
+                return ValidationProblem("آدرس باید حداقل ۱۰ کاراکتر باشد.");
+            }
+
+            customer.Address = request.Address.Trim();
+        }
+
+        if (request.FirstName is not null)
+        {
+            customer.FirstName = request.FirstName.Trim();
+        }
+
+        if (request.LastName is not null)
+        {
+            customer.LastName = request.LastName.Trim();
+        }
+
+        await dbContext.SaveChangesAsync(ct);
+
+        return Ok(new CustomerIncompleteRowDto(
+            customer.Id, customer.FullName, customer.FirstName, customer.LastName, customer.NationalId != null,
+            customer.Mobile, customer.EmergencyMobile, customer.Address, customer.PostalCode, customer.IsProfileComplete));
+    }
+
     /// <summary>مشتریان پرریسک — every customer with at least one currently-overdue installment or
     /// a bounced cheque, worst first.</summary>
     [HttpGet("high-risk")]
@@ -179,4 +312,10 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
         string.IsNullOrEmpty(nationalId) || nationalId.Length < 7
             ? nationalId
             : $"{nationalId[..4]}•••{nationalId[^3..]}";
+
+    private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
+    {
+        Status = StatusCodes.Status400BadRequest,
+        Title = message,
+    });
 }

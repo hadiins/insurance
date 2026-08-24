@@ -20,6 +20,7 @@ import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { PaymentRecordPage } from "../payments/PaymentRecordPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
 import { PolicyNumberSettingsPage } from "../settings/PolicyNumberSettingsPage";
+import { CustomerCompletionPage } from "../customers/CustomerCompletionPage";
 import { DeskFeedPage } from "../desk/DeskFeedPage";
 import { PoliciesListPage } from "../policies/PoliciesListPage";
 import { InstallmentsWorklistPage } from "../installments/InstallmentsWorklistPage";
@@ -80,6 +81,8 @@ function renderPage(tab: OpenTab) {
       return <AgencySettingsPage />;
     case "policy-number-settings":
       return <PolicyNumberSettingsPage />;
+    case "customer-completion":
+      return <CustomerCompletionPage />;
     case "desk-feed":
       return <DeskFeedPage />;
     case "policy-list":

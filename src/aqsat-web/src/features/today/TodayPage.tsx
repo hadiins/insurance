@@ -59,12 +59,19 @@ interface PnlSummaryDto {
   netProfit: number;
 }
 
+interface IncompleteProfileSummaryDto {
+  total: number;
+  withoutMobile: number;
+  withoutNationalId: number;
+}
+
 export function TodayPage() {
   const openTab = useTabsStore((s) => s.openTab);
   const [data, setData] = useState<CountdownDashboardDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payingRow, setPayingRow] = useState<CountdownRowDto | null>(null);
   const [pnl, setPnl] = useState<PnlSummaryDto | null>(null);
+  const [incompleteProfiles, setIncompleteProfiles] = useState<IncompleteProfileSummaryDto | null>(null);
 
   const reload = useCallback(() => {
     api
@@ -85,6 +92,13 @@ export function TodayPage() {
       .get<PnlSummaryDto>(`/reports/pnl?from=${from}&to=${to}&basis=Accrual`)
       .then(setPnl)
       .catch(() => setPnl(null));
+  }, []);
+
+  useEffect(() => {
+    api
+      .get<IncompleteProfileSummaryDto>("/customers/incomplete-summary")
+      .then(setIncompleteProfiles)
+      .catch(() => setIncompleteProfiles(null));
   }, []);
 
   const overdueOrCriticalCount = data?.rows.filter((r) => r.urgency === "Overdue" || r.urgency === "Critical").length ?? 0;
@@ -121,6 +135,28 @@ export function TodayPage() {
             </div>
           </div>
           <div className="text-[11px] text-(--ice-3)">مشاهدهٔ گزارش کامل ←</div>
+        </div>
+      )}
+
+      {incompleteProfiles !== null && incompleteProfiles.total > 0 && (
+        <div
+          onClick={() =>
+            openTab({ navType: "customer-completion", page: "customer-completion", kind: "singleton", title: "تکمیل پروندهٔ مشتریان" })
+          }
+          className="mb-4.5 cursor-pointer rounded-[14px] border border-(--amber)/25 bg-(--amber)/6 p-3.5 transition-colors hover:bg-(--amber)/10"
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-[13px] font-bold text-(--amber)">⚠ {fa(incompleteProfiles.total)} مشتری اطلاعات ناقص دارند</div>
+            <div className="text-[11px] text-(--ice-3)">تکمیل پرونده‌ها ←</div>
+          </div>
+          <div className="flex gap-5 text-[11.5px] text-(--ice-3)">
+            <span>
+              بدون شمارهٔ موبایل: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutMobile)}</b> ← یادآوری پیامکی کار نمی‌کند
+            </span>
+            <span>
+              بدون کد ملی: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutNationalId)}</b> ← اعتبارسنجی ممکن نیست
+            </span>
+          </div>
         </div>
       )}
 
