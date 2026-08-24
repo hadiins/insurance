@@ -1,10 +1,13 @@
-import { toJalaali, toGregorian, isValidJalaaliDate } from "jalaali-js";
+import { toJalaali, toGregorian, isValidJalaaliDate, jalaaliMonthLength } from "jalaali-js";
 import { fa, toLatinDigits } from "./persian";
+
+export { jalaaliMonthLength };
 
 /** CLAUDE.md — "Jalali dates displayed; store DateTimeOffset UTC." One conversion point for the
  * whole frontend, per docs/TASK-25-IDENTITY-VEHICLE.md §6.1's "یک نقطهٔ تبدیل مرکزی در هر لایه." */
 
-function isoToJalaliParts(iso: string): { jy: number; jm: number; jd: number } | null {
+export function isoToJalaliParts(iso: string | null | undefined): { jy: number; jm: number; jd: number } | null {
+  if (!iso) return null;
   const m = iso.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return null;
   const [, gy, gm, gd] = m;
@@ -39,6 +42,23 @@ export function toJalaliDateTimeDisplay(iso: string | null | undefined): string 
   if (!datePart) return "—";
   const timePart = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   return fa(`${datePart} ${timePart}`);
+}
+
+export function todayJalaliParts(): { jy: number; jm: number; jd: number } {
+  const now = new Date();
+  return toJalaali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+export function jalaliPartsToIso(jy: number, jm: number, jd: number): string {
+  const { gy, gm, gd } = toGregorian(jy, jm, jd);
+  return `${gy.toString().padStart(4, "0")}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`;
+}
+
+/** 0-6, Saturday-first (the Jalali week's own start day), for laying out a calendar grid. */
+export function jalaliFirstWeekdayOffset(jy: number, jm: number): number {
+  const { gy, gm, gd } = toGregorian(jy, jm, 1);
+  const jsDay = new Date(gy, gm - 1, gd).getDay(); // 0 = Sunday … 6 = Saturday
+  return (jsDay + 1) % 7; // 0 = Saturday … 6 = Friday
 }
 
 /** "1405/05/23" (Persian or Latin digits, "/" or "-" separator) -> ISO "2026-08-14", or null if
