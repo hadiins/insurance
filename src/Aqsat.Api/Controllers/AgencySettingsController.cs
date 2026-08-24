@@ -39,6 +39,8 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
             .FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
         var defaults = new OrgSettings();
 
+        var hasAnyPolicy = await dbContext.Policies.AsNoTracking().AnyAsync(ct);
+
         return Ok(new AgencySettingsDto(
             organization.Code, organization.Name, organization.City, organization.InsurerName,
             settings?.SettlementDeadlineDays ?? defaults.SettlementDeadlineDays,
@@ -51,7 +53,38 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
             settings?.DefaultServiceFee ?? defaults.DefaultServiceFee,
             (settings?.ServiceFeeMode ?? defaults.ServiceFeeMode).ToString(),
             settings?.DefaultWriteOffDays ?? defaults.DefaultWriteOffDays,
-            settings?.RenewalAutoWatchLeadDays ?? defaults.RenewalAutoWatchLeadDays));
+            settings?.RenewalAutoWatchLeadDays ?? defaults.RenewalAutoWatchLeadDays,
+            organization.AgencyCode, organization.AgencyCode is not null && hasAnyPolicy));
+    }
+
+    /// <summary>docs/TASK-24-POLICY-NUMBER.md §4.3 — "پس از اولین بیمه‌نامه قابل تغییر نیست...
+    /// در سطح سرویس قفل شود، نه فقط UI": once any policy exists for this agency, the code is
+    /// permanently locked here regardless of what the UI allows.</summary>
+    [HttpPut("agency-code")]
+    [Authorize(Policy = Permissions.SettingsWrite)]
+    public async Task<ActionResult<AgencySettingsDto>> UpdateAgencyCode(UpdateAgencyCodeRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.AgencyCode))
+        {
+            return ValidationProblem("کد نمایندگی الزامی است.");
+        }
+
+        var organization = await dbContext.Organizations.FirstOrDefaultAsync(o => o.Id == currentUser.ActiveOrganizationId, ct);
+        if (organization is null)
+        {
+            return NotFound();
+        }
+
+        var hasAnyPolicy = await dbContext.Policies.AsNoTracking().AnyAsync(ct);
+        if (organization.AgencyCode is not null && hasAnyPolicy)
+        {
+            return ValidationProblem("کد نمایندگی پس از ثبت اولین بیمه‌نامه قابل تغییر نیست.");
+        }
+
+        organization.AgencyCode = request.AgencyCode.Trim();
+        await dbContext.SaveChangesAsync(ct);
+
+        return await Get(ct);
     }
 
     [HttpPut]

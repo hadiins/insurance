@@ -18,6 +18,8 @@ interface AgencySettingsDto {
   serviceFeeMode: "Fixed" | "Percent";
   defaultWriteOffDays: number;
   renewalAutoWatchLeadDays: number;
+  agencyCode: string | null;
+  agencyCodeLocked: boolean;
 }
 
 export function AgencySettingsPage() {
@@ -25,6 +27,9 @@ export function AgencySettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [agencyCodeInput, setAgencyCodeInput] = useState("");
+  const [agencyCodeBusy, setAgencyCodeBusy] = useState(false);
+  const [agencyCodeError, setAgencyCodeError] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -36,6 +41,21 @@ export function AgencySettingsPage() {
   function update<K extends keyof AgencySettingsDto>(key: K, value: AgencySettingsDto[K]) {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
     setSaved(false);
+  }
+
+  async function saveAgencyCode() {
+    if (!agencyCodeInput.trim()) return;
+    setAgencyCodeBusy(true);
+    setAgencyCodeError(null);
+    try {
+      const updated = await api.put<AgencySettingsDto>("/settings/agency/agency-code", { agencyCode: agencyCodeInput.trim() });
+      setForm(updated);
+      setAgencyCodeInput("");
+    } catch (err) {
+      setAgencyCodeError(err instanceof ApiError ? err.message : "ذخیرهٔ کد نمایندگی ناموفق بود.");
+    } finally {
+      setAgencyCodeBusy(false);
+    }
   }
 
   async function save() {
@@ -109,6 +129,35 @@ export function AgencySettingsPage() {
           </Field>
           <Field label="شرکت بیمهٔ طرف قرارداد">
             <input value={form.insurerName ?? ""} onChange={(e) => update("insurerName", e.target.value)} className={inputClass} />
+          </Field>
+        </div>
+
+        <div className="mt-3 border-t border-(--edge) pt-3">
+          <Field label="کد نمایندگی (برای شمارهٔ بیمه‌نامه)">
+            {form.agencyCodeLocked ? (
+              <div className="flex items-center gap-2">
+                <div className={`${inputClass} bg-(--fld)/50 text-(--ice-3)`}>{fa(form.agencyCode ?? "")}</div>
+                <span className="shrink-0 text-[11px] text-(--ice-3)">🔒 پس از اولین بیمه‌نامه قفل شده</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  value={agencyCodeInput || form.agencyCode || ""}
+                  onChange={(e) => setAgencyCodeInput(e.target.value)}
+                  placeholder="۵۷۶۲۱۰"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  disabled={agencyCodeBusy || !agencyCodeInput.trim()}
+                  onClick={saveAgencyCode}
+                  className="shrink-0 rounded-[10px] border border-(--mint) bg-(--mint) px-3 py-2 text-[12px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ذخیره
+                </button>
+              </div>
+            )}
+            {agencyCodeError && <div className="mt-1.5 text-[11px] text-(--ember)">{agencyCodeError}</div>}
           </Field>
         </div>
       </div>

@@ -19,6 +19,7 @@ import { CollectionsReportPage } from "../reports/CollectionsReportPage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { PaymentRecordPage } from "../payments/PaymentRecordPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
+import { PolicyNumberSettingsPage } from "../settings/PolicyNumberSettingsPage";
 import { DeskFeedPage } from "../desk/DeskFeedPage";
 import { PoliciesListPage } from "../policies/PoliciesListPage";
 import { InstallmentsWorklistPage } from "../installments/InstallmentsWorklistPage";
@@ -77,6 +78,8 @@ function renderPage(tab: OpenTab) {
       return <PaymentRecordPage />;
     case "agency-settings":
       return <AgencySettingsPage />;
+    case "policy-number-settings":
+      return <PolicyNumberSettingsPage />;
     case "desk-feed":
       return <DeskFeedPage />;
     case "policy-list":

@@ -164,6 +164,7 @@ export const NAV: NavGroup[] = [
     icon: ICONS.gear,
     items: [
       { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "agency-settings" },
+      { navType: "settings-policy-number", title: "کدهای بیمه‌نامه", kind: "singleton", page: "policy-number-settings" },
       { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users" },
       { navType: "change-password", title: "تغییر رمز عبور", kind: "singleton", page: "change-password" },
       { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },

@@ -17,6 +17,7 @@ export type PageKind =
   | "collateral"
   | "collections-report"
   | "missing-serials"
+  | "policy-number-settings"
   | "platform-updates"
   | "payment-record"
   | "agency-settings"
