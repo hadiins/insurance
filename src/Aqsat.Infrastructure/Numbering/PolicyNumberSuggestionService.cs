@@ -93,4 +93,55 @@ public sealed class PolicyNumberSuggestionService(AppDbContext dbContext)
             composedPreview,
             canCompose);
     }
+
+    /// <summary>docs/TASK-24-POLICY-NUMBER.md §6 — non-blocking cross-checks, relevant only to the
+    /// "ورود دستی شمارهٔ کامل" escape hatch (the structured form's segments are locked from this
+    /// same data, so they can never disagree with it by construction).</summary>
+    public async Task<IReadOnlyList<string>> CheckWarningsAsync(
+        Guid agencyId, string policyNumber, Guid insuranceLineId, DateOnly issueDate, CancellationToken ct)
+    {
+        await PolicyNumberDefaultsSeeder.EnsureAgencyDefaultsAsync(dbContext, agencyId, ct);
+
+        var format = await dbContext.PolicyNumberFormats.AsNoTracking().FirstOrDefaultAsync(f => f.IsActive, ct);
+        if (format is null)
+        {
+            return [];
+        }
+
+        var parts = PolicyNumberParser.Parse(policyNumber, format);
+        if (!parts.IsParsed)
+        {
+            return [];
+        }
+
+        var warnings = new List<string>();
+
+        if (parts.LineCode is not null)
+        {
+            var codeOwner = await dbContext.InsuranceLineCodes.AsNoTracking()
+                .Where(c => c.Code == parts.LineCode && c.InsurerName == format.InsurerName && c.IsActive)
+                .Include(c => c.InsuranceLine)
+                .FirstOrDefaultAsync(ct);
+            if (codeOwner is not null && codeOwner.InsuranceLineId != insuranceLineId)
+            {
+                var selectedLineName = await dbContext.InsuranceLines.AsNoTracking()
+                    .Where(l => l.Id == insuranceLineId).Select(l => l.NameFa).FirstOrDefaultAsync(ct);
+                warnings.Add($"کد {parts.LineCode} متعلق به {codeOwner.InsuranceLine.NameFa} است ولی رشتهٔ انتخابی {selectedLineName} است.");
+            }
+        }
+
+        var organization = await dbContext.Organizations.AsNoTracking().FirstAsync(o => o.Id == agencyId, ct);
+        if (organization.AgencyCode is not null && parts.AgencyCode is not null && parts.AgencyCode != organization.AgencyCode)
+        {
+            warnings.Add("کد نمایندگی در شماره متفاوت است.");
+        }
+
+        var issueYear = Persian.GetYear(issueDate.ToDateTime(TimeOnly.MinValue));
+        if (parts.Year is { } numberYear && numberYear != issueYear)
+        {
+            warnings.Add($"سال شماره {numberYear} است ولی تاریخ صدور {issueYear} است.");
+        }
+
+        return warnings;
+    }
 }

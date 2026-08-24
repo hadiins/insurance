@@ -43,6 +43,18 @@ public sealed class PoliciesController(
             suggestion.LastSerial, suggestion.LastIssueDate, suggestion.ComposedPreview, suggestion.CanCompose));
     }
 
+    /// <summary>docs/TASK-24-POLICY-NUMBER.md §6 — non-blocking cross-checks for the "ورود دستی
+    /// شمارهٔ کامل" escape hatch only (the structured form's segments can't disagree by
+    /// construction). Always 200 — a mismatch is a warning to confirm, never an error.</summary>
+    [HttpGet("number-warnings")]
+    public async Task<ActionResult<PolicyNumberWarningsDto>> NumberWarnings(
+        [FromQuery] string policyNumber, [FromQuery] Guid insuranceLineId, [FromQuery] DateOnly issueDate, CancellationToken ct)
+    {
+        var warnings = await numberSuggestionService.CheckWarningsAsync(
+            currentUser.ActiveOrganizationId, policyNumber, insuranceLineId, issueDate, ct);
+        return Ok(new PolicyNumberWarningsDto(warnings));
+    }
+
     /// <summary>
     /// docs/TASKS.md Task 6 — manual issuance, fixed field order per docs/PHASE-1-SPEC.md §5. Only
     /// creates the Policy (+ Customer/Vehicle/PropertySubject as needed) — down payment and

@@ -73,6 +73,12 @@ export function NewPolicyPage() {
   const [gapConfirmed, setGapConfirmed] = useState(false);
   const [gapPrompt, setGapPrompt] = useState<string[] | null>(null);
 
+  // docs/TASK-24-POLICY-NUMBER.md §6 — non-blocking cross-checks, relevant only to the manual
+  // escape hatch (the structured form's segments can't disagree by construction).
+  const [numberWarnings, setNumberWarnings] = useState<string[]>([]);
+  const [numberWarningsConfirmed, setNumberWarningsConfirmed] = useState(false);
+  const [mismatchPrompt, setMismatchPrompt] = useState<string[] | null>(null);
+
   useEffect(() => {
     api
       .get<InsuranceLineDto[]>("/insurance-lines")
@@ -132,6 +138,26 @@ export function NewPolicyPage() {
   const finalPolicyNumber = manualEntry ? manualNumberInput.trim() : (composedNumber ?? "");
 
   useEffect(() => {
+    setNumberWarnings([]);
+    setNumberWarningsConfirmed(false);
+    if (!manualEntry || !manualNumberInput.trim() || !form.insuranceLineId || !form.issueDate) {
+      return;
+    }
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams({
+        policyNumber: manualNumberInput.trim(),
+        insuranceLineId: form.insuranceLineId,
+        issueDate: form.issueDate,
+      });
+      api
+        .get<{ warnings: string[] }>(`/policies/number-warnings?${params.toString()}`)
+        .then((r) => setNumberWarnings(r.warnings))
+        .catch(() => setNumberWarnings([]));
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [manualEntry, manualNumberInput, form.insuranceLineId, form.issueDate]);
+
+  useEffect(() => {
     setTitle(tabKey, finalPolicyNumber ? `بیمه‌نامه — ${finalPolicyNumber}` : "ثبت بیمه‌نامه");
   }, [finalPolicyNumber, tabKey, setTitle]);
 
@@ -150,6 +176,9 @@ export function NewPolicyPage() {
     setManualEntry(false);
     setManualNumberInput("");
     setGapConfirmed(false);
+    setNumberWarnings([]);
+    setNumberWarningsConfirmed(false);
+    setMismatchPrompt(null);
     setPlate(EMPTY_PLATE);
     setDirty(tabKey, false);
     setTitle(tabKey, "ثبت بیمه‌نامه");
@@ -186,6 +215,10 @@ export function NewPolicyPage() {
     }
     if (gapWarning && gapWarning.length > 0 && !gapConfirmed) {
       setGapPrompt(gapWarning);
+      return;
+    }
+    if (numberWarnings.length > 0 && !numberWarningsConfirmed) {
+      setMismatchPrompt(numberWarnings);
       return;
     }
 
@@ -382,6 +415,41 @@ export function NewPolicyPage() {
               <button
                 type="button"
                 onClick={() => setGapPrompt(null)}
+                className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+              >
+                اصلاح
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mismatchPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
+            <div className="mb-2 text-[14px] font-bold text-(--ember)">⚠️ عدم تطابق در شمارهٔ وارد‌شده</div>
+            <ul className="mb-4 list-inside list-disc space-y-1 text-[12.5px] leading-relaxed text-(--ice-2)">
+              {mismatchPrompt.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+            <div className="mb-4 text-[12px] leading-relaxed text-(--ice-3)">
+              موارد مرزی واقعی وجود دارد — صدور آخر اسفند، انتقال پرونده. اگر عمدی است ادامه دهید.
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNumberWarningsConfirmed(true);
+                  setMismatchPrompt(null);
+                }}
+                className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+              >
+                ادامه
+              </button>
+              <button
+                type="button"
+                onClick={() => setMismatchPrompt(null)}
                 className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
               >
                 اصلاح

@@ -59,3 +59,7 @@ public sealed record PolicyNumberSuggestionDto(
     DateOnly? LastIssueDate,
     string? ComposedPreview,
     bool CanCompose);
+
+/// <summary>docs/TASK-24-POLICY-NUMBER.md §6 — always non-blocking; an empty list means either no
+/// mismatch or the number couldn't be parsed at all (nothing to compare).</summary>
+public sealed record PolicyNumberWarningsDto(IReadOnlyList<string> Warnings);

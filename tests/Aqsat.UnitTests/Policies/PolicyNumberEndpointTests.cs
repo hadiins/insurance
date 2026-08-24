@@ -119,6 +119,60 @@ public class PolicyNumberEndpointTests : IClassFixture<WebApplicationFactory<Pro
         Assert.Equal("OLD-FORMAT/000042", policy.PolicyNumber);
     }
 
+    [Fact]
+    public async Task Number_warnings_flags_a_line_code_that_belongs_to_a_different_line()
+    {
+        var (client, _, atashLineId) = await SeedAsync();
+
+        // Ensure the parsian line-code defaults exist (lazily seeded by a suggestion call), then ask
+        // for atash's issuance to check a number carrying salis's own code ("1110").
+        await client.GetFromJsonAsync<PolicyNumberSuggestionDto>(
+            $"/api/policies/number-suggestion?insuranceLineId={atashLineId}&issueDate=2026-04-01");
+
+        var warnings = await client.GetFromJsonAsync<PolicyNumberWarningsDto>(
+            $"/api/policies/number-warnings?policyNumber=1110/576210/405/000001&insuranceLineId={atashLineId}&issueDate=2026-04-01");
+
+        Assert.NotNull(warnings);
+        Assert.Contains(warnings!.Warnings, w => w.Contains("1110"));
+    }
+
+    [Fact]
+    public async Task Number_warnings_flags_an_agency_code_that_differs_from_the_configured_one()
+    {
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var warnings = await client.GetFromJsonAsync<PolicyNumberWarningsDto>(
+            $"/api/policies/number-warnings?policyNumber=1110/999999/405/000001&insuranceLineId={salisLineId}&issueDate=2026-04-01");
+
+        Assert.NotNull(warnings);
+        Assert.Contains(warnings!.Warnings, w => w.Contains("نمایندگی"));
+    }
+
+    [Fact]
+    public async Task Number_warnings_flags_a_year_that_differs_from_issue_date()
+    {
+        var (client, salisLineId, _) = await SeedAsync();
+
+        // "405" normalizes to 1405, but 2026-01-01 is still Jalali 1404 (Nowruz 1405 is ~2026-03-21).
+        var warnings = await client.GetFromJsonAsync<PolicyNumberWarningsDto>(
+            $"/api/policies/number-warnings?policyNumber=1110/576210/405/000001&insuranceLineId={salisLineId}&issueDate=2026-01-01");
+
+        Assert.NotNull(warnings);
+        Assert.Contains(warnings!.Warnings, w => w.Contains("1405") && w.Contains("1404"));
+    }
+
+    [Fact]
+    public async Task Number_warnings_is_empty_when_everything_matches()
+    {
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var warnings = await client.GetFromJsonAsync<PolicyNumberWarningsDto>(
+            $"/api/policies/number-warnings?policyNumber=1110/576210/405/000001&insuranceLineId={salisLineId}&issueDate=2026-04-01");
+
+        Assert.NotNull(warnings);
+        Assert.Empty(warnings!.Warnings);
+    }
+
     private async Task<(HttpClient Client, Guid SalisLineId, Guid AtashLineId)> SeedAsync()
     {
         await using var seedContext = TestDbContextFactory.Create();
