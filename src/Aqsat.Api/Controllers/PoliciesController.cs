@@ -345,7 +345,34 @@ public sealed class PoliciesController(
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            query = query.Where(p => p.PolicyNumber.Contains(term) || p.Customer.FullName.Contains(term));
+            var normalized = DigitNormalizer.ToLatin(term);
+
+            // docs/TASK-24-POLICY-NUMBER.md §8 — four input shapes, OR'd together rather than
+            // strictly disambiguated (a 4-digit term is genuinely ambiguous between a full "1405"
+            // year and a "1110" line code per the doc's own table): full number substring match,
+            // serial with-or-without leading zeros, year (3 or 4 digit), and line code.
+            if (normalized.Length > 0 && normalized.All(char.IsAsciiDigit))
+            {
+                var paddedSerial = normalized.PadLeft(6, '0');
+                int? candidateYear = normalized.Length switch
+                {
+                    3 => 1000 + int.Parse(normalized),
+                    4 => int.Parse(normalized),
+                    _ => null,
+                };
+
+                query = query.Where(p =>
+                    p.PolicyNumber.Contains(term)
+                    || p.Customer.FullName.Contains(term)
+                    || p.PnSerial == normalized
+                    || p.PnSerial == paddedSerial
+                    || (candidateYear != null && p.PnYear == candidateYear)
+                    || p.PnLineCode == normalized);
+            }
+            else
+            {
+                query = query.Where(p => p.PolicyNumber.Contains(term) || p.Customer.FullName.Contains(term));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PolicyStatus>(status, ignoreCase: true, out var parsedStatus))

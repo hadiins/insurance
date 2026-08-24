@@ -105,14 +105,28 @@ export function PoliciesListPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">{heading}</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">جست‌وجو بر اساس شمارهٔ بیمه‌نامه یا نام بیمه‌گذار</div>
+      <div className="mb-4.5 text-xs text-(--ice-3)">
+        جست‌وجو بر اساس شمارهٔ کامل، سریال (با یا بدون صفر)، سال، کد رشته، یا نام بیمه‌گذار
+      </div>
 
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="شمارهٔ بیمه‌نامه یا نام…"
-        className="mb-4.5 w-full max-w-sm rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
-      />
+      <div className="mb-4.5 flex max-w-sm items-center gap-1.5">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="1110/576210/405/000248 · 248 · 1405 · نام…"
+          dir="ltr"
+          className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-right text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+          >
+            پاک کردن
+          </button>
+        )}
+      </div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
