@@ -27,9 +27,13 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 interface FormState {
   insuranceLineId: string;
-  customerFullName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerMobile: string;
+  customerEmergencyMobile: string;
   customerNationalId: string;
+  customerAddress: string;
+  customerPostalCode: string;
   propertyAddress: string;
   propertyPostalCode: string;
   netPremium: string;
@@ -41,9 +45,13 @@ interface FormState {
 
 const EMPTY: FormState = {
   insuranceLineId: "",
-  customerFullName: "",
+  customerFirstName: "",
+  customerLastName: "",
   customerMobile: "",
+  customerEmergencyMobile: "",
   customerNationalId: "",
+  customerAddress: "",
+  customerPostalCode: "",
   propertyAddress: "",
   propertyPostalCode: "",
   netPremium: "",
@@ -57,6 +65,7 @@ export function NewPolicyPage() {
   const tabKey = useTabKey();
   const setDirty = useTabsStore((s) => s.setDirty);
   const setTitle = useTabsStore((s) => s.setTitle);
+  const openTab = useTabsStore((s) => s.openTab);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [lines, setLines] = useState<InsuranceLineDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -190,8 +199,9 @@ export function NewPolicyPage() {
       setError("نوع بیمه‌نامه را انتخاب کنید.");
       return;
     }
-    if (!form.customerFullName.trim()) {
-      setError("نام بیمه‌گذار الزامی است.");
+    const customerFullName = `${form.customerFirstName.trim()} ${form.customerLastName.trim()}`.trim();
+    if (!customerFullName) {
+      setError("نام و نام خانوادگی بیمه‌گذار الزامی است.");
       return;
     }
     if (!form.endDate) {
@@ -200,6 +210,14 @@ export function NewPolicyPage() {
     }
     if (form.customerNationalId.trim() && !isValidNationalId(form.customerNationalId)) {
       setError("کد ملی بیمه‌گذار نامعتبر است.");
+      return;
+    }
+    if (form.customerEmergencyMobile.trim() && form.customerEmergencyMobile.trim() === form.customerMobile.trim()) {
+      setError("موبایل اضطراری نباید با موبایل اصلی یکسان باشد.");
+      return;
+    }
+    if (form.customerPostalCode.trim() && toLatinDigits(form.customerPostalCode.trim()).length !== 10) {
+      setError("کد پستی بیمه‌گذار باید دقیقاً ۱۰ رقم باشد.");
       return;
     }
     if (selectedLine.requiresVehicle && !isPlateFilled(plate)) {
@@ -231,9 +249,14 @@ export function NewPolicyPage() {
         pnManualEntry: manualEntry,
         insuranceLineId: form.insuranceLineId,
         customerId: null,
-        customerFullName: form.customerFullName.trim(),
+        customerFullName,
+        customerFirstName: form.customerFirstName.trim() || null,
+        customerLastName: form.customerLastName.trim() || null,
         customerMobile: form.customerMobile || null,
+        customerEmergencyMobile: form.customerEmergencyMobile.trim() || null,
         customerNationalId: form.customerNationalId.trim() ? form.customerNationalId.trim() : null,
+        customerAddress: form.customerAddress.trim() || null,
+        customerPostalCode: form.customerPostalCode.trim() || null,
         vehicle: selectedLine.requiresVehicle || isPlateFilled(plate)
           ? {
               plate: null,
@@ -291,13 +314,24 @@ export function NewPolicyPage() {
           <div className="mb-4 text-[13px] text-(--ice-2)">
             شمارهٔ بیمه‌نامه: <b>{result.policyNumber}</b> — گام بعد، زمان‌بندی اقساط از فهرست «در انتظار زمان‌بندی» است.
           </div>
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
-          >
-            ثبت بیمه‌نامهٔ دیگر
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                openTab({ navType: "installments-schedule", page: "schedule-policy", kind: "singleton", title: "در انتظار زمان‌بندی" })
+              }
+              className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
+            >
+              زمان‌بندی اقساط
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+            >
+              ثبت بیمه‌نامهٔ دیگر
+            </button>
+          </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
@@ -339,9 +373,13 @@ export function NewPolicyPage() {
               }}
             />
 
-            <Field label="نام بیمه‌گذار" value={form.customerFullName} onChange={(v) => update("customerFullName", v)} />
+            <Field label="نام" value={form.customerFirstName} onChange={(v) => update("customerFirstName", v)} />
+            <Field label="نام خانوادگی" value={form.customerLastName} onChange={(v) => update("customerLastName", v)} />
             <Field label="شمارهٔ همراه" value={form.customerMobile} onChange={(v) => update("customerMobile", v)} placeholder="۰۹۱۲۳۴۵۶۷۸۹" />
+            <Field label="شمارهٔ همراه اضطراری" value={form.customerEmergencyMobile} onChange={(v) => update("customerEmergencyMobile", v)} placeholder="اختیاری" />
             <Field label="کد ملی بیمه‌گذار" value={form.customerNationalId} onChange={(v) => update("customerNationalId", v)} placeholder="۰۰۷۲۳۴۵۴۵۳" />
+            <Field label="آدرس بیمه‌گذار" value={form.customerAddress} onChange={(v) => update("customerAddress", v)} />
+            <Field label="کد پستی بیمه‌گذار" value={form.customerPostalCode} onChange={(v) => update("customerPostalCode", v)} placeholder="۱۲۳۴۵۶۷۸۹۰" />
 
             {selectedLine?.requiresVehicle && (
               <PlateField

@@ -41,7 +41,15 @@ public sealed record CreatePolicyRequest(
     decimal? AgencyCommissionPercent = null,
     /// <summary>docs/TASK-24-POLICY-NUMBER.md §2 — set when the number came from the "ورود دستی
     /// شمارهٔ کامل" escape hatch instead of the locked line/agency/year segments.</summary>
-    bool PnManualEntry = false);
+    bool PnManualEntry = false,
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §2/§3 — captured here so a manually-entered
+    /// customer's IsProfileComplete can actually become true from this form, instead of always
+    /// landing in the completion queue for fields the issuance form never asked for.</summary>
+    string? CustomerFirstName = null,
+    string? CustomerLastName = null,
+    string? CustomerEmergencyMobile = null,
+    string? CustomerAddress = null,
+    string? CustomerPostalCode = null);
 
 public sealed record CreatePolicyResultDto(Guid PolicyId, string PolicyNumber, Guid CustomerId);
 

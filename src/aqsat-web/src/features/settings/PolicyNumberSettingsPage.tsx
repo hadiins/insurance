@@ -42,8 +42,14 @@ export function PolicyNumberSettingsPage() {
   const [newCode, setNewCode] = useState("");
 
   function reload() {
-    api.get<InsuranceLineCodeDto[]>("/settings/policy-number/line-codes").then(setCodes).catch(() => {});
-    api.get<PolicyNumberFormatDto>("/settings/policy-number/format").then(setFormat).catch(() => {});
+    api
+      .get<InsuranceLineCodeDto[]>("/settings/policy-number/line-codes")
+      .then(setCodes)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری فهرست کدها"));
+    api
+      .get<PolicyNumberFormatDto>("/settings/policy-number/format")
+      .then(setFormat)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری الگوی شماره"));
   }
 
   useEffect(() => {
@@ -78,6 +84,9 @@ export function PolicyNumberSettingsPage() {
     setError(null);
     try {
       await api.delete(`/settings/policy-number/line-codes/${id}`);
+      // Optimistic: the row leaves the table immediately from the DELETE's own success, instead of
+      // depending on a follow-up GET that could silently fail and leave the row looking "stuck".
+      setCodes((prev) => prev?.filter((c) => c.id !== id) ?? prev);
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "حذف ناموفق بود.");

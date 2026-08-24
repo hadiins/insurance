@@ -111,6 +111,34 @@ public class PolicyIssuanceEndpointTests : IClassFixture<WebApplicationFactory<P
         Assert.Equal("63", policy.Vehicle.PlateIranCode);
     }
 
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — a customer entered fully from the issuance
+    /// form (all of FirstName/LastName/NationalId/Mobile/Address/PostalCode) must actually compute
+    /// as IsProfileComplete, not silently land in the completion queue for fields this form never
+    /// asked for.</summary>
+    [Fact]
+    public async Task Fully_filled_customer_fields_from_issuance_compute_as_profile_complete()
+    {
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-{Guid.NewGuid():N}"[..16], salisLineId, null, "مجید حیدری", "09123456789", "0072345454",
+            Vehicle: new VehicleInput("۱۱ی۲۲۲", null, null, null, null, null), Property: null,
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1),
+            9_000_000m, 500_000m, null, null, false,
+            CustomerFirstName: "مجید", CustomerLastName: "حیدری",
+            CustomerAddress: "تهران، خیابان آزادی، پلاک ۱", CustomerPostalCode: "1234567890"));
+
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = (await client.GetFromJsonAsync<MeResponse>("/api/auth/me"))!.ActiveOrganizationId;
+        var customer = await verify.Customers.AsNoTracking().SingleAsync(c => c.Id == result!.CustomerId);
+        Assert.Equal("مجید", customer.FirstName);
+        Assert.Equal("حیدری", customer.LastName);
+        Assert.True(customer.IsProfileComplete);
+    }
+
     private async Task<(HttpClient Client, Guid SalisLineId, Guid AtashLineId)> SeedAsync()
     {
         await using var seedContext = TestDbContextFactory.Create();

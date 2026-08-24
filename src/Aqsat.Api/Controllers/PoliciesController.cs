@@ -135,8 +135,35 @@ public sealed class PoliciesController(
                 // generated code just satisfies the NOT NULL + unique constraint.
                 ExternalCode = $"MAN-{Guid.NewGuid():N}"[..12],
                 FullName = request.CustomerFullName.Trim(),
-                Mobile = request.CustomerMobile,
+                FirstName = string.IsNullOrWhiteSpace(request.CustomerFirstName) ? null : request.CustomerFirstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(request.CustomerLastName) ? null : request.CustomerLastName.Trim(),
             };
+
+            if (!string.IsNullOrWhiteSpace(request.CustomerMobile))
+            {
+                if (!MobileNumberValidator.IsValid(request.CustomerMobile))
+                {
+                    return ValidationProblem("شمارهٔ موبایل بیمه‌گذار نامعتبر است.");
+                }
+
+                customer.Mobile = MobileNumberValidator.Normalize(request.CustomerMobile);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.CustomerEmergencyMobile))
+            {
+                if (!MobileNumberValidator.IsValid(request.CustomerEmergencyMobile))
+                {
+                    return ValidationProblem("شمارهٔ موبایل اضطراری نامعتبر است.");
+                }
+
+                var normalizedEmergency = MobileNumberValidator.Normalize(request.CustomerEmergencyMobile);
+                if (normalizedEmergency == customer.Mobile)
+                {
+                    return ValidationProblem("موبایل اضطراری نباید با موبایل اصلی یکسان باشد.");
+                }
+
+                customer.EmergencyMobile = normalizedEmergency;
+            }
 
             if (!string.IsNullOrWhiteSpace(request.CustomerNationalId))
             {
@@ -148,6 +175,27 @@ public sealed class PoliciesController(
 
                 customer.NationalId = normalizedNationalId;
                 customer.NationalIdHash = fieldEncryptor.Hash(normalizedNationalId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.CustomerPostalCode))
+            {
+                var normalizedPostalCode = DigitNormalizer.ToLatin(request.CustomerPostalCode).Trim();
+                if (normalizedPostalCode.Length != 10 || !normalizedPostalCode.All(char.IsAsciiDigit))
+                {
+                    return ValidationProblem("کد پستی باید دقیقاً ۱۰ رقم باشد.");
+                }
+
+                customer.PostalCode = normalizedPostalCode;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.CustomerAddress))
+            {
+                if (request.CustomerAddress.Trim().Length < 10)
+                {
+                    return ValidationProblem("آدرس بیمه‌گذار باید حداقل ۱۰ کاراکتر باشد.");
+                }
+
+                customer.Address = request.CustomerAddress.Trim();
             }
 
             dbContext.Customers.Add(customer);
