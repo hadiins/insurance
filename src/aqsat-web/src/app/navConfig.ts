@@ -168,6 +168,7 @@ export const NAV: NavGroup[] = [
       { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "agency-settings" },
       { navType: "settings-policy-number", title: "کدهای بیمه‌نامه", kind: "singleton", page: "policy-number-settings" },
       { navType: "settings-cash-and-bank", title: "صندوق و بانک‌ها", kind: "singleton", page: "cash-and-bank-settings" },
+      { navType: "settings-agency-commission", title: "کارمزد از بیمه‌گر", kind: "singleton", page: "agency-commission-settings" },
       { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users" },
       { navType: "change-password", title: "تغییر رمز عبور", kind: "singleton", page: "change-password" },
       { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },

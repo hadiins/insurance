@@ -18,6 +18,7 @@ export type PageKind =
   | "missing-serials"
   | "policy-number-settings"
   | "cash-and-bank-settings"
+  | "agency-commission-settings"
   | "customer-completion"
   | "schedule-policy"
   | "platform-updates"

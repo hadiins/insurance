@@ -44,6 +44,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<Marketer> Marketers => Set<Marketer>();
     public DbSet<MarketerRate> MarketerRates => Set<MarketerRate>();
     public DbSet<CommissionEntry> CommissionEntries => Set<CommissionEntry>();
+    public DbSet<AgencyCommissionRate> AgencyCommissionRates => Set<AgencyCommissionRate>();
     public DbSet<RenewalWatch> RenewalWatches => Set<RenewalWatch>();
 
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();

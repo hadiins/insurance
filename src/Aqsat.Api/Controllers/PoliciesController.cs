@@ -273,6 +273,19 @@ public sealed class PoliciesController(
                 .FirstOrDefaultAsync(ct);
         }
 
+        // The agency's own commission rate from the insurer is locked at issuance the same way —
+        // an explicit AgencyCommissionPercent on the request always wins (manual override /
+        // PUT-style backfill from before this rate table existed); otherwise auto-lookup the
+        // active per-line rate, same precedence as the marketer lookup above.
+        var agencyCommissionPercent = request.AgencyCommissionPercent
+            ?? await dbContext.AgencyCommissionRates
+                .AsNoTracking()
+                .Where(r => r.InsuranceLineId == request.InsuranceLineId
+                    && r.EffectiveFrom <= request.IssueDate && (r.EffectiveTo == null || r.EffectiveTo >= request.IssueDate))
+                .OrderByDescending(r => r.EffectiveFrom)
+                .Select(r => (decimal?)r.RatePercent)
+                .FirstOrDefaultAsync(ct);
+
         // docs/TASK-24-POLICY-NUMBER.md §5 — parsing never blocks issuance; a failed parse just
         // leaves PnIsParsed=false with a note while PolicyNumber itself is still saved verbatim.
         // Ensures the format/line-code defaults exist even if this agency's very first action is
@@ -306,8 +319,8 @@ public sealed class PoliciesController(
             MarketerRatePercent = marketerRatePercent,
             PreviousInsurer = request.PreviousInsurer,
             IsRenewal = request.IsRenewal,
-            AgencyCommissionPercent = request.AgencyCommissionPercent,
-            AgencyCommissionAmount = request.AgencyCommissionPercent is { } pct ? request.NetPremium * pct / 100m : null,
+            AgencyCommissionPercent = agencyCommissionPercent,
+            AgencyCommissionAmount = agencyCommissionPercent is { } pct ? request.NetPremium * pct / 100m : null,
             PnLineCode = parts.LineCode,
             PnAgencyCode = parts.AgencyCode,
             PnYear = parts.Year,
