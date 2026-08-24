@@ -134,11 +134,6 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
         }
         else
         {
-            // Known limitation: DownPayment is a plain field on Policy, not a tracked Payment/
-            // PaymentAllocation (docs/TASKS.md Task 8's design) — so a down payment's collection
-            // never appears here. Cash-basis income for a policy therefore only starts accruing
-            // once its first *installment* payment is recorded; the down-payment share of
-            // ServiceFee/AgencyCommission is not recognised under cash basis in this pass.
             var allocations = await dbContext.PaymentAllocations
                 .AsNoTracking()
                 .Where(a => a.Payment.PaidOn >= from && a.Payment.PaidOn <= to)
@@ -155,6 +150,38 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
                     policy.InsuranceLineId, policy.InsuranceLine.NameFa, policy.MarketerId, policy.Marketer?.FullName ?? "بدون بازاریاب",
                     a.Payment.PaidOn, new PnlTotals((policy.AgencyCommissionAmount ?? 0) * ratio, policy.ServiceFee * ratio, 0, 0));
             }));
+
+            // Down payments are recorded as their own Payment (PoliciesController.GenerateScheduleAsync)
+            // but deliberately carry no PaymentAllocation — they aren't collected against any specific
+            // installment, since they were already subtracted from FinancedAmount before the
+            // installments were sized. Recognized here the same proportional way as an installment
+            // payment, keyed off the policy the down-payment sentinel (InstallmentIdHint) points at.
+            var downPayments = await dbContext.Payments
+                .AsNoTracking()
+                .Where(p => p.Method == PoliciesController.DownPaymentMethod && p.PaidOn >= from && p.PaidOn <= to)
+                .ToListAsync(ct);
+
+            if (downPayments.Count > 0)
+            {
+                var policyIds = downPayments.Select(p => p.InstallmentIdHint).ToList();
+                var policiesById = await dbContext.Policies
+                    .AsNoTracking()
+                    .Where(p => policyIds.Contains(p.Id))
+                    .Include(p => p.InsuranceLine)
+                    .Include(p => p.Marketer)
+                    .ToDictionaryAsync(p => p.Id, ct);
+
+                items.AddRange(downPayments
+                    .Where(p => policiesById.ContainsKey(p.InstallmentIdHint))
+                    .Select(p =>
+                    {
+                        var policy = policiesById[p.InstallmentIdHint];
+                        var ratio = policy.TotalReceivable > 0 ? p.Amount / policy.TotalReceivable : 0;
+                        return new LineItem(
+                            policy.InsuranceLineId, policy.InsuranceLine.NameFa, policy.MarketerId, policy.Marketer?.FullName ?? "بدون بازاریاب",
+                            p.PaidOn, new PnlTotals((policy.AgencyCommissionAmount ?? 0) * ratio, policy.ServiceFee * ratio, 0, 0));
+                    }));
+            }
         }
 
         var commissionEntries = await dbContext.CommissionEntries

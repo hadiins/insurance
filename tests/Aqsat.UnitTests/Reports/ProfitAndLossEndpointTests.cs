@@ -110,17 +110,20 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(600_000m, accrualAfter.TotalExpense);
         Assert.Equal(400_000m, accrualAfter.NetProfit);
 
-        // --- Same snapshot, cash basis: income only recognises the fraction of TotalReceivable
-        // actually collected (4,000,000 / 10,000,000 = 40% of the 1,000,000 commission = 400,000);
-        // the down payment itself isn't a tracked Payment in this schema, so it never counts. Same
-        // expense as accrual — the two bases diverge only on the income side, and diverge into a
-        // loss here, which is the "coherent and defensible" divergence the check asks for.
+        // --- Same snapshot, cash basis: income recognises the fraction of TotalReceivable actually
+        // collected. The down payment is its own settled Payment now (PoliciesController.
+        // GenerateScheduleAsync), recognised on the policy's IssueDate — 2,000,000 / 10,000,000 =
+        // 20% of the 1,000,000 commission = 200,000 — plus the first installment's
+        // 4,000,000 / 10,000,000 = 40% = 400,000. Both land on `today` here, so cash income is
+        // 600,000 total; expense is the same 600,000 as accrual, so the two bases coincide exactly
+        // in this snapshot (they'd diverge if the down payment or installment fell outside the
+        // query window).
         var cashAfter = await client.GetFromJsonAsync<PnlResultDto>(
             $"/api/reports/pnl?from={Iso(today)}&to={Iso(today)}&basis=Cash");
-        Assert.Equal(400_000m, cashAfter!.AgencyCommissionIncome);
-        Assert.Equal(400_000m, cashAfter.TotalIncome);
+        Assert.Equal(600_000m, cashAfter!.AgencyCommissionIncome);
+        Assert.Equal(600_000m, cashAfter.TotalIncome);
         Assert.Equal(600_000m, cashAfter.TotalExpense);
-        Assert.Equal(-200_000m, cashAfter.NetProfit);
+        Assert.Equal(0m, cashAfter.NetProfit);
 
         // --- Breakdown by marketer sums back to the same total. ---
         Assert.Equal(accrualAfter.NetProfit, accrualAfter.ByMarketer.Sum(r => r.NetProfit));

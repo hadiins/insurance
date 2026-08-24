@@ -89,9 +89,13 @@ public class CustomerAndPolicyFileEndpointTests : IClassFixture<WebApplicationFa
         Assert.Equal(2, customerFile!.Policies.Count);
         // Policy 1 balance: 8,000,000 receivable - 4,000,000 paid = 4,000,000. Policy 2: 6,000,000 untouched.
         Assert.Equal(10_000_000m, customerFile.AggregateBalance);
-        Assert.Single(customerFile.Payments);
-        Assert.Equal("REF-1", customerFile.Payments[0].ReferenceNo);
-        Assert.NotEmpty(customerFile.Payments[0].AllocatedTo);
+        // Two payments now: the 2,000,000 down-payment receipt policy 1's own schedule call
+        // created, plus the explicit 4,000,000 installment payment recorded above.
+        Assert.Equal(2, customerFile.Payments.Count);
+        var installmentPayment = Assert.Single(customerFile.Payments, p => p.ReferenceNo == "REF-1");
+        Assert.NotEmpty(installmentPayment.AllocatedTo);
+        var downPaymentReceipt = Assert.Single(customerFile.Payments, p => p.Amount == 2_000_000m);
+        Assert.Empty(downPaymentReceipt.AllocatedTo);
         // Unified timeline merges both policies — it must have strictly more rows than policy 1's
         // own file, since policy 2's issuance/scheduling entries are included too.
         Assert.True(customerFile.Timeline.Count > policyFile.Timeline.Count);

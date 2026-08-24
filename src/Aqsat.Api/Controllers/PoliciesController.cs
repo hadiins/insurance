@@ -6,6 +6,7 @@ using Aqsat.Application.Numbering;
 using Aqsat.Application.Schedule;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
+using Aqsat.Infrastructure.Auth;
 using Aqsat.Infrastructure.Numbering;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,11 @@ public sealed class PoliciesController(
     IFieldEncryptor fieldEncryptor, PolicyNumberSuggestionService numberSuggestionService)
     : ControllerBase
 {
+    /// <summary>The marker ReportsController's cash-basis P&amp;L filters on to recognize a
+    /// down-payment Payment (which carries no PaymentAllocation rows, since it isn't collected
+    /// against any specific installment).</summary>
+    public const string DownPaymentMethod = "پیش‌پرداخت";
+
     /// <summary>docs/TASK-24-POLICY-NUMBER.md §2/§3 — backs the issuance form's locked
     /// line/agency/year display and its serial suggestion.</summary>
     [HttpGet("number-suggestion")]
@@ -565,6 +571,44 @@ public sealed class PoliciesController(
         dbContext.Installments.AddRange(installments);
         policy.DownPayment = downPayment;
         policy.InstallmentCount = installmentCount;
+
+        // docs/PHASE-1-SPEC.md §3.6's cash-basis P&L only ever read PaymentAllocations, so a down
+        // payment — collected up front, never allocated against any installment because it was
+        // already subtracted from FinancedAmount before the installments above were sized — was
+        // invisible to it and had no receipt at all. A real Payment row fixes both: ReportsController
+        // recognizes it directly by Method (§ below), and it shows up wherever the customer's payment
+        // history does. InstallmentIdHint has no FK constraint (PaymentConfiguration.cs) and only
+        // needs to be unique per (AgencyId, PaidOn, Amount) for the idempotency index — policy.Id
+        // satisfies that since a policy is scheduled exactly once (blocked above once InstallmentCount > 0).
+        if (downPayment > 0)
+        {
+            var downPaymentReceipt = new Payment
+            {
+                AgencyId = policy.AgencyId,
+                CustomerId = policy.CustomerId,
+                InstallmentIdHint = policy.Id,
+                Amount = downPayment,
+                PaidOn = policy.IssueDate,
+                Method = DownPaymentMethod,
+                RecordedByUserId = currentUser.UserId,
+            };
+            dbContext.Payments.Add(downPaymentReceipt);
+
+            dbContext.AuditEntries.Add(new AuditEntry
+            {
+                AgencyId = policy.AgencyId,
+                UserId = currentUser.UserId,
+                UserDisplayName = currentUser.DisplayName,
+                EntityType = nameof(Payment),
+                EntityId = downPaymentReceipt.Id,
+                PolicyId = policy.Id,
+                Action = AuditAction.PaymentRecorded,
+                Description = $"ثبت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}",
+                OccurredAt = DateTimeOffset.UtcNow,
+                IpAddress = CurrentRequestContext.IpAddress,
+            });
+        }
+
         await dbContext.SaveChangesAsync(ct);
 
         // docs/TASKS.md Task 13 — generation happens here, not at issuance, because it needs the
