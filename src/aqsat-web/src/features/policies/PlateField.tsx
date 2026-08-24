@@ -73,7 +73,7 @@ export function PlateField({ value, onChange }: { value: PlateParts; onChange: (
           ))}
         </select>
       </div>
-      <div className="flex items-stretch gap-1.5" dir="ltr">
+      <div className="flex items-stretch justify-end gap-1.5" dir="rtl">
         <input
           value={fa(value.twoDigit)}
           onChange={(e) => {
