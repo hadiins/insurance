@@ -1,8 +1,23 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { MoneyInput } from "../../components/MoneyInput";
+
+interface CashBoxDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+interface BankAccountDto {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  isActive: boolean;
+}
+
+type MethodType = "Cash" | "BankTransfer" | "Cheque";
 
 interface AllocationLineDto {
   installmentId: string;
@@ -32,15 +47,44 @@ export function RecordPaymentDialog({
   onRecorded: () => void;
 }) {
   const [amount, setAmount] = useState(String(Math.round(suggestedAmount)));
-  const [method, setMethod] = useState("نقدی");
+  const [methodType, setMethodType] = useState<MethodType>("Cash");
+  const [cashBoxId, setCashBoxId] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
+  const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountDto[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PaymentResultDto | null>(null);
+
+  useEffect(() => {
+    api
+      .get<CashBoxDto[]>("/settings/cash-and-bank/cash-boxes")
+      .then((list) => {
+        setCashBoxes(list);
+        const active = list.find((b) => b.isActive);
+        if (active) setCashBoxId(active.id);
+      })
+      .catch(() => {});
+    api
+      .get<BankAccountDto[]>("/settings/cash-and-bank/bank-accounts")
+      .then(setBankAccounts)
+      .catch(() => {});
+  }, []);
+
+  const methodLabel: Record<MethodType, string> = { Cash: "نقدی", BankTransfer: "واریز بانکی", Cheque: "چک" };
 
   async function submit() {
     const numericAmount = Number(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setError("مبلغ پرداخت باید مثبت باشد.");
+      return;
+    }
+    if (methodType === "Cash" && !cashBoxId) {
+      setError("انتخاب صندوق الزامی است.");
+      return;
+    }
+    if (methodType !== "Cash" && !bankAccountId) {
+      setError("انتخاب حساب بانکی الزامی است.");
       return;
     }
 
@@ -52,7 +96,10 @@ export function RecordPaymentDialog({
         installmentIdHint: installmentId,
         amount: numericAmount,
         paidOn,
-        method,
+        method: methodLabel[methodType],
+        methodType,
+        cashBoxId: methodType === "Cash" ? cashBoxId : null,
+        bankAccountId: methodType !== "Cash" ? bankAccountId : null,
       });
       setResult(recorded);
       onRecorded();
@@ -114,11 +161,49 @@ export function RecordPaymentDialog({
                 />
 
                 <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">روش پرداخت</label>
-                <input
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value)}
-                  className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
-                />
+                <select
+                  value={methodType}
+                  onChange={(e) => setMethodType(e.target.value as MethodType)}
+                  className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                >
+                  <option value="Cash">نقدی</option>
+                  <option value="BankTransfer">واریز بانکی</option>
+                  <option value="Cheque">چک</option>
+                </select>
+
+                {methodType === "Cash" ? (
+                  <>
+                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">صندوق</label>
+                    <select
+                      value={cashBoxId}
+                      onChange={(e) => setCashBoxId(e.target.value)}
+                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                    >
+                      <option value="">انتخاب کنید…</option>
+                      {cashBoxes.filter((b) => b.isActive).map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+                    <select
+                      value={bankAccountId}
+                      onChange={(e) => setBankAccountId(e.target.value)}
+                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                    >
+                      <option value="">انتخاب کنید…</option>
+                      {bankAccounts.filter((a) => a.isActive).map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.bankName} — {a.accountNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
 
                 <div className="flex gap-2">
                   <button

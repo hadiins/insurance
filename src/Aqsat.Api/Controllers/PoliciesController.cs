@@ -590,6 +590,7 @@ public sealed class PoliciesController(
                 Amount = downPayment,
                 PaidOn = policy.IssueDate,
                 Method = DownPaymentMethod,
+                MethodType = PaymentMethod.Cash,
                 RecordedByUserId = currentUser.UserId,
             };
             dbContext.Payments.Add(downPaymentReceipt);

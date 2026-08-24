@@ -1,4 +1,5 @@
 using Aqsat.Domain.Common;
+using Aqsat.Domain.Enums;
 
 namespace Aqsat.Domain;
 
@@ -20,6 +21,15 @@ public class Payment : AgencyOwnedEntity
     public DateOnly PaidOn { get; set; }
     public string Method { get; set; } = default!;
     public string? ReferenceNo { get; set; }
+
+    /// <summary>Structured counterpart of <see cref="Method"/> — the free-text column stays for
+    /// display/compat, this drives which of CashBoxId/BankAccountId applies and the receipts
+    /// report's breakdown.</summary>
+    public PaymentMethod MethodType { get; set; }
+    public Guid? CashBoxId { get; set; }
+    public CashBox? CashBox { get; set; }
+    public Guid? BankAccountId { get; set; }
+    public BankAccount? BankAccount { get; set; }
 
     public Guid RecordedByUserId { get; set; }
 

@@ -1,3 +1,5 @@
+using Aqsat.Domain.Enums;
+
 namespace Aqsat.Api.Contracts;
 
 /// <summary>An explicit override for one installment's share of the payment — omit
@@ -11,7 +13,10 @@ public sealed record RecordPaymentRequest(
     DateOnly PaidOn,
     string Method,
     string? ReferenceNo,
-    IReadOnlyList<AllocationLineRequest>? Allocations = null);
+    IReadOnlyList<AllocationLineRequest>? Allocations = null,
+    PaymentMethod? MethodType = null,
+    Guid? CashBoxId = null,
+    Guid? BankAccountId = null);
 
 public sealed record AllocationLineDto(Guid InstallmentId, int SeqNo, string PolicyNumber, decimal Amount);
 

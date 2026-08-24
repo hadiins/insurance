@@ -169,6 +169,9 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             PaidOn = request.PaidOn,
             Method = request.Method,
             ReferenceNo = request.ReferenceNo,
+            MethodType = request.MethodType ?? PaymentMethod.Cash,
+            CashBoxId = request.CashBoxId,
+            BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
         };
         dbContext.Payments.Add(payment);
