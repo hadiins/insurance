@@ -12,6 +12,7 @@ using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Aqsat.Api.Controllers;
 
@@ -399,6 +400,125 @@ public sealed class PoliciesController(
         return NoContent();
     }
 
+    /// <summary>Non-installment policies never generate Installment rows, so they have no
+    /// per-installment settlement event to flip a commission slice payable on — this is that event,
+    /// for the whole policy at once. Idempotent the same way RecordPaymentAsync is (rule 24):
+    /// InstallmentIdHint = policy.Id is safe here since IsInstallment policies never reach
+    /// GenerateScheduleAsync's own down-payment receipt, so there is no hint collision.</summary>
+    [HttpPost("{id:guid}/record-full-payment")]
+    [Authorize(Policy = Permissions.PaymentWrite)]
+    public async Task<ActionResult<RecordFullPaymentResultDto>> RecordFullPayment(
+        Guid id, RecordFullPaymentRequest request, CancellationToken ct)
+    {
+        if (request.Amount <= 0)
+        {
+            return ValidationProblem("مبلغ پرداخت باید مثبت باشد.");
+        }
+
+        var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        if (policy.IsInstallment)
+        {
+            return ValidationProblem("این بیمه‌نامه اقساطی است؛ از فرم ثبت پرداخت قسط استفاده کنید.");
+        }
+
+        var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
+            p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == request.Amount, ct);
+        if (existing is not null)
+        {
+            return Ok(new RecordFullPaymentResultDto(existing.Id, existing.Amount));
+        }
+
+        var occurredAt = DateTimeOffset.UtcNow;
+        var payment = new Payment
+        {
+            AgencyId = policy.AgencyId,
+            CustomerId = policy.CustomerId,
+            InstallmentIdHint = policy.Id,
+            Amount = request.Amount,
+            PaidOn = request.PaidOn,
+            Method = request.Method,
+            ReferenceNo = request.ReferenceNo,
+            MethodType = request.MethodType ?? PaymentMethod.Cash,
+            CashBoxId = request.CashBoxId,
+            BankAccountId = request.BankAccountId,
+            RecordedByUserId = currentUser.UserId,
+        };
+        dbContext.Payments.Add(payment);
+
+        dbContext.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = policy.AgencyId,
+            UserId = currentUser.UserId,
+            UserDisplayName = currentUser.DisplayName,
+            EntityType = nameof(Payment),
+            EntityId = payment.Id,
+            PolicyId = policy.Id,
+            Action = AuditAction.PaymentRecorded,
+            Description = $"ثبت پرداخت کامل بیمه‌نامهٔ {policy.PolicyNumber}",
+            OccurredAt = occurredAt,
+            IpAddress = CurrentRequestContext.IpAddress,
+        });
+
+        // The single full-policy commission slice is created lazily here rather than at issuance
+        // (docs-plan default: imported policies rarely have AgencyCommissionPercent set until the
+        // agent backfills it via the PUT above, well after issuance) and immediately flipped
+        // Payable, mirroring the down-payment slice's "money in hand = payable now" rule.
+        if (policy.AgencyCommissionPercent is { } ratePercent)
+        {
+            var entry = await dbContext.AgencyCommissionEntries
+                .FirstOrDefaultAsync(e => e.PolicyId == policy.Id && e.IsFullPolicySlice, ct);
+            if (entry is null)
+            {
+                entry = new AgencyCommissionEntry
+                {
+                    AgencyId = policy.AgencyId,
+                    PolicyId = policy.Id,
+                    InstallmentId = null,
+                    IsFullPolicySlice = true,
+                    BasePortion = policy.NetPremium,
+                    RatePercent = ratePercent,
+                    Amount = Math.Round(policy.NetPremium * ratePercent / 100m, 0, MidpointRounding.ToEven),
+                    Status = CommissionStatus.Pending,
+                };
+                dbContext.AgencyCommissionEntries.Add(entry);
+            }
+
+            if (entry.Status == CommissionStatus.Pending)
+            {
+                entry.Status = CommissionStatus.Payable;
+                entry.EligibleAt = occurredAt;
+            }
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            foreach (var entry in dbContext.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            var raced = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
+                p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == request.Amount, ct);
+            if (raced is not null)
+            {
+                return Ok(new RecordFullPaymentResultDto(raced.Id, raced.Amount));
+            }
+
+            return ValidationProblem("خطای پایگاه‌داده هنگام ثبت پرداخت.");
+        }
+
+        return Ok(new RecordFullPaymentResultDto(payment.Id, payment.Amount));
+    }
+
     /// <summary>Backs فهرست بیمه‌نامه‌ها / بیمه‌نامه‌های اقساطی / باطل‌شده‌ها — one filtered list,
     /// same shape the CollateralPage payload pattern already established for one page serving
     /// several nav items.</summary>
@@ -646,6 +766,35 @@ public sealed class PoliciesController(
                     InstallmentId = slice.InstallmentId,
                     BasePortion = slice.BasePortion,
                     RatePercent = ratePercent,
+                    Amount = slice.Amount,
+                    Status = slice.PayableImmediately ? CommissionStatus.Payable : CommissionStatus.Pending,
+                    EligibleAt = slice.PayableImmediately ? now : null,
+                });
+            }
+
+            await dbContext.SaveChangesAsync(ct);
+        }
+
+        // Mirrors the marketer commission generation immediately above, minus the MarketerId
+        // dimension — same CommissionGenerator, same rounding/proportional-slice guarantee, only
+        // runs when a rate was actually locked at issuance (stage 2/7).
+        if (policy.AgencyCommissionPercent is { } agencyRatePercent)
+        {
+            var agencySlices = CommissionGenerator.Generate(
+                policy.NetPremium, agencyRatePercent, policy.TotalReceivable, downPayment,
+                installments.Select(i => (i.Id, i.Amount)).ToList());
+
+            var now = DateTimeOffset.UtcNow;
+            foreach (var slice in agencySlices)
+            {
+                dbContext.AgencyCommissionEntries.Add(new AgencyCommissionEntry
+                {
+                    AgencyId = policy.AgencyId,
+                    PolicyId = policy.Id,
+                    InstallmentId = slice.InstallmentId,
+                    IsFullPolicySlice = false,
+                    BasePortion = slice.BasePortion,
+                    RatePercent = agencyRatePercent,
                     Amount = slice.Amount,
                     Status = slice.PayableImmediately ? CommissionStatus.Payable : CommissionStatus.Pending,
                     EligibleAt = slice.PayableImmediately ? now : null,

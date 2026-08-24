@@ -27,3 +27,16 @@ public sealed record PaymentResultDto(
     decimal UnallocatedAmount);
 
 public sealed record BatchPaymentResultItem(Guid InstallmentIdHint, PaymentResultDto? Result, string? Error);
+
+/// <summary>Non-installment policies have no Installment row to hint at — the whole policy is paid
+/// off in one shot, which is also the event that flips its single AgencyCommissionEntry payable.</summary>
+public sealed record RecordFullPaymentRequest(
+    decimal Amount,
+    DateOnly PaidOn,
+    string Method,
+    string? ReferenceNo,
+    PaymentMethod? MethodType = null,
+    Guid? CashBoxId = null,
+    Guid? BankAccountId = null);
+
+public sealed record RecordFullPaymentResultDto(Guid PaymentId, decimal Amount);

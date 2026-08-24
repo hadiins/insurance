@@ -79,6 +79,14 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
                     commissionEntry.Status = CommissionStatus.Pending;
                     commissionEntry.EligibleAt = null;
                 }
+
+                var agencyCommissionEntry = await dbContext.AgencyCommissionEntries
+                    .FirstOrDefaultAsync(c => c.InstallmentId == installment.Id, ct);
+                if (agencyCommissionEntry is { Status: CommissionStatus.Payable })
+                {
+                    agencyCommissionEntry.Status = CommissionStatus.Pending;
+                    agencyCommissionEntry.EligibleAt = null;
+                }
             }
 
             dbContext.AuditEntries.Add(new AuditEntry
@@ -195,6 +203,14 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
                 {
                     commissionEntry.Status = CommissionStatus.Payable;
                     commissionEntry.EligibleAt = occurredAt;
+                }
+
+                var agencyCommissionEntry = await dbContext.AgencyCommissionEntries
+                    .FirstOrDefaultAsync(c => c.InstallmentId == installmentId, ct);
+                if (agencyCommissionEntry is { Status: CommissionStatus.Pending })
+                {
+                    agencyCommissionEntry.Status = CommissionStatus.Payable;
+                    agencyCommissionEntry.EligibleAt = occurredAt;
                 }
             }
 

@@ -276,6 +276,19 @@ try
         // been removed — confirmed successful in production (docs/TASK-24-POLICY-NUMBER.md §9 step
         // 5, docs/TASK-25-IDENTITY-VEHICLE.md §7 step 6). Both jobs are still idempotent and
         // re-runnable by hand later (e.g. from a future "بازتجزیهٔ شماره‌ها" admin action) if needed.
+
+        // One-time (idempotent, re-runnable) backfill for AgencyCommissionEntry on policies issued
+        // before stage 3/7 of the accounting buildout existed. Remove this enqueue the same way the
+        // two above were removed, once confirmed successful in production.
+        try
+        {
+            Hangfire.BackgroundJob.Enqueue<Aqsat.Infrastructure.Jobs.AgencyCommissionBackfillJob>(
+                job => job.RunAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to enqueue AgencyCommissionBackfillJob at startup — the database may be unreachable.");
+        }
     }
 
     app.MapHealthChecks("/health", new HealthCheckOptions
