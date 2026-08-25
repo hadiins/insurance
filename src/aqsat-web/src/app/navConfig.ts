@@ -43,10 +43,6 @@ export const NAV: NavGroup[] = [
       { navType: "policy-new", title: "ثبت بیمه‌نامه", kind: "multi-create", page: "new-policy" },
       { navType: "policies-list", title: "فهرست بیمه‌نامه‌ها", kind: "singleton", page: "policy-list" },
       {
-        navType: "policies-installment", title: "بیمه‌نامه‌های اقساطی", kind: "singleton", page: "policy-list",
-        payload: { isInstallment: true },
-      },
-      {
         navType: "policies-pending", title: "در انتظار تأیید مشتری", kind: "singleton", page: "policy-list",
         payload: { status: "PendingConfirmation" },
       },
@@ -65,26 +61,9 @@ export const NAV: NavGroup[] = [
       { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-worklist" },
       { navType: "installments-schedule", title: "در انتظار زمان‌بندی", kind: "singleton", page: "schedule-policy" },
       {
-        navType: "installments-overdue", title: "اقساط معوق", kind: "singleton", page: "installment-worklist",
-        payload: { overdueOnly: true },
-      },
-      { navType: "payment-record", title: "ثبت پرداخت", kind: "singleton", page: "payment-record" },
-      { navType: "payment-online", title: "پرداخت‌های آنلاین", kind: "singleton", page: "blank" },
-      {
-        navType: "settlement-partial", title: "تسویه‌های جزئی", kind: "singleton", page: "installment-worklist",
-        payload: { status: "Partial" },
-      },
-      {
         navType: "customer-statement", title: "صورت‌حساب مشتری", kind: "singleton", page: "customer-lookup",
         payload: { mode: "statement" },
       },
-    ],
-  },
-  {
-    id: "collateral",
-    label: "وثیقه و چک",
-    icon: ICONS.card,
-    items: [
       {
         navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "collateral",
         payload: { type: "ChequeSayadi", upcomingDays: "30" },
@@ -93,9 +72,15 @@ export const NAV: NavGroup[] = [
         navType: "checks-bounced", title: "چک‌های برگشتی", kind: "singleton", page: "collateral",
         payload: { type: "ChequeSayadi", status: "Bounced" },
       },
+    ],
+  },
+  {
+    id: "collateral",
+    label: "وثیقه و ضمانت",
+    icon: ICONS.card,
+    items: [
       { navType: "check-new", title: "ثبت چک صیادی", kind: "singleton", page: "collateral", payload: { type: "ChequeSayadi" } },
       { navType: "promissory-notes", title: "سفته‌ها", kind: "singleton", page: "collateral", payload: { type: "PromissoryNote" } },
-      { navType: "legal-notice", title: "اظهارنامه و پیگیری حقوقی", kind: "singleton", page: "blank" },
     ],
   },
   {
@@ -108,9 +93,18 @@ export const NAV: NavGroup[] = [
         navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "customer-lookup",
         payload: { mode: "payments" },
       },
-      { navType: "customer-consents", title: "رضایت‌نامه‌های ثبت‌شده", kind: "singleton", page: "blank" },
       { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "high-risk-customers" },
       { navType: "customer-completion", title: "تکمیل پروندهٔ مشتریان", kind: "singleton", page: "customer-completion" },
+    ],
+  },
+  {
+    id: "cash-flow",
+    label: "دریافت و پرداخت",
+    icon: ICONS.coin,
+    items: [
+      { navType: "cash-flow-record-receipt", title: "ثبت دریافتی‌ها", kind: "singleton", page: "record-receipt" },
+      { navType: "cash-flow-expenses", title: "ثبت هزینه‌ها", kind: "singleton", page: "expenses" },
+      { navType: "cash-flow-insurer-remittance", title: "پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance" },
     ],
   },
   {
@@ -122,7 +116,6 @@ export const NAV: NavGroup[] = [
       { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "sms-templates" },
       { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "sms-reminders" },
       { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "sms-delivery-report" },
-      { navType: "sms-credit", title: "اعتبار پنل", kind: "singleton", page: "blank" },
     ],
   },
   {
@@ -144,22 +137,10 @@ export const NAV: NavGroup[] = [
       { navType: "reports-expenses", title: "گزارش هزینه‌ها", kind: "singleton", page: "expenses" },
       { navType: "reports-insurer-remittance", title: "گزارش پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance" },
       { navType: "reports-missing-serials", title: "شماره‌های جا افتاده", kind: "singleton", page: "missing-serials" },
-      { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
       { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report" },
       { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "collections-report" },
       { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "collections-report" },
-      { navType: "reports-network-compare", title: "مقایسه با میانگین شبکه", kind: "singleton", page: "blank" },
       { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "collections-report" },
-    ],
-  },
-  {
-    id: "cash-flow",
-    label: "دریافت و پرداخت",
-    icon: ICONS.coin,
-    items: [
-      { navType: "cash-flow-record-receipt", title: "ثبت دریافتی‌ها", kind: "singleton", page: "record-receipt" },
-      { navType: "cash-flow-expenses", title: "ثبت هزینه‌ها", kind: "singleton", page: "expenses" },
-      { navType: "cash-flow-insurer-remittance", title: "پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance" },
     ],
   },
   {
@@ -185,8 +166,6 @@ export const NAV: NavGroup[] = [
       { navType: "settings-expense-categories", title: "دسته‌بندی هزینه‌ها", kind: "singleton", page: "expense-category-settings" },
       { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users" },
       { navType: "change-password", title: "تغییر رمز عبور", kind: "singleton", page: "change-password" },
-      { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },
-      { navType: "settings-sms-panel", title: "پنل پیامک", kind: "singleton", page: "blank" },
       { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "settings-audit-log" },
       {
         navType: "agencies-management", title: "نمایندگی‌ها", kind: "singleton", page: "agencies-management",

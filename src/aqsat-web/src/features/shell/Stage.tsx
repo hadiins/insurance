@@ -21,7 +21,6 @@ import { ExpenseCategorySettingsPage } from "../settings/ExpenseCategorySettings
 import { RecordReceiptPage } from "../policies/RecordReceiptPage";
 import { InsurerRemittancePage } from "../reports/InsurerRemittancePage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
-import { PaymentRecordPage } from "../payments/PaymentRecordPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
 import { PolicyNumberSettingsPage } from "../settings/PolicyNumberSettingsPage";
 import { CashAndBankSettingsPage } from "../settings/CashAndBankSettingsPage";
@@ -90,8 +89,6 @@ function renderPage(tab: OpenTab) {
       return <InsurerRemittancePage />;
     case "platform-updates":
       return <PlatformUpdatesPage />;
-    case "payment-record":
-      return <PaymentRecordPage />;
     case "agency-settings":
       return <AgencySettingsPage />;
     case "policy-number-settings":

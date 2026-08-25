@@ -34,6 +34,13 @@ const URGENCY_LABEL: Record<InstallmentWorklistRowDto["urgency"], string> = {
   Future: "آینده",
 };
 
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "همهٔ وضعیت‌ها" },
+  { value: "Unpaid", label: "پرداخت‌نشده" },
+  { value: "Partial", label: "پرداخت جزئی (تسویه‌های جزئی)" },
+  { value: "Settled", label: "تسویه‌شده" },
+];
+
 export function InstallmentsWorklistPage() {
   const tabKey = useTabKey();
   const tab = useTabsStore((s) => s.tabs.find((t) => t.key === tabKey));
@@ -43,13 +50,13 @@ export function InstallmentsWorklistPage() {
   const [rows, setRows] = useState<InstallmentWorklistRowDto[] | null>(null);
   const [payingRow, setPayingRow] = useState<InstallmentWorklistRowDto | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const heading = initial.overdueOnly ? "اقساط معوق" : initial.status === "Partial" ? "تسویه‌های جزئی" : "فهرست اقساط";
+  const [overdueOnly, setOverdueOnly] = useState(initial.overdueOnly ?? false);
+  const [status, setStatus] = useState(initial.status ?? "");
 
   const reload = useCallback(() => {
     const params = new URLSearchParams();
-    if (initial.overdueOnly) params.set("overdueOnly", "true");
-    if (initial.status) params.set("status", initial.status);
+    if (overdueOnly) params.set("overdueOnly", "true");
+    if (status) params.set("status", status);
     api
       .get<InstallmentWorklistRowDto[]>(`/installments?${params.toString()}`)
       .then((data) => {
@@ -58,7 +65,7 @@ export function InstallmentsWorklistPage() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری فهرست"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial.overdueOnly, initial.status]);
+  }, [overdueOnly, status]);
 
   useEffect(() => {
     reload();
@@ -66,8 +73,43 @@ export function InstallmentsWorklistPage() {
 
   return (
     <div>
-      <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">{heading}</h2>
+      <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">فهرست اقساط</h2>
       <div className="mb-4.5 text-xs text-(--ice-3)">بدون محدودیت بازهٔ زمانی — همهٔ ردیف‌های واجد شرایط</div>
+
+      <div className="mb-4.5 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOverdueOnly((v) => !v)}
+          className={`rounded-[10px] border px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+            overdueOnly ? "border-(--mint) bg-(--mint) text-(--on-mint)" : "border-(--edge-2) bg-(--btn-bg) text-(--ice-2) hover:bg-(--btn-hov)"
+          }`}
+        >
+          فقط معوق
+        </button>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        {(overdueOnly || status) && (
+          <button
+            type="button"
+            onClick={() => {
+              setOverdueOnly(false);
+              setStatus("");
+            }}
+            className="text-[11.5px] text-(--ice-3) hover:text-(--ice)"
+          >
+            پاک کردن فیلترها
+          </button>
+        )}
+      </div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">

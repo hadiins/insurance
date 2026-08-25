@@ -35,12 +35,19 @@ const STATUS_PILL_CLASS: Record<PolicyListItemDto["status"], string> = {
   PendingConfirmation: "bg-(--amber)/13 text-(--amber)",
 };
 
-const TITLES: Record<string, string> = {
-  none: "فهرست بیمه‌نامه‌ها",
-  installment: "بیمه‌نامه‌های اقساطی",
-  cancelled: "باطل‌شده‌ها",
-  pending: "در انتظار تأیید مشتری",
-};
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "همهٔ وضعیت‌ها" },
+  { value: "Active", label: "فعال" },
+  { value: "Settled", label: "تسویه‌شده" },
+  { value: "Cancelled", label: "باطل‌شده" },
+  { value: "PendingConfirmation", label: "در انتظار تأیید مشتری" },
+];
+
+const INSTALLMENT_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "همه" },
+  { value: "true", label: "فقط اقساطی" },
+  { value: "false", label: "فقط غیراقساطی" },
+];
 
 export function PoliciesListPage() {
   const tabKey = useTabKey();
@@ -51,20 +58,14 @@ export function PoliciesListPage() {
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<PolicyListItemDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const heading = initial.isInstallment
-    ? TITLES.installment
-    : initial.status === "Cancelled"
-      ? TITLES.cancelled
-      : initial.status === "PendingConfirmation"
-        ? TITLES.pending
-        : TITLES.none;
+  const [status, setStatus] = useState(initial.status ?? "");
+  const [installmentFilter, setInstallmentFilter] = useState(initial.isInstallment ? "true" : "");
 
   function reload() {
     const params = new URLSearchParams();
     if (search.trim()) params.set("search", search.trim());
-    if (initial.status) params.set("status", initial.status);
-    if (initial.isInstallment) params.set("isInstallment", "true");
+    if (status) params.set("status", status);
+    if (installmentFilter) params.set("isInstallment", installmentFilter);
     api
       .get<PolicyListItemDto[]>(`/policies?${params.toString()}`)
       .then((data) => {
@@ -78,7 +79,7 @@ export function PoliciesListPage() {
     const handle = setTimeout(reload, 250);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, initial.status, initial.isInstallment]);
+  }, [search, status, installmentFilter]);
 
   function openPolicy(p: PolicyListItemDto) {
     openTab({
@@ -104,7 +105,7 @@ export function PoliciesListPage() {
 
   return (
     <div>
-      <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">{heading}</h2>
+      <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">فهرست بیمه‌نامه‌ها</h2>
       <div className="mb-4.5 text-xs text-(--ice-3)">
         جست‌وجو بر اساس شمارهٔ کامل، سریال (با یا بدون صفر)، سال، کد رشته، یا نام بیمه‌گذار
       </div>
@@ -124,6 +125,43 @@ export function PoliciesListPage() {
             className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             پاک کردن
+          </button>
+        )}
+      </div>
+
+      <div className="mb-4.5 flex flex-wrap items-center gap-2">
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={installmentFilter}
+          onChange={(e) => setInstallmentFilter(e.target.value)}
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+        >
+          {INSTALLMENT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        {(status || installmentFilter) && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("");
+              setInstallmentFilter("");
+            }}
+            className="text-[11.5px] text-(--ice-3) hover:text-(--ice)"
+          >
+            پاک کردن فیلترها
           </button>
         )}
       </div>

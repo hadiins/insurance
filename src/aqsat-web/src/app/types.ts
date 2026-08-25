@@ -27,7 +27,6 @@ export type PageKind =
   | "customer-completion"
   | "schedule-policy"
   | "platform-updates"
-  | "payment-record"
   | "agency-settings"
   | "desk-feed"
   | "policy-list"
