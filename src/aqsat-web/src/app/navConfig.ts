@@ -140,6 +140,7 @@ export const NAV: NavGroup[] = [
     icon: ICONS.chart,
     items: [
       { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl" },
+      { navType: "reports-receipts", title: "دریافتی‌ها", kind: "singleton", page: "receipts-report" },
       { navType: "reports-missing-serials", title: "شماره‌های جا افتاده", kind: "singleton", page: "missing-serials" },
       { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
       { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report" },

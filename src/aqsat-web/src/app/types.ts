@@ -15,6 +15,7 @@ export type PageKind =
   | "renewal-watches"
   | "collateral"
   | "collections-report"
+  | "receipts-report"
   | "missing-serials"
   | "policy-number-settings"
   | "cash-and-bank-settings"

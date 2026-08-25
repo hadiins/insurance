@@ -15,6 +15,7 @@ import { MissingSerialsPage } from "../reports/MissingSerialsPage";
 import { RenewalWatchesPage } from "../renewals/RenewalWatchesPage";
 import { CollateralPage } from "../collateral/CollateralPage";
 import { CollectionsReportPage } from "../reports/CollectionsReportPage";
+import { ReceiptsReportPage } from "../reports/ReceiptsReportPage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { PaymentRecordPage } from "../payments/PaymentRecordPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
@@ -73,6 +74,8 @@ function renderPage(tab: OpenTab) {
       return <CollateralPage />;
     case "collections-report":
       return <CollectionsReportPage />;
+    case "receipts-report":
+      return <ReceiptsReportPage />;
     case "platform-updates":
       return <PlatformUpdatesPage />;
     case "payment-record":
