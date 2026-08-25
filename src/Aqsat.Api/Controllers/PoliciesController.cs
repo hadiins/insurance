@@ -448,6 +448,28 @@ public sealed class PoliciesController(
             BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
         };
+
+        if (payment.MethodType == PaymentMethod.Cheque)
+        {
+            if (request.Cheque is null)
+            {
+                return ValidationProblem("برای پرداخت چکی، مشخصات چک الزامی است.");
+            }
+
+            dbContext.PaymentCheques.Add(new PaymentCheque
+            {
+                AgencyId = policy.AgencyId,
+                Payment = payment,
+                PolicyId = policy.Id,
+                ChequeNumber = request.Cheque.ChequeNumber.Trim(),
+                BankName = request.Cheque.BankName.Trim(),
+                DueDate = request.Cheque.DueDate,
+                PresenterName = request.Cheque.PresenterName.Trim(),
+                CashBoxId = request.Cheque.CashBoxId,
+                Status = CollateralStatus.Held,
+            });
+        }
+
         dbContext.Payments.Add(payment);
 
         dbContext.AuditEntries.Add(new AuditEntry
@@ -697,6 +719,28 @@ public sealed class PoliciesController(
             BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
         };
+
+        if (payment.MethodType == PaymentMethod.Cheque)
+        {
+            if (request.Cheque is null)
+            {
+                return ValidationProblem("برای پیش‌پرداخت چکی، مشخصات چک الزامی است.");
+            }
+
+            dbContext.PaymentCheques.Add(new PaymentCheque
+            {
+                AgencyId = policy.AgencyId,
+                Payment = payment,
+                PolicyId = policy.Id,
+                ChequeNumber = request.Cheque.ChequeNumber.Trim(),
+                BankName = request.Cheque.BankName.Trim(),
+                DueDate = request.Cheque.DueDate,
+                PresenterName = request.Cheque.PresenterName.Trim(),
+                CashBoxId = request.Cheque.CashBoxId,
+                Status = CollateralStatus.Held,
+            });
+        }
+
         dbContext.Payments.Add(payment);
 
         dbContext.AuditEntries.Add(new AuditEntry

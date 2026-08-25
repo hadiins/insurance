@@ -5,6 +5,7 @@ using Aqsat.Application.Payments;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Auth;
+using Aqsat.Infrastructure.Payments;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,7 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/payments")]
 [Authorize(Policy = Permissions.PaymentWrite)]
-public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserContext currentUser) : ControllerBase
+public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserContext currentUser, PaymentReversalService reversalService) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<PaymentResultDto>> Record(RecordPaymentRequest request, CancellationToken ct)
@@ -49,118 +50,11 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
     [HttpPost("{id:guid}/reverse")]
     public async Task<ActionResult> Reverse(Guid id, CancellationToken ct)
     {
-        var payment = await dbContext.Payments
-            .Include(p => p.Allocations).ThenInclude(a => a.Installment)
-            .FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (payment is null)
+        var found = await reversalService.ReverseAsync(id, currentUser.UserId, currentUser.DisplayName, ct);
+        if (!found)
         {
             return NotFound();
         }
-
-        var occurredAt = DateTimeOffset.UtcNow;
-        foreach (var allocation in payment.Allocations)
-        {
-            var installment = allocation.Installment;
-            var wasSettled = installment.Status == InstallmentStatus.Settled;
-            installment.PaidAmount -= allocation.Amount;
-            installment.Status = RecomputeStatus(installment.PaidAmount, installment.Amount);
-            allocation.IsDeleted = true;
-            allocation.DeletedAt = occurredAt;
-
-            // docs/TASKS.md Task 13 — undoing the settlement that made a commission slice payable
-            // must undo the activation too. This is not the "no clawback" case (rule: a customer
-            // who simply stops paying never triggers this) — it is unwinding our own mistaken entry.
-            if (wasSettled && installment.Status != InstallmentStatus.Settled)
-            {
-                var commissionEntry = await dbContext.CommissionEntries
-                    .FirstOrDefaultAsync(c => c.InstallmentId == installment.Id, ct);
-                if (commissionEntry is { Status: CommissionStatus.Payable })
-                {
-                    commissionEntry.Status = CommissionStatus.Pending;
-                    commissionEntry.EligibleAt = null;
-                }
-
-                var agencyCommissionEntry = await dbContext.AgencyCommissionEntries
-                    .FirstOrDefaultAsync(c => c.InstallmentId == installment.Id, ct);
-                if (agencyCommissionEntry is { Status: CommissionStatus.Payable })
-                {
-                    agencyCommissionEntry.Status = CommissionStatus.Pending;
-                    agencyCommissionEntry.EligibleAt = null;
-                }
-            }
-
-            dbContext.AuditEntries.Add(new AuditEntry
-            {
-                AgencyId = installment.AgencyId,
-                UserId = currentUser.UserId,
-                UserDisplayName = currentUser.DisplayName,
-                EntityType = nameof(Payment),
-                EntityId = payment.Id,
-                PolicyId = installment.PolicyId,
-                Action = AuditAction.PaymentReversed,
-                Description = $"برگشت پرداخت قسط شمارهٔ {installment.SeqNo}",
-                OccurredAt = occurredAt,
-                IpAddress = CurrentRequestContext.IpAddress,
-            });
-        }
-
-        // A down-payment or non-installment full-payment receipt has no PaymentAllocation rows —
-        // InstallmentIdHint holds the policy's own Id in both cases (no real FK, PaymentConfiguration.cs).
-        // Reversing it must undo whichever commission slice its receipt made payable.
-        if (payment.Allocations.Count == 0)
-        {
-            var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == payment.InstallmentIdHint, ct);
-            if (policy is not null)
-            {
-                if (policy.IsInstallment)
-                {
-                    var downCommissionEntry = await dbContext.CommissionEntries
-                        .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.InstallmentId == null, ct);
-                    if (downCommissionEntry is { Status: CommissionStatus.Payable })
-                    {
-                        downCommissionEntry.Status = CommissionStatus.Pending;
-                        downCommissionEntry.EligibleAt = null;
-                    }
-
-                    var downAgencyEntry = await dbContext.AgencyCommissionEntries
-                        .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.InstallmentId == null && !c.IsFullPolicySlice, ct);
-                    if (downAgencyEntry is { Status: CommissionStatus.Payable })
-                    {
-                        downAgencyEntry.Status = CommissionStatus.Pending;
-                        downAgencyEntry.EligibleAt = null;
-                    }
-                }
-                else
-                {
-                    var fullPolicyEntry = await dbContext.AgencyCommissionEntries
-                        .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.IsFullPolicySlice, ct);
-                    if (fullPolicyEntry is { Status: CommissionStatus.Payable })
-                    {
-                        fullPolicyEntry.Status = CommissionStatus.Pending;
-                        fullPolicyEntry.EligibleAt = null;
-                    }
-                }
-
-                dbContext.AuditEntries.Add(new AuditEntry
-                {
-                    AgencyId = policy.AgencyId,
-                    UserId = currentUser.UserId,
-                    UserDisplayName = currentUser.DisplayName,
-                    EntityType = nameof(Payment),
-                    EntityId = payment.Id,
-                    PolicyId = policy.Id,
-                    Action = AuditAction.PaymentReversed,
-                    Description = policy.IsInstallment
-                        ? $"برگشت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}"
-                        : $"برگشت پرداخت کامل بیمه‌نامهٔ {policy.PolicyNumber}",
-                    OccurredAt = occurredAt,
-                    IpAddress = CurrentRequestContext.IpAddress,
-                });
-            }
-        }
-
-        payment.IsDeleted = true;
-        payment.DeletedAt = occurredAt;
 
         await dbContext.SaveChangesAsync(ct);
         return NoContent();
@@ -237,6 +131,27 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
         };
+        if (payment.MethodType == PaymentMethod.Cheque)
+        {
+            if (request.Cheque is null)
+            {
+                return (null, "برای پرداخت چکی، مشخصات چک الزامی است.");
+            }
+
+            dbContext.PaymentCheques.Add(new PaymentCheque
+            {
+                AgencyId = hint.AgencyId,
+                Payment = payment,
+                PolicyId = hint.PolicyId,
+                ChequeNumber = request.Cheque.ChequeNumber.Trim(),
+                BankName = request.Cheque.BankName.Trim(),
+                DueDate = request.Cheque.DueDate,
+                PresenterName = request.Cheque.PresenterName.Trim(),
+                CashBoxId = request.Cheque.CashBoxId,
+                Status = CollateralStatus.Held,
+            });
+        }
+
         dbContext.Payments.Add(payment);
 
         var occurredAt = DateTimeOffset.UtcNow;

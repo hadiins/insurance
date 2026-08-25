@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { MoneyInput } from "../../components/MoneyInput";
+import { JalaliDateField } from "../../components/JalaliDateField";
 
 interface CashBoxDto {
   id: string;
@@ -56,6 +57,11 @@ export function RecordPaymentDialog({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PaymentResultDto | null>(null);
 
+  const [chequeNumber, setChequeNumber] = useState("");
+  const [chequeBankName, setChequeBankName] = useState("");
+  const [chequeDueDate, setChequeDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [chequePresenterName, setChequePresenterName] = useState("");
+
   useEffect(() => {
     api
       .get<CashBoxDto[]>("/settings/cash-and-bank/cash-boxes")
@@ -79,12 +85,16 @@ export function RecordPaymentDialog({
       setError("مبلغ پرداخت باید مثبت باشد.");
       return;
     }
-    if (methodType === "Cash" && !cashBoxId) {
+    if ((methodType === "Cash" || methodType === "Cheque") && !cashBoxId) {
       setError("انتخاب صندوق الزامی است.");
       return;
     }
-    if (methodType !== "Cash" && !bankAccountId) {
+    if (methodType === "BankTransfer" && !bankAccountId) {
       setError("انتخاب حساب بانکی الزامی است.");
+      return;
+    }
+    if (methodType === "Cheque" && (!chequeNumber.trim() || !chequeBankName.trim() || !chequePresenterName.trim())) {
+      setError("شمارهٔ چک، بانک عامل و نام تحویل‌دهنده الزامی است.");
       return;
     }
 
@@ -98,8 +108,18 @@ export function RecordPaymentDialog({
         paidOn,
         method: methodLabel[methodType],
         methodType,
-        cashBoxId: methodType === "Cash" ? cashBoxId : null,
-        bankAccountId: methodType !== "Cash" ? bankAccountId : null,
+        cashBoxId: methodType === "Cash" || methodType === "Cheque" ? cashBoxId : null,
+        bankAccountId: methodType === "BankTransfer" ? bankAccountId : null,
+        cheque:
+          methodType === "Cheque"
+            ? {
+                chequeNumber: chequeNumber.trim(),
+                bankName: chequeBankName.trim(),
+                dueDate: chequeDueDate,
+                presenterName: chequePresenterName.trim(),
+                cashBoxId,
+              }
+            : null,
       });
       setResult(recorded);
       onRecorded();
@@ -171,23 +191,7 @@ export function RecordPaymentDialog({
                   <option value="Cheque">چک</option>
                 </select>
 
-                {methodType === "Cash" ? (
-                  <>
-                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">صندوق</label>
-                    <select
-                      value={cashBoxId}
-                      onChange={(e) => setCashBoxId(e.target.value)}
-                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
-                    >
-                      <option value="">انتخاب کنید…</option>
-                      {cashBoxes.filter((b) => b.isActive).map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                ) : (
+                {methodType === "BankTransfer" ? (
                   <>
                     <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
                     <select
@@ -203,6 +207,58 @@ export function RecordPaymentDialog({
                       ))}
                     </select>
                   </>
+                ) : (
+                  <>
+                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">
+                      صندوق {methodType === "Cheque" && "(محل نگهداری چک)"}
+                    </label>
+                    <select
+                      value={cashBoxId}
+                      onChange={(e) => setCashBoxId(e.target.value)}
+                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                    >
+                      <option value="">انتخاب کنید…</option>
+                      {cashBoxes.filter((b) => b.isActive).map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+
+                {methodType === "Cheque" && (
+                  <div className="mb-4.5 grid grid-cols-2 gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 p-2.5">
+                    <div>
+                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
+                      <input
+                        value={chequeNumber}
+                        onChange={(e) => setChequeNumber(e.target.value)}
+                        dir="ltr"
+                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">بانک عامل</label>
+                      <input
+                        value={chequeBankName}
+                        onChange={(e) => setChequeBankName(e.target.value)}
+                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
+                      <JalaliDateField value={chequeDueDate} onChange={setChequeDueDate} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
+                      <input
+                        value={chequePresenterName}
+                        onChange={(e) => setChequePresenterName(e.target.value)}
+                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                      />
+                    </div>
+                  </div>
                 )}
 
                 <div className="flex gap-2">

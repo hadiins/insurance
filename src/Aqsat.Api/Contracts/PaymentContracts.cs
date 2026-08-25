@@ -7,6 +7,13 @@ namespace Aqsat.Api.Contracts;
 /// per docs/PHASE-1-SPEC.md §3.4 (oldest due date first); pass it to let the agent edit the split.</summary>
 public sealed record AllocationLineRequest(Guid InstallmentId, decimal Amount);
 
+/// <summary>Required when MethodType == Cheque, on every receipt endpoint that accepts a
+/// structured method (installment payment, down payment, non-installment full payment). CashBoxId
+/// is where the paper cheque is physically held while Status == Held — a different concern from
+/// Payment.BankAccountId, which only matters once the cheque is actually deposited.</summary>
+public sealed record ChequeDetailsRequest(
+    string ChequeNumber, string BankName, DateOnly DueDate, string PresenterName, Guid CashBoxId);
+
 public sealed record RecordPaymentRequest(
     Guid InstallmentIdHint,
     decimal Amount,
@@ -16,7 +23,8 @@ public sealed record RecordPaymentRequest(
     IReadOnlyList<AllocationLineRequest>? Allocations = null,
     PaymentMethod? MethodType = null,
     Guid? CashBoxId = null,
-    Guid? BankAccountId = null);
+    Guid? BankAccountId = null,
+    ChequeDetailsRequest? Cheque = null);
 
 public sealed record AllocationLineDto(Guid InstallmentId, int SeqNo, string PolicyNumber, decimal Amount);
 
@@ -37,7 +45,8 @@ public sealed record RecordFullPaymentRequest(
     string? ReferenceNo,
     PaymentMethod? MethodType = null,
     Guid? CashBoxId = null,
-    Guid? BankAccountId = null);
+    Guid? BankAccountId = null,
+    ChequeDetailsRequest? Cheque = null);
 
 public sealed record RecordFullPaymentResultDto(Guid PaymentId, decimal Amount);
 
@@ -51,6 +60,7 @@ public sealed record ReceiveDownPaymentRequest(
     string? ReferenceNo,
     PaymentMethod? MethodType = null,
     Guid? CashBoxId = null,
-    Guid? BankAccountId = null);
+    Guid? BankAccountId = null,
+    ChequeDetailsRequest? Cheque = null);
 
 public sealed record ReceiveDownPaymentResultDto(Guid PaymentId, decimal Amount);
