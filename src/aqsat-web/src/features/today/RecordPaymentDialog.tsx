@@ -48,6 +48,7 @@ export function RecordPaymentDialog({
   onRecorded: () => void;
 }) {
   const [amount, setAmount] = useState(String(Math.round(suggestedAmount)));
+  const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10));
   const [methodType, setMethodType] = useState<MethodType>("Cash");
   const [cashBoxId, setCashBoxId] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
@@ -101,7 +102,6 @@ export function RecordPaymentDialog({
     setSubmitting(true);
     setError(null);
     try {
-      const paidOn = new Date().toISOString().slice(0, 10);
       const recorded = await api.post<PaymentResultDto>("/payments", {
         installmentIdHint: installmentId,
         amount: numericAmount,
@@ -179,6 +179,15 @@ export function RecordPaymentDialog({
                   onChange={setAmount}
                   className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
                 />
+
+                <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
+                <div className="mb-3.5">
+                  <JalaliDateField
+                    value={paidOn}
+                    onChange={setPaidOn}
+                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+                  />
+                </div>
 
                 <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">روش پرداخت</label>
                 <select
