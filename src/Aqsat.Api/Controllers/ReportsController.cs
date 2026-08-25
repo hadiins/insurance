@@ -46,7 +46,8 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             totals.TotalIncome, totals.TotalExpense, totals.NetProfit,
             GroupBy(items, i => (i.InsuranceLineId?.ToString() ?? "none", i.LineLabel)),
             GroupBy(items, i => (i.MarketerId?.ToString() ?? "none", i.MarketerLabel)),
-            GroupBy(items, i => (i.EventDate.ToString("yyyy-MM"), i.EventDate.ToString("yyyy-MM")))));
+            GroupBy(items, i => (i.EventDate.ToString("yyyy-MM"), i.EventDate.ToString("yyyy-MM"))),
+            totals.OperatingExpense));
     }
 
     [HttpGet("export")]
@@ -78,6 +79,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
         row++;
         WriteRow("پورسانت بازاریاب", totals.MarketerCommissionExpense);
         WriteRow("سوخت نکول", totals.DefaultWriteOffExpense);
+        WriteRow("هزینه‌های عملیاتی", totals.OperatingExpense);
         WriteRow("جمع هزینه", totals.TotalExpense);
         row++;
         WriteRow("سود خالص", totals.NetProfit);
@@ -217,6 +219,17 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
                 i.Policy.InsuranceLineId, i.Policy.InsuranceLine.NameFa, i.Policy.MarketerId, i.Policy.Marketer?.FullName ?? "بدون بازاریاب",
                 i.SettlementDeadline, new PnlTotals(0, 0, 0, i.Balance))));
 
+        // Stage 7/7 — the agency's own operating costs, a real third expense line (never derived,
+        // unlike default write-off). Not tied to any InsuranceLine/Marketer, so both fall back to
+        // the same "بدون ..." grouping the rest of this method already uses for unassigned rows.
+        var expenses = await dbContext.Expenses
+            .AsNoTracking()
+            .Where(e => e.Date >= from && e.Date <= to)
+            .ToListAsync(ct);
+
+        items.AddRange(expenses.Select(e => new LineItem(
+            null, "بدون رشته", null, "بدون بازاریاب", e.Date, new PnlTotals(0, 0, 0, 0, e.Amount))));
+
         var totals = items.Aggregate(default(PnlTotals), (acc, item) => acc + item.Totals);
         return (totals, items);
     }
@@ -229,7 +242,8 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
                 var totals = g.Aggregate(default(PnlTotals), (acc, item) => acc + item.Totals);
                 return new PnlBreakdownRow(
                     g.Key.Key, g.Key.Label, totals.AgencyCommissionIncome, totals.ServiceFeeIncome,
-                    totals.MarketerCommissionExpense, totals.DefaultWriteOffExpense, totals.TotalIncome, totals.TotalExpense, totals.NetProfit);
+                    totals.MarketerCommissionExpense, totals.DefaultWriteOffExpense, totals.TotalIncome, totals.TotalExpense, totals.NetProfit,
+                    totals.OperatingExpense);
             })
             .OrderByDescending(r => r.NetProfit)
             .ToList();

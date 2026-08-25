@@ -38,6 +38,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<CashBox> CashBoxes => Set<CashBox>();
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<PaymentCheque> PaymentCheques => Set<PaymentCheque>();
+    public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
+    public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportRow> ImportRows => Set<ImportRow>();
     public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();

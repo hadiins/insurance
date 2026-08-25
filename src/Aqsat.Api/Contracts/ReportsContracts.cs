@@ -6,12 +6,13 @@ public sealed record PnlRequest(DateOnly From, DateOnly To, string Basis, int? W
 public sealed record PnlBreakdownRow(
     string GroupKey, string GroupLabel,
     decimal AgencyCommissionIncome, decimal ServiceFeeIncome, decimal MarketerCommissionExpense, decimal DefaultWriteOffExpense,
-    decimal TotalIncome, decimal TotalExpense, decimal NetProfit);
+    decimal TotalIncome, decimal TotalExpense, decimal NetProfit, decimal OperatingExpense = 0);
 
 public sealed record PnlResultDto(
     decimal AgencyCommissionIncome, decimal ServiceFeeIncome, decimal MarketerCommissionExpense, decimal DefaultWriteOffExpense,
     decimal TotalIncome, decimal TotalExpense, decimal NetProfit,
-    IReadOnlyList<PnlBreakdownRow> ByLine, IReadOnlyList<PnlBreakdownRow> ByMarketer, IReadOnlyList<PnlBreakdownRow> ByMonth);
+    IReadOnlyList<PnlBreakdownRow> ByLine, IReadOnlyList<PnlBreakdownRow> ByMarketer, IReadOnlyList<PnlBreakdownRow> ByMonth,
+    decimal OperatingExpense = 0);
 
 /// <summary>docs/TASKS.md Task 18 — filtered, server-side-paged collections report. Reads only
 /// indexed columns on Installment (AgencyId, Status, SettlementDeadline) — no heavy join on live

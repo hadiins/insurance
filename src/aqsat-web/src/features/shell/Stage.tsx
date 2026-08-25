@@ -16,6 +16,8 @@ import { RenewalWatchesPage } from "../renewals/RenewalWatchesPage";
 import { CollateralPage } from "../collateral/CollateralPage";
 import { CollectionsReportPage } from "../reports/CollectionsReportPage";
 import { ReceiptsReportPage } from "../reports/ReceiptsReportPage";
+import { ExpensesPage } from "../reports/ExpensesPage";
+import { ExpenseCategorySettingsPage } from "../settings/ExpenseCategorySettingsPage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { PaymentRecordPage } from "../payments/PaymentRecordPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
@@ -76,6 +78,10 @@ function renderPage(tab: OpenTab) {
       return <CollectionsReportPage />;
     case "receipts-report":
       return <ReceiptsReportPage />;
+    case "expenses":
+      return <ExpensesPage />;
+    case "expense-category-settings":
+      return <ExpenseCategorySettingsPage />;
     case "platform-updates":
       return <PlatformUpdatesPage />;
     case "payment-record":

@@ -27,4 +27,15 @@ public class PnlTotalsTests
         Assert.Equal(20m, sum.MarketerCommissionExpense);
         Assert.Equal(5m, sum.DefaultWriteOffExpense);
     }
+
+    [Fact]
+    public void Operating_expense_stage_7_reduces_net_profit_like_any_other_expense()
+    {
+        var totals = new PnlTotals(
+            AgencyCommissionIncome: 1_000_000m, ServiceFeeIncome: 0m,
+            MarketerCommissionExpense: 0m, DefaultWriteOffExpense: 0m, OperatingExpense: 300_000m);
+
+        Assert.Equal(300_000m, totals.TotalExpense);
+        Assert.Equal(700_000m, totals.NetProfit);
+    }
 }

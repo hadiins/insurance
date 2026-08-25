@@ -141,6 +141,7 @@ export const NAV: NavGroup[] = [
     items: [
       { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl" },
       { navType: "reports-receipts", title: "دریافتی‌ها", kind: "singleton", page: "receipts-report" },
+      { navType: "reports-expenses", title: "هزینه‌ها", kind: "singleton", page: "expenses" },
       { navType: "reports-missing-serials", title: "شماره‌های جا افتاده", kind: "singleton", page: "missing-serials" },
       { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
       { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report" },
@@ -170,6 +171,7 @@ export const NAV: NavGroup[] = [
       { navType: "settings-policy-number", title: "کدهای بیمه‌نامه", kind: "singleton", page: "policy-number-settings" },
       { navType: "settings-cash-and-bank", title: "صندوق و بانک‌ها", kind: "singleton", page: "cash-and-bank-settings" },
       { navType: "settings-agency-commission", title: "کارمزد از بیمه‌گر", kind: "singleton", page: "agency-commission-settings" },
+      { navType: "settings-expense-categories", title: "دسته‌بندی هزینه‌ها", kind: "singleton", page: "expense-category-settings" },
       { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users" },
       { navType: "change-password", title: "تغییر رمز عبور", kind: "singleton", page: "change-password" },
       { navType: "settings-payment-gateway", title: "درگاه پرداخت", kind: "singleton", page: "blank" },

@@ -16,6 +16,8 @@ export type PageKind =
   | "collateral"
   | "collections-report"
   | "receipts-report"
+  | "expenses"
+  | "expense-category-settings"
   | "missing-serials"
   | "policy-number-settings"
   | "cash-and-bank-settings"

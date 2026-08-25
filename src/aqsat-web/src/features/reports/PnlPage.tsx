@@ -16,6 +16,7 @@ interface PnlResultDto {
   serviceFeeIncome: number;
   marketerCommissionExpense: number;
   defaultWriteOffExpense: number;
+  operatingExpense: number;
   totalIncome: number;
   totalExpense: number;
   netProfit: number;
@@ -174,6 +175,7 @@ function PnlSummaryCard({ title, result, highlight }: { title: string; result: P
         <Line label="کارمزد خدمات" value={result.serviceFeeIncome} />
         <Line label="پورسانت بازاریاب" value={-result.marketerCommissionExpense} />
         <Line label="سوخت نکول" value={-result.defaultWriteOffExpense} />
+        <Line label="هزینه‌های عملیاتی" value={-result.operatingExpense} />
       </div>
       <div className="border-t border-(--edge-2) pt-2.5">
         <div className="text-[10px] tracking-wider text-(--ice-3)">سود خالص</div>
