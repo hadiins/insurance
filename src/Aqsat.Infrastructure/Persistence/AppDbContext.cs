@@ -40,6 +40,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     public DbSet<PaymentCheque> PaymentCheques => Set<PaymentCheque>();
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<InsurerRemittance> InsurerRemittances => Set<InsurerRemittance>();
+    public DbSet<InsurerRemittanceLine> InsurerRemittanceLines => Set<InsurerRemittanceLine>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportRow> ImportRows => Set<ImportRow>();
     public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();

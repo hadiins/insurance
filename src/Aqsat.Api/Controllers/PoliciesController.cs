@@ -925,6 +925,42 @@ public sealed class PoliciesController(
         return (dto, null);
     }
 
+    /// <summary>«ثبت دریافت» — everything a receipt-recording page needs about one policy in a
+    /// single call: scheduled?, down payment already received?, which installments are still open,
+    /// and (non-installment) whether the one full payment already landed.</summary>
+    [HttpGet("{id:guid}/receipt-status")]
+    [Authorize(Policy = Permissions.PolicyRead)]
+    public async Task<ActionResult<PolicyReceiptStatusDto>> ReceiptStatus(Guid id, CancellationToken ct)
+    {
+        var policy = await dbContext.Policies.AsNoTracking()
+            .Include(p => p.Customer)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        var isScheduled = policy.InstallmentCount > 0;
+
+        var downPaymentReceived = policy.DownPayment > 0 && await dbContext.Payments.AsNoTracking()
+            .AnyAsync(p => p.InstallmentIdHint == policy.Id && p.Method == DownPaymentMethod, ct);
+
+        var openInstallments = await dbContext.Installments.AsNoTracking()
+            .Where(i => i.PolicyId == policy.Id && i.Status != InstallmentStatus.Settled)
+            .OrderBy(i => i.SeqNo)
+            .Select(i => new OpenInstallmentRow(i.Id, i.SeqNo, i.DueDate, i.Amount, i.Balance, i.Status.ToString()))
+            .ToListAsync(ct);
+
+        // A non-installment policy's one "record-full-payment" receipt carries no Method sentinel —
+        // any Payment hinting at this policy that isn't the down-payment marker is the full payment.
+        var isFullyPaid = !policy.IsInstallment && await dbContext.Payments.AsNoTracking()
+            .AnyAsync(p => p.InstallmentIdHint == policy.Id && p.Method != DownPaymentMethod, ct);
+
+        return Ok(new PolicyReceiptStatusDto(
+            policy.Id, policy.PolicyNumber, policy.Customer.FullName, policy.IsInstallment, isScheduled,
+            policy.TotalReceivable, policy.DownPayment, downPaymentReceived, openInstallments, isFullyPaid));
+    }
+
     /// <summary>
     /// docs/TASKS.md Task 17 — the policy file: installments, endorsements, commission, and a
     /// history tab that is a single indexed query on AuditEntry.PolicyId (CLAUDE.md rule 28).

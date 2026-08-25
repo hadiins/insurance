@@ -18,6 +18,8 @@ export type PageKind =
   | "receipts-report"
   | "expenses"
   | "expense-category-settings"
+  | "record-receipt"
+  | "insurer-remittance"
   | "missing-serials"
   | "policy-number-settings"
   | "cash-and-bank-settings"

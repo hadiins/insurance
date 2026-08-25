@@ -18,6 +18,8 @@ import { CollectionsReportPage } from "../reports/CollectionsReportPage";
 import { ReceiptsReportPage } from "../reports/ReceiptsReportPage";
 import { ExpensesPage } from "../reports/ExpensesPage";
 import { ExpenseCategorySettingsPage } from "../settings/ExpenseCategorySettingsPage";
+import { RecordReceiptPage } from "../policies/RecordReceiptPage";
+import { InsurerRemittancePage } from "../reports/InsurerRemittancePage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { PaymentRecordPage } from "../payments/PaymentRecordPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
@@ -82,6 +84,10 @@ function renderPage(tab: OpenTab) {
       return <ExpensesPage />;
     case "expense-category-settings":
       return <ExpenseCategorySettingsPage />;
+    case "record-receipt":
+      return <RecordReceiptPage />;
+    case "insurer-remittance":
+      return <InsurerRemittancePage />;
     case "platform-updates":
       return <PlatformUpdatesPage />;
     case "payment-record":
