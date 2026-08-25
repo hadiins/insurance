@@ -3,6 +3,22 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money, toLatinDigits } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { MoneyInput } from "../../components/MoneyInput";
+import { JalaliDateField } from "../../components/JalaliDateField";
+
+interface CashBoxDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+interface BankAccountDto {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  isActive: boolean;
+}
+
+type MethodType = "Cash" | "BankTransfer" | "Cheque";
 
 interface PendingSchedulePolicyDto {
   policyId: string;
@@ -37,6 +53,32 @@ export function SchedulePolicyPage() {
   const [downPaymentTouched, setDownPaymentTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<ScheduleResultDto | null>(null);
+  const [scheduledDownPayment, setScheduledDownPayment] = useState(0);
+
+  const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountDto[]>([]);
+  const [receivePaidOn, setReceivePaidOn] = useState(new Date().toISOString().slice(0, 10));
+  const [receiveMethodType, setReceiveMethodType] = useState<MethodType>("Cash");
+  const [receiveCashBoxId, setReceiveCashBoxId] = useState("");
+  const [receiveBankAccountId, setReceiveBankAccountId] = useState("");
+  const [receiveReferenceNo, setReceiveReferenceNo] = useState("");
+  const [receiving, setReceiving] = useState(false);
+  const [received, setReceived] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<CashBoxDto[]>("/settings/cash-and-bank/cash-boxes")
+      .then((list) => {
+        setCashBoxes(list);
+        const active = list.find((b) => b.isActive);
+        if (active) setReceiveCashBoxId(active.id);
+      })
+      .catch(() => {});
+    api
+      .get<BankAccountDto[]>("/settings/cash-and-bank/bank-accounts")
+      .then(setBankAccounts)
+      .catch(() => {});
+  }, []);
 
   function reload() {
     api
@@ -57,6 +99,9 @@ export function SchedulePolicyPage() {
     setDownPaymentTouched(false);
     setResult(null);
     setError(null);
+    setReceived(false);
+    setReceiveReferenceNo("");
+    setReceivePaidOn(new Date().toISOString().slice(0, 10));
   }
 
   useEffect(() => {
@@ -90,11 +135,41 @@ export function SchedulePolicyPage() {
         installmentCount: count,
       });
       setResult(created);
+      setScheduledDownPayment(down);
       setPending((prev) => prev?.filter((p) => p.policyId !== selected.policyId) ?? prev);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "زمان‌بندی ناموفق بود.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function receiveDownPayment() {
+    if (!selected) return;
+    if (receiveMethodType === "Cash" && !receiveCashBoxId) {
+      setError("انتخاب صندوق الزامی است.");
+      return;
+    }
+    if (receiveMethodType !== "Cash" && !receiveBankAccountId) {
+      setError("انتخاب حساب بانکی الزامی است.");
+      return;
+    }
+
+    setReceiving(true);
+    setError(null);
+    try {
+      await api.post(`/policies/${selected.policyId}/receive-down-payment`, {
+        paidOn: receivePaidOn,
+        referenceNo: receiveReferenceNo.trim() || null,
+        methodType: receiveMethodType,
+        cashBoxId: receiveMethodType === "Cash" ? receiveCashBoxId : null,
+        bankAccountId: receiveMethodType !== "Cash" ? receiveBankAccountId : null,
+      });
+      setReceived(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ثبت پیش‌پرداخت ناموفق بود.");
+    } finally {
+      setReceiving(false);
     }
   }
 
@@ -223,6 +298,89 @@ export function SchedulePolicyPage() {
                         </tbody>
                       </table>
                     </div>
+
+                    {scheduledDownPayment > 0 && (
+                      <div className="mt-4 border-t border-(--edge)/50 pt-3">
+                        {received ? (
+                          <div className="text-[12.5px] font-semibold text-(--mint)">پیش‌پرداخت با موفقیت دریافت و ثبت شد.</div>
+                        ) : (
+                          <>
+                            <div className="mb-2 text-[12.5px] font-semibold text-(--ice)">
+                              دریافت پیش‌پرداخت — {money(scheduledDownPayment)} تومان
+                            </div>
+                            <div className="mb-2 grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
+                                <JalaliDateField value={receivePaidOn} onChange={setReceivePaidOn} />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">روش دریافت</label>
+                                <select
+                                  value={receiveMethodType}
+                                  onChange={(e) => setReceiveMethodType(e.target.value as MethodType)}
+                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                >
+                                  <option value="Cash">نقدی</option>
+                                  <option value="BankTransfer">واریز بانکی</option>
+                                  <option value="Cheque">چک</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div className="mb-2 grid grid-cols-2 gap-2">
+                              {receiveMethodType === "Cash" ? (
+                                <div>
+                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">صندوق</label>
+                                  <select
+                                    value={receiveCashBoxId}
+                                    onChange={(e) => setReceiveCashBoxId(e.target.value)}
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                  >
+                                    <option value="">انتخاب کنید…</option>
+                                    {cashBoxes.filter((b) => b.isActive).map((b) => (
+                                      <option key={b.id} value={b.id}>
+                                        {b.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : (
+                                <div>
+                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+                                  <select
+                                    value={receiveBankAccountId}
+                                    onChange={(e) => setReceiveBankAccountId(e.target.value)}
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                  >
+                                    <option value="">انتخاب کنید…</option>
+                                    {bankAccounts.filter((a) => a.isActive).map((a) => (
+                                      <option key={a.id} value={a.id}>
+                                        {a.bankName} — {a.accountNumber}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                              <div>
+                                <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ مرجع (اختیاری)</label>
+                                <input
+                                  value={receiveReferenceNo}
+                                  onChange={(e) => setReceiveReferenceNo(e.target.value)}
+                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={receiveDownPayment}
+                              disabled={receiving}
+                              className="w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {receiving ? "در حال ثبت…" : "ثبت دریافت پیش‌پرداخت"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </>

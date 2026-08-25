@@ -67,11 +67,20 @@ public class MarketerCommissionEndpointTests : IClassFixture<WebApplicationFacto
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<ScheduleResultDto>();
 
         // 10 slices total (1 down-payment + 9 installments), summing to 10,700,000 * 5% = 535,000.
+        // Stage 4/7 — scheduling alone no longer implies the down payment was collected, so every
+        // slice starts Pending until its own receipt event fires.
         var afterSchedule = await client.GetFromJsonAsync<CommissionSummaryDto>($"/api/marketers/{marketer.Id}/commissions");
         Assert.Equal(10, afterSchedule!.Entries.Count);
         Assert.Equal(535_000m, afterSchedule.Pending + afterSchedule.Payable + afterSchedule.Paid);
-        Assert.Equal(1_700_000m * 5m / 100m, afterSchedule.Payable); // down-payment slice, payable immediately
-        Assert.Equal(afterSchedule.Entries.Count - 1, afterSchedule.Entries.Count(e => e.Status == "Pending"));
+        Assert.Equal(0m, afterSchedule.Payable);
+        Assert.Equal(afterSchedule.Entries.Count, afterSchedule.Entries.Count(e => e.Status == "Pending"));
+
+        var receiveDownPaymentResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{policy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(issueDate, null));
+        receiveDownPaymentResponse.EnsureSuccessStatusCode();
+
+        var afterDownPaymentReceived = await client.GetFromJsonAsync<CommissionSummaryDto>($"/api/marketers/{marketer.Id}/commissions");
+        Assert.Equal(1_700_000m * 5m / 100m, afterDownPaymentReceived!.Payable); // down-payment slice, now payable
 
         // Settle exactly the first 7 (oldest-due-first) of the 9 installments.
         AgencyContext.Current = fixture.AgencyAId;

@@ -649,6 +649,110 @@ public sealed class PoliciesController(
         return Ok(results);
     }
 
+    /// <summary>Stage 4/7 — the actual money-in-hand event for a scheduled policy's down payment,
+    /// decoupled from /schedule itself (which only sizes the installments). Flips the down-payment
+    /// slice of both CommissionEntry (marketer) and AgencyCommissionEntry Payable, mirroring
+    /// RecordPaymentAsync's per-installment flip. Idempotent the same way (rule 24):
+    /// InstallmentIdHint = policy.Id, unique per (AgencyId, PaidOn, Amount).</summary>
+    [HttpPost("{id:guid}/receive-down-payment")]
+    [Authorize(Policy = Permissions.PaymentWrite)]
+    public async Task<ActionResult<ReceiveDownPaymentResultDto>> ReceiveDownPayment(
+        Guid id, ReceiveDownPaymentRequest request, CancellationToken ct)
+    {
+        var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null)
+        {
+            return NotFound();
+        }
+
+        if (policy.InstallmentCount == 0)
+        {
+            return ValidationProblem("این بیمه‌نامه هنوز زمان‌بندی نشده است.");
+        }
+
+        if (policy.DownPayment <= 0)
+        {
+            return ValidationProblem("این بیمه‌نامه پیش‌پرداختی ندارد.");
+        }
+
+        var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
+            p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == policy.DownPayment, ct);
+        if (existing is not null)
+        {
+            return Ok(new ReceiveDownPaymentResultDto(existing.Id, existing.Amount));
+        }
+
+        var occurredAt = DateTimeOffset.UtcNow;
+        var payment = new Payment
+        {
+            AgencyId = policy.AgencyId,
+            CustomerId = policy.CustomerId,
+            InstallmentIdHint = policy.Id,
+            Amount = policy.DownPayment,
+            PaidOn = request.PaidOn,
+            Method = DownPaymentMethod,
+            ReferenceNo = request.ReferenceNo,
+            MethodType = request.MethodType ?? PaymentMethod.Cash,
+            CashBoxId = request.CashBoxId,
+            BankAccountId = request.BankAccountId,
+            RecordedByUserId = currentUser.UserId,
+        };
+        dbContext.Payments.Add(payment);
+
+        dbContext.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = policy.AgencyId,
+            UserId = currentUser.UserId,
+            UserDisplayName = currentUser.DisplayName,
+            EntityType = nameof(Payment),
+            EntityId = payment.Id,
+            PolicyId = policy.Id,
+            Action = AuditAction.PaymentRecorded,
+            Description = $"ثبت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}",
+            OccurredAt = occurredAt,
+            IpAddress = CurrentRequestContext.IpAddress,
+        });
+
+        var downCommissionEntry = await dbContext.CommissionEntries
+            .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.InstallmentId == null, ct);
+        if (downCommissionEntry is { Status: CommissionStatus.Pending })
+        {
+            downCommissionEntry.Status = CommissionStatus.Payable;
+            downCommissionEntry.EligibleAt = occurredAt;
+        }
+
+        var downAgencyEntry = await dbContext.AgencyCommissionEntries
+            .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.InstallmentId == null && !c.IsFullPolicySlice, ct);
+        if (downAgencyEntry is { Status: CommissionStatus.Pending })
+        {
+            downAgencyEntry.Status = CommissionStatus.Payable;
+            downAgencyEntry.EligibleAt = occurredAt;
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            foreach (var entry in dbContext.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            var raced = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
+                p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == policy.DownPayment, ct);
+            if (raced is not null)
+            {
+                return Ok(new ReceiveDownPaymentResultDto(raced.Id, raced.Amount));
+            }
+
+            return ValidationProblem("خطای پایگاه‌داده هنگام ثبت پیش‌پرداخت.");
+        }
+
+        return Ok(new ReceiveDownPaymentResultDto(payment.Id, payment.Amount));
+    }
+
     private async Task<(ScheduleResultDto? Result, string? Error)> GenerateScheduleAsync(
         Guid policyId, decimal downPayment, int installmentCount, CancellationToken ct)
     {
@@ -705,57 +809,25 @@ public sealed class PoliciesController(
         policy.DownPayment = downPayment;
         policy.InstallmentCount = installmentCount;
 
-        // docs/PHASE-1-SPEC.md §3.6's cash-basis P&L only ever read PaymentAllocations, so a down
-        // payment — collected up front, never allocated against any installment because it was
-        // already subtracted from FinancedAmount before the installments above were sized — was
-        // invisible to it and had no receipt at all. A real Payment row fixes both: ReportsController
-        // recognizes it directly by Method (§ below), and it shows up wherever the customer's payment
-        // history does. InstallmentIdHint has no FK constraint (PaymentConfiguration.cs) and only
-        // needs to be unique per (AgencyId, PaidOn, Amount) for the idempotency index — policy.Id
-        // satisfies that since a policy is scheduled exactly once (blocked above once InstallmentCount > 0).
-        if (downPayment > 0)
-        {
-            var downPaymentReceipt = new Payment
-            {
-                AgencyId = policy.AgencyId,
-                CustomerId = policy.CustomerId,
-                InstallmentIdHint = policy.Id,
-                Amount = downPayment,
-                PaidOn = policy.IssueDate,
-                Method = DownPaymentMethod,
-                MethodType = PaymentMethod.Cash,
-                RecordedByUserId = currentUser.UserId,
-            };
-            dbContext.Payments.Add(downPaymentReceipt);
-
-            dbContext.AuditEntries.Add(new AuditEntry
-            {
-                AgencyId = policy.AgencyId,
-                UserId = currentUser.UserId,
-                UserDisplayName = currentUser.DisplayName,
-                EntityType = nameof(Payment),
-                EntityId = downPaymentReceipt.Id,
-                PolicyId = policy.Id,
-                Action = AuditAction.PaymentRecorded,
-                Description = $"ثبت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}",
-                OccurredAt = DateTimeOffset.UtcNow,
-                IpAddress = CurrentRequestContext.IpAddress,
-            });
-        }
-
         await dbContext.SaveChangesAsync(ct);
 
         // docs/TASKS.md Task 13 — generation happens here, not at issuance, because it needs the
         // actual per-installment amounts the schedule just produced. Only runs when a marketer and
         // a locked-in rate were captured at issuance (Task 6); otherwise this policy simply has no
         // commission entries, same as before Task 13 existed.
+        //
+        // Stage 4/7 — every slice, including the down-payment one, starts Pending: scheduling no
+        // longer implies the down payment was actually collected (that used to be conflated: the
+        // down-payment Payment receipt was auto-created right here). Now a real
+        // POST /{id}/receive-down-payment call is what flips the down-payment slice Payable, with a
+        // real date/method/cashbox — CommissionGenerator's own PayableImmediately flag is ignored
+        // here on purpose.
         if (policy.MarketerId is { } marketerId && policy.MarketerRatePercent is { } ratePercent)
         {
             var slices = CommissionGenerator.Generate(
                 policy.NetPremium, ratePercent, policy.TotalReceivable, downPayment,
                 installments.Select(i => (i.Id, i.Amount)).ToList());
 
-            var now = DateTimeOffset.UtcNow;
             foreach (var slice in slices)
             {
                 dbContext.CommissionEntries.Add(new CommissionEntry
@@ -767,8 +839,7 @@ public sealed class PoliciesController(
                     BasePortion = slice.BasePortion,
                     RatePercent = ratePercent,
                     Amount = slice.Amount,
-                    Status = slice.PayableImmediately ? CommissionStatus.Payable : CommissionStatus.Pending,
-                    EligibleAt = slice.PayableImmediately ? now : null,
+                    Status = CommissionStatus.Pending,
                 });
             }
 
@@ -784,7 +855,6 @@ public sealed class PoliciesController(
                 policy.NetPremium, agencyRatePercent, policy.TotalReceivable, downPayment,
                 installments.Select(i => (i.Id, i.Amount)).ToList());
 
-            var now = DateTimeOffset.UtcNow;
             foreach (var slice in agencySlices)
             {
                 dbContext.AgencyCommissionEntries.Add(new AgencyCommissionEntry
@@ -796,8 +866,7 @@ public sealed class PoliciesController(
                     BasePortion = slice.BasePortion,
                     RatePercent = agencyRatePercent,
                     Amount = slice.Amount,
-                    Status = slice.PayableImmediately ? CommissionStatus.Payable : CommissionStatus.Pending,
-                    EligibleAt = slice.PayableImmediately ? now : null,
+                    Status = CommissionStatus.Pending,
                 });
             }
 

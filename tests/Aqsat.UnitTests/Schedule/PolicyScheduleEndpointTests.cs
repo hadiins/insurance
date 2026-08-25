@@ -93,13 +93,22 @@ public class PolicyScheduleEndpointTests : IClassFixture<WebApplicationFactory<P
         var persistedCount = await seedContext.Installments.AsNoTracking().CountAsync(i => i.PolicyId == policy.Id);
         Assert.Equal(9, persistedCount);
 
+        // Scheduling only sizes the installments now (stage 4/7) — the down payment has no receipt
+        // yet until receive-down-payment is called, with its own real date.
+        Assert.False(await seedContext.Payments.AsNoTracking().AnyAsync(p => p.InstallmentIdHint == policy.Id));
+
+        var receiveDate = policy.IssueDate.AddDays(2);
+        var receiveResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{policy.Id}/receive-down-payment", new ReceiveDownPaymentRequest(receiveDate, null));
+        receiveResponse.EnsureSuccessStatusCode();
+
         // A down payment is collected up front and never allocated against any installment — it
         // gets its own settled Payment (receipt) instead, with no PaymentAllocation rows.
         var downPaymentReceipt = await seedContext.Payments.AsNoTracking()
             .Include(p => p.Allocations)
             .SingleAsync(p => p.InstallmentIdHint == policy.Id);
         Assert.Equal(1_700_000m, downPaymentReceipt.Amount);
-        Assert.Equal(policy.IssueDate, downPaymentReceipt.PaidOn);
+        Assert.Equal(receiveDate, downPaymentReceipt.PaidOn);
         Assert.Equal(customer.Id, downPaymentReceipt.CustomerId);
         Assert.Empty(downPaymentReceipt.Allocations);
     }
@@ -156,6 +165,10 @@ public class PolicyScheduleEndpointTests : IClassFixture<WebApplicationFactory<P
         // 2,000,000 down payment against a 10,000,000 TotalReceivable is a 20% share.
         var response = await client.PostAsJsonAsync($"/api/policies/{policy.Id}/schedule", new ScheduleRequest(2_000_000m, 5));
         response.EnsureSuccessStatusCode();
+
+        var receiveResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{policy.Id}/receive-down-payment", new ReceiveDownPaymentRequest(policy.IssueDate, null));
+        receiveResponse.EnsureSuccessStatusCode();
 
         var pnlResponse = await client.GetAsync(
             $"/api/reports/pnl?from={policy.IssueDate:yyyy-MM-dd}&to={policy.IssueDate:yyyy-MM-dd}&basis=Cash");

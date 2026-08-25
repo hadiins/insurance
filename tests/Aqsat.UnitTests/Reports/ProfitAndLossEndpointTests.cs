@@ -80,6 +80,12 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
         scheduleResponse.EnsureSuccessStatusCode();
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<ScheduleResultDto>();
 
+        // Stage 4/7 — scheduling alone no longer implies the down payment was collected; the
+        // down-payment commission slice only flips Payable once this real receipt event fires.
+        var receiveDownPaymentResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{policy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(today, null));
+        receiveDownPaymentResponse.EnsureSuccessStatusCode();
+
         // --- Snapshot 1: right after schedule generation, only the down-payment slice is payable. ---
         var accrualBefore = await client.GetFromJsonAsync<PnlResultDto>(
             $"/api/reports/pnl?from={Iso(today)}&to={Iso(today)}&basis=Accrual");
@@ -111,8 +117,8 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(400_000m, accrualAfter.NetProfit);
 
         // --- Same snapshot, cash basis: income recognises the fraction of TotalReceivable actually
-        // collected. The down payment is its own settled Payment now (PoliciesController.
-        // GenerateScheduleAsync), recognised on the policy's IssueDate — 2,000,000 / 10,000,000 =
+        // collected. The down payment is its own settled Payment (PoliciesController.
+        // ReceiveDownPayment), recognised on `today` above — 2,000,000 / 10,000,000 =
         // 20% of the 1,000,000 commission = 200,000 — plus the first installment's
         // 4,000,000 / 10,000,000 = 40% = 400,000. Both land on `today` here, so cash income is
         // 600,000 total; expense is the same 600,000 as accrual, so the two bases coincide exactly

@@ -57,6 +57,10 @@ public class CustomerAndPolicyFileEndpointTests : IClassFixture<WebApplicationFa
             $"/api/policies/{firstPolicy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
         scheduleResponse.EnsureSuccessStatusCode();
 
+        var receiveDownPaymentResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{firstPolicy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(today, null));
+        receiveDownPaymentResponse.EnsureSuccessStatusCode();
+
         // Same customer record, explicitly reused — a second policy for the same person.
         var secondPolicyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-FILE-{Guid.NewGuid():N}"[..16], salisLineId, firstPolicy.CustomerId, null, null, null,
@@ -89,8 +93,8 @@ public class CustomerAndPolicyFileEndpointTests : IClassFixture<WebApplicationFa
         Assert.Equal(2, customerFile!.Policies.Count);
         // Policy 1 balance: 8,000,000 receivable - 4,000,000 paid = 4,000,000. Policy 2: 6,000,000 untouched.
         Assert.Equal(10_000_000m, customerFile.AggregateBalance);
-        // Two payments now: the 2,000,000 down-payment receipt policy 1's own schedule call
-        // created, plus the explicit 4,000,000 installment payment recorded above.
+        // Two payments now: the 2,000,000 down-payment receipt from receive-down-payment above,
+        // plus the explicit 4,000,000 installment payment recorded above.
         Assert.Equal(2, customerFile.Payments.Count);
         var installmentPayment = Assert.Single(customerFile.Payments, p => p.ReferenceNo == "REF-1");
         Assert.NotEmpty(installmentPayment.AllocatedTo);

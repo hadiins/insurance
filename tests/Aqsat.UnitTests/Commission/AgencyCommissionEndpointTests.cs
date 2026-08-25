@@ -56,13 +56,22 @@ public class AgencyCommissionEndpointTests : IClassFixture<WebApplicationFactory
         AgencyContext.Current = fixture.AgencyAId;
 
         // Down-payment slice (20% of receivable) + 2 installment slices (each 40%), 10% of NetPremium = 1,000,000 total.
+        // Stage 4/7 — every slice starts Pending; scheduling no longer implies the down payment was collected.
         var entries = await seedContext.AgencyCommissionEntries.AsNoTracking()
             .Where(e => e.PolicyId == policy.PolicyId).ToListAsync();
         Assert.Equal(3, entries.Count);
         Assert.Equal(1_000_000m, entries.Sum(e => e.Amount));
         var downSlice = Assert.Single(entries, e => e.InstallmentId == null);
-        Assert.Equal(CommissionStatus.Payable, downSlice.Status);
-        Assert.Equal(2, entries.Count(e => e.Status == CommissionStatus.Pending));
+        Assert.Equal(CommissionStatus.Pending, downSlice.Status);
+        Assert.Equal(3, entries.Count(e => e.Status == CommissionStatus.Pending));
+
+        var receiveDownPaymentResponse = await client.PostAsJsonAsync(
+            $"/api/policies/{policy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(issueDate, null));
+        receiveDownPaymentResponse.EnsureSuccessStatusCode();
+
+        var afterDownPaymentReceived = await seedContext.AgencyCommissionEntries.AsNoTracking()
+            .Where(e => e.PolicyId == policy.PolicyId && e.InstallmentId == null).SingleAsync();
+        Assert.Equal(CommissionStatus.Payable, afterDownPaymentReceived.Status);
 
         var firstInstallmentId = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId).OrderBy(i => i.SeqNo).Select(i => i.Id).FirstAsync();

@@ -104,6 +104,61 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             });
         }
 
+        // A down-payment or non-installment full-payment receipt has no PaymentAllocation rows —
+        // InstallmentIdHint holds the policy's own Id in both cases (no real FK, PaymentConfiguration.cs).
+        // Reversing it must undo whichever commission slice its receipt made payable.
+        if (payment.Allocations.Count == 0)
+        {
+            var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == payment.InstallmentIdHint, ct);
+            if (policy is not null)
+            {
+                if (policy.IsInstallment)
+                {
+                    var downCommissionEntry = await dbContext.CommissionEntries
+                        .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.InstallmentId == null, ct);
+                    if (downCommissionEntry is { Status: CommissionStatus.Payable })
+                    {
+                        downCommissionEntry.Status = CommissionStatus.Pending;
+                        downCommissionEntry.EligibleAt = null;
+                    }
+
+                    var downAgencyEntry = await dbContext.AgencyCommissionEntries
+                        .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.InstallmentId == null && !c.IsFullPolicySlice, ct);
+                    if (downAgencyEntry is { Status: CommissionStatus.Payable })
+                    {
+                        downAgencyEntry.Status = CommissionStatus.Pending;
+                        downAgencyEntry.EligibleAt = null;
+                    }
+                }
+                else
+                {
+                    var fullPolicyEntry = await dbContext.AgencyCommissionEntries
+                        .FirstOrDefaultAsync(c => c.PolicyId == policy.Id && c.IsFullPolicySlice, ct);
+                    if (fullPolicyEntry is { Status: CommissionStatus.Payable })
+                    {
+                        fullPolicyEntry.Status = CommissionStatus.Pending;
+                        fullPolicyEntry.EligibleAt = null;
+                    }
+                }
+
+                dbContext.AuditEntries.Add(new AuditEntry
+                {
+                    AgencyId = policy.AgencyId,
+                    UserId = currentUser.UserId,
+                    UserDisplayName = currentUser.DisplayName,
+                    EntityType = nameof(Payment),
+                    EntityId = payment.Id,
+                    PolicyId = policy.Id,
+                    Action = AuditAction.PaymentReversed,
+                    Description = policy.IsInstallment
+                        ? $"برگشت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}"
+                        : $"برگشت پرداخت کامل بیمه‌نامهٔ {policy.PolicyNumber}",
+                    OccurredAt = occurredAt,
+                    IpAddress = CurrentRequestContext.IpAddress,
+                });
+            }
+        }
+
         payment.IsDeleted = true;
         payment.DeletedAt = occurredAt;
 

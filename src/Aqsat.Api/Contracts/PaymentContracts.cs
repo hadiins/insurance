@@ -40,3 +40,17 @@ public sealed record RecordFullPaymentRequest(
     Guid? BankAccountId = null);
 
 public sealed record RecordFullPaymentResultDto(Guid PaymentId, decimal Amount);
+
+/// <summary>Stage 4/7 — receiving the down payment is now its own event, decoupled from
+/// scheduling, with a real date/reference/cashbox instead of the schedule call's own timestamp.
+/// No free-text Method here on purpose: Payment.Method stays the fixed "پیش‌پرداخت" marker
+/// ReportsController's cash-basis P&amp;L keys off of (PoliciesController.DownPaymentMethod);
+/// MethodType/CashBoxId/BankAccountId carry the real cash/bank/cheque choice.</summary>
+public sealed record ReceiveDownPaymentRequest(
+    DateOnly PaidOn,
+    string? ReferenceNo,
+    PaymentMethod? MethodType = null,
+    Guid? CashBoxId = null,
+    Guid? BankAccountId = null);
+
+public sealed record ReceiveDownPaymentResultDto(Guid PaymentId, decimal Amount);
