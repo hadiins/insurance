@@ -11,4 +11,9 @@ public enum PaymentMethod : byte
     Cash = 1,
     BankTransfer = 2,
     Cheque = 3,
+
+    /// <summary>The agency's own card terminal, wired directly to the insurer's account — the
+    /// money never touches the agency's CashBox or BankAccount, so Payment.CashBoxId/BankAccountId
+    /// stay null for this method. Which insurer it was is already known from the Policy.</summary>
+    PosDirect = 4,
 }

@@ -18,7 +18,7 @@ interface BankAccountDto {
   isActive: boolean;
 }
 
-type MethodType = "Cash" | "BankTransfer" | "Cheque";
+type MethodType = "Cash" | "BankTransfer" | "Cheque" | "PosDirect";
 
 interface AllocationLineDto {
   installmentId: string;
@@ -58,6 +58,7 @@ export function RecordPaymentDialog({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PaymentResultDto | null>(null);
 
+  const [referenceNo, setReferenceNo] = useState("");
   const [chequeNumber, setChequeNumber] = useState("");
   const [chequeBankName, setChequeBankName] = useState("");
   const [chequeDueDate, setChequeDueDate] = useState(new Date().toISOString().slice(0, 10));
@@ -78,7 +79,12 @@ export function RecordPaymentDialog({
       .catch(() => {});
   }, []);
 
-  const methodLabel: Record<MethodType, string> = { Cash: "نقدی", BankTransfer: "واریز بانکی", Cheque: "چک" };
+  const methodLabel: Record<MethodType, string> = {
+    Cash: "نقدی",
+    BankTransfer: "واریز بانکی",
+    Cheque: "چک",
+    PosDirect: "پوز مستقیم بیمه‌گر",
+  };
 
   async function submit() {
     const numericAmount = Number(amount);
@@ -107,6 +113,7 @@ export function RecordPaymentDialog({
         amount: numericAmount,
         paidOn,
         method: methodLabel[methodType],
+        referenceNo: referenceNo.trim() || null,
         methodType,
         cashBoxId: methodType === "Cash" || methodType === "Cheque" ? cashBoxId : null,
         bankAccountId: methodType === "BankTransfer" ? bankAccountId : null,
@@ -198,9 +205,10 @@ export function RecordPaymentDialog({
                   <option value="Cash">نقدی</option>
                   <option value="BankTransfer">واریز بانکی</option>
                   <option value="Cheque">چک</option>
+                  <option value="PosDirect">پوز مستقیم بیمه‌گر</option>
                 </select>
 
-                {methodType === "BankTransfer" ? (
+                {methodType === "BankTransfer" && (
                   <>
                     <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
                     <select
@@ -216,7 +224,9 @@ export function RecordPaymentDialog({
                       ))}
                     </select>
                   </>
-                ) : (
+                )}
+
+                {(methodType === "Cash" || methodType === "Cheque") && (
                   <>
                     <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">
                       صندوق {methodType === "Cheque" && "(محل نگهداری چک)"}
@@ -233,6 +243,21 @@ export function RecordPaymentDialog({
                         </option>
                       ))}
                     </select>
+                  </>
+                )}
+
+                {methodType === "PosDirect" && (
+                  <>
+                    <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12px] text-(--ice-3)">
+                      مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود — نیازی به انتخاب صندوق یا حساب بانکی نیست.
+                    </div>
+                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ مرجع/ترمینال (اختیاری)</label>
+                    <input
+                      value={referenceNo}
+                      onChange={(e) => setReferenceNo(e.target.value)}
+                      dir="ltr"
+                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                    />
                   </>
                 )}
 

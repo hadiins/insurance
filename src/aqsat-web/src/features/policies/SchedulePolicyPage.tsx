@@ -18,7 +18,7 @@ interface BankAccountDto {
   isActive: boolean;
 }
 
-type MethodType = "Cash" | "BankTransfer" | "Cheque";
+type MethodType = "Cash" | "BankTransfer" | "Cheque" | "PosDirect";
 
 interface PendingSchedulePolicyDto {
   policyId: string;
@@ -342,11 +342,12 @@ export function SchedulePolicyPage() {
                                   <option value="Cash">نقدی</option>
                                   <option value="BankTransfer">واریز بانکی</option>
                                   <option value="Cheque">چک</option>
+                                  <option value="PosDirect">پوز مستقیم بیمه‌گر</option>
                                 </select>
                               </div>
                             </div>
                             <div className="mb-2 grid grid-cols-2 gap-2">
-                              {receiveMethodType === "BankTransfer" ? (
+                              {receiveMethodType === "BankTransfer" && (
                                 <div>
                                   <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
                                   <select
@@ -362,7 +363,8 @@ export function SchedulePolicyPage() {
                                     ))}
                                   </select>
                                 </div>
-                              ) : (
+                              )}
+                              {(receiveMethodType === "Cash" || receiveMethodType === "Cheque") && (
                                 <div>
                                   <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">
                                     صندوق {receiveMethodType === "Cheque" && "(محل نگهداری چک)"}
@@ -379,6 +381,11 @@ export function SchedulePolicyPage() {
                                       </option>
                                     ))}
                                   </select>
+                                </div>
+                              )}
+                              {receiveMethodType === "PosDirect" && (
+                                <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12px] text-(--ice-3)">
+                                  مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود.
                                 </div>
                               )}
                               <div>

@@ -140,8 +140,6 @@ export const NAV: NavGroup[] = [
     icon: ICONS.chart,
     items: [
       { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl" },
-      { navType: "reports-receipts", title: "دریافتی‌ها", kind: "singleton", page: "receipts-report" },
-      { navType: "reports-expenses", title: "هزینه‌ها", kind: "singleton", page: "expenses" },
       { navType: "reports-missing-serials", title: "شماره‌های جا افتاده", kind: "singleton", page: "missing-serials" },
       { navType: "reports-builder", title: "گزارش‌گیری", kind: "singleton", page: "blank" },
       { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report" },
@@ -149,6 +147,15 @@ export const NAV: NavGroup[] = [
       { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "collections-report" },
       { navType: "reports-network-compare", title: "مقایسه با میانگین شبکه", kind: "singleton", page: "blank" },
       { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "collections-report" },
+    ],
+  },
+  {
+    id: "cash-flow",
+    label: "دریافت و پرداخت",
+    icon: ICONS.coin,
+    items: [
+      { navType: "cash-flow-receipts", title: "دریافتی‌ها", kind: "singleton", page: "receipts-report" },
+      { navType: "cash-flow-expenses", title: "هزینه‌ها", kind: "singleton", page: "expenses" },
     ],
   },
   {

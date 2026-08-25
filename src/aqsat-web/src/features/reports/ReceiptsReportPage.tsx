@@ -38,7 +38,12 @@ interface ReceiptsReportDto {
   rows: ReceiptRow[];
 }
 
-const METHOD_LABEL: Record<string, string> = { Cash: "نقدی", BankTransfer: "واریز بانکی", Cheque: "چک" };
+const METHOD_LABEL: Record<string, string> = {
+  Cash: "نقدی",
+  BankTransfer: "واریز بانکی",
+  Cheque: "چک",
+  PosDirect: "پوز مستقیم بیمه‌گر",
+};
 const CHEQUE_STATUS_LABEL: Record<string, string> = { Held: "نزد صندوق", AtBank: "نزد بانک", Cleared: "وصول‌شده", Bounced: "برگشتی" };
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -178,7 +183,9 @@ export function ReceiptsReportPage() {
                     <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.customerFullName}</td>
                     <td className="px-3 py-2.5 text-[13px] font-bold">{money(r.amount)}</td>
                     <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{METHOD_LABEL[r.methodType] ?? r.methodType}</td>
-                    <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{r.cashBoxName ?? r.bankAccountLabel ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">
+                      {r.cashBoxName ?? r.bankAccountLabel ?? (r.methodType === "PosDirect" ? "حساب بیمه‌گر" : "—")}
+                    </td>
                     <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">
                       {r.chequeNumber
                         ? `${r.chequeNumber} (${CHEQUE_STATUS_LABEL[r.chequeStatus ?? ""] ?? r.chequeStatus})`
