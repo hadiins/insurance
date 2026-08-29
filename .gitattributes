@@ -1,0 +1,7 @@
+# Byte-exact checkouts and archives on every platform — no EOL conversion, ever.
+# Rationale: `git archive` with core.autocrlf=true on Windows rewrote every text file
+# to CRLF inside release tarballs, which broke bash scripts the moment they ran on the
+# Ubuntu server ("set: pipefail: invalid option name"). With `-text`, blobs go to
+# worktrees and archives exactly as committed (LF), and CRLF only ever appears if a
+# tool writes it — git stays out of the way.
+* -text

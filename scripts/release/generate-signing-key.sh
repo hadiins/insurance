@@ -5,6 +5,7 @@
 set -euo pipefail
 
 out_dir="${1:-.}"
+mkdir -p "$out_dir"
 private_key="$out_dir/release-signing-key.pem"
 public_key="$out_dir/release-signing-key.pub.pem"
 
