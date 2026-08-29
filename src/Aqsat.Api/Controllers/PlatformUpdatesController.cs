@@ -1,3 +1,4 @@
+using System.Reflection;
 using Aqsat.Api.Contracts;
 using Aqsat.Api.Hubs;
 using Aqsat.Application.Auth;
@@ -34,10 +35,37 @@ public sealed class PlatformUpdatesController(
     IConfiguration configuration) : ControllerBase
 {
     [HttpGet("status")]
-    public ActionResult<PlatformStatusDto> Status()
+    public ActionResult<PlatformStatusDto> Status() =>
+        Ok(new PlatformStatusDto(CurrentVersion, maintenanceMode.IsActive, maintenanceMode.EstimatedEndsAt));
+
+    /// <summary>Single source of truth for "what version am I running", used by both the panel's
+    /// status display and Start()'s compatibility gate. Config (App:Version) wins when explicitly
+    /// set; otherwise the version stamped into the image at build time (src/Aqsat.Api/Dockerfile's
+    /// ARG APP_VERSION → InformationalVersion). Why not a runtime env var: Aqsat.Updater recreates
+    /// this container copying the OLD container's env (DockerContainerOrchestrator.RecreateContainerAsync),
+    /// so an env-based version would stay stale forever after the first panel-driven update —
+    /// misreporting the panel and failing every later version gate (IsOlderThan fails closed on
+    /// unparseable versions). A truly unstamped dev build reports "unknown", which Start()'s gate
+    /// treats as unparseable → version-gated packages are refused (fail closed).</summary>
+    private string CurrentVersion
     {
-        var version = configuration["App:Version"] ?? typeof(PlatformUpdatesController).Assembly.GetName().Version?.ToString() ?? "unknown";
-        return Ok(new PlatformStatusDto(version, maintenanceMode.IsActive, maintenanceMode.EstimatedEndsAt));
+        get
+        {
+            var configured = configuration["App:Version"];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured;
+            }
+
+            // Semver build metadata ("+<git-commit>", appended by the SDK when SourceRevisionId is
+            // set — local/non-stamped builds carry it) is NOT part of the version proper: with it
+            // intact, IsOlderThan's Version.TryParse fails (gate fails closed) and the value
+            // overflows UpdateRuns.FromVersion's column width → SqlException 2628 on Start().
+            var informational = typeof(PlatformUpdatesController).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            var buildMetadata = informational?.IndexOf('+') ?? -1;
+            return buildMetadata >= 0 ? informational![..buildMetadata] : informational ?? "unknown";
+        }
     }
 
     [HttpGet("packages")]
@@ -139,7 +167,7 @@ public sealed class PlatformUpdatesController(
             return ValidationProblem("بستهٔ به‌روزرسانی یافت نشد یا لغو شده است.");
         }
 
-        var currentVersion = configuration["App:Version"] ?? "unknown";
+        var currentVersion = CurrentVersion;
         if (!string.IsNullOrWhiteSpace(package.MinimumFromVersion) &&
             IsOlderThan(currentVersion, package.MinimumFromVersion))
         {

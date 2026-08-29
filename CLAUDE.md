@@ -83,7 +83,10 @@ Violating any of these is a bug, not a style preference.
     filter, the database must still refuse.
 11. **RLS is not enough** — the service layer must also verify every referenced ID is inside the
     caller's scope. A FK to an invisible row does not throw; it silently succeeds.
-12. **National ID encrypted at rest**, masked in every UI (`۰۰۷۲•••۴۵۳`).
+12. **National ID stored as plaintext** (owner decision 2026-08-28, superseding the original
+    AES-at-rest design): it is the issuance wizard's entry key, directly queryable by SQL, and
+    shown **unmasked** in every UI. The keyed HMAC `NationalIdHash` is still maintained alongside
+    it for dedupe/audit paths.
 13. **Never store postal code** unless a concrete feature needs it.
 14. **API keys server-side only.** Never reach an external API from the browser.
 
@@ -255,7 +258,7 @@ Locks are for **writing only, never reading**.
 - **Persian digits in all display**; Latin digits in inputs and API payloads.
 - Jalali dates displayed; store `DateTimeOffset` UTC.
 - Tabular numerals for every figure.
-- `AgencyId` never shown to end users; national ID always masked.
+- `AgencyId` never shown to end users; national IDs are shown in full (owner decision 2026-08-28 — rule 12 rewritten, plaintext at rest).
 - Every list shows a total count, even when zero.
 - Any active filter renders a visible "clear filters" control.
 

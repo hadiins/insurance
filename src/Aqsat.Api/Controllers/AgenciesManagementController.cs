@@ -153,6 +153,13 @@ public sealed class AgenciesManagementController(AppDbContext dbContext, IPasswo
             return "نام، شمارهٔ همراه و رمز عبور اولین کاربر نمایندگی الزامی است.";
         }
 
+        // Same 8-character minimum every other account-creation path enforces — an agency manager
+        // account with a one-character password is the weakest link in the whole tenant.
+        if (request.ManagerPassword.Length < 8)
+        {
+            return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
+        }
+
         return null;
     }
 

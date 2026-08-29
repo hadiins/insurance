@@ -235,6 +235,9 @@ public sealed class PoliciesController(
                 PlateLetter = hasStructuredPlate ? v.PlateLetter : null,
                 PlateThreeDigit = hasStructuredPlate ? DigitNormalizer.ToLatin(v.PlateThreeDigit!) : null,
                 PlateIranCode = hasStructuredPlate ? DigitNormalizer.ToLatin(v.PlateIranCode!) : null,
+                EngineNumber = string.IsNullOrWhiteSpace(v.EngineNumber) ? null : v.EngineNumber.Trim(),
+                VehicleType = string.IsNullOrWhiteSpace(v.VehicleType) ? null : v.VehicleType.Trim(),
+                ManufactureYear = v.ManufactureYear,
             };
             vehicle.PlateNormalized = hasStructuredPlate ? vehicle.Plate : null;
             dbContext.Vehicles.Add(vehicle);

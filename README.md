@@ -44,12 +44,14 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d
 ```
 
 **First run only:** the `sqlserver-backup` volume is created empty and owned by `root`, but SQL
-Server's own process (`mssql`, uid 10001) needs to write backup files into it. Fix ownership once,
-right after the first `up`:
+Server's own process (`mssql`, uid 10001) needs to write backup files into it — and the `api`
+container (running as its unprivileged `app` user since the non-root hardening) needs to delete
+expired ones during the retention sweep. Fix ownership/permissions once, right after the first
+`up`:
 
 ```bash
 docker compose -f docker-compose.prod.yml exec -u root sqlserver \
-  bash -c "mkdir -p /var/opt/mssql/backup && chown mssql:mssql /var/opt/mssql/backup"
+  bash -c "mkdir -p /var/opt/mssql/backup && chown mssql:mssql /var/opt/mssql/backup && chmod 0777 /var/opt/mssql/backup"
 ```
 
 `sqlserver`'s port is **not** published to the host — only the `api` container can reach it, over
@@ -68,7 +70,15 @@ domain) in front of it for anything beyond local testing.
 | `BACKUP_RETENTION_DAYS` | no, default `14` | How long `DatabaseBackupJob` keeps old `.bak` files before deleting them |
 | `UPDATER_SHARED_TOKEN` | only if using `updater` | Bearer token `Aqsat.Updater` requires on every request (`X-Updater-Token` header) — see "Update service" below |
 | `UPDATER_SIGNING_PUBLIC_KEY_PEM` | only if using `updater` | RSA public key (PEM) `Aqsat.Updater` verifies release package signatures against |
-| `APP_VERSION` | only if using `updater` | This deployment's own version string, e.g. `1.5.0` — drives the update panel's minimum-version prerequisite check |
+| `APP_VERSION` | yes (at build time) | Release version (e.g. `1.0.0`) stamped into the api image when it is BUILT — the update panel reads it from the image itself, never from runtime env. Unstamped images report `unknown` and refuse version-gated packages |
+| `DOCKER_GID` | no, default `999` | GID of the host's `/var/run/docker.sock` owning group (`stat -c '%g' /var/run/docker.sock`) — the `updater` image joins this group at build time so it never runs as root. Rebuild with `DOCKER_GID=<gid> docker compose -f docker-compose.prod.yml build updater` if your host differs, or updates fail with "Permission denied" on the socket |
+
+Non-env-var settings worth knowing (in `appsettings.*.json`, overridable via environment):
+- `Deployment:KnownProxies` — JSON array of reverse-proxy IPs trusted for X-Forwarded-For/Proto
+  (rate limiting and audit IP attribution depend on it; default trusts loopback only)
+- `Security:PasswordIterations` — PBKDF2 cost for NEW password hashes (default `600000`; dev/test
+  lowers it purely for suite speed). Existing hashes keep their stored count, so lowering it never
+  weakens already-hashed passwords
 
 Never commit a real `.env` — it holds the encryption key.
 
@@ -118,9 +128,12 @@ only to users whose role carries `Platform.Owner`, which nothing seeds by defaul
 part of the main app that talks to `updater` at all, over plain HTTP with the same shared token.
 
 `UpdatePackage` rows come from `scripts/release/` — build, sign, and register a release with
-`docs/RELEASE-RUNBOOK.md`'s procedure (also `POST /api/platform/updates/register` and
+`docs/RELEASE-RUNBOOK.md`'s procedure, or in one command on the server itself with
+`scripts/release/publish-local.sh` (build → push to a loopback registry → sign → register; the
+full single-server walkthrough is [`docs/UPDATE-TEST-RUNBOOK.md`](docs/UPDATE-TEST-RUNBOOK.md)).
+You can also hit `POST /api/platform/updates/register` and
 `POST /api/platform/updates/packages/{id}/yank` directly, if you're scripting your own pipeline
-instead). The signature is checked twice, independently: once by `Aqsat.Api` before a package is
+instead. The signature is checked twice, independently: once by `Aqsat.Api` before a package is
 even allowed into the catalog, again by `Aqsat.Updater` immediately before it applies one.
 
 ## Data residency

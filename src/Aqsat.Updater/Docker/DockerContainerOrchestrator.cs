@@ -35,7 +35,10 @@ public sealed class DockerContainerOrchestrator : IContainerOrchestrator
             ct);
 
         var inspected = await _client.Images.InspectImageAsync(imageTag, ct);
-        return inspected.ID; // sha256:... content digest of the pulled image.
+        // Return the REGISTRY manifest digest (what scripts/release/sign-package.sh signed — see
+        // docs/RELEASE-RUNBOOK.md §2), not the image config ID; UpdateOrchestrator's digest gate
+        // compares against exactly that signed value.
+        return ImageDigest.OfPulledImage(repository, inspected.RepoDigests, inspected.ID); // sha256:... registry manifest digest of the pulled image.
     }
 
     public async Task<string> RecreateContainerAsync(string containerName, string imageTag, CancellationToken ct)

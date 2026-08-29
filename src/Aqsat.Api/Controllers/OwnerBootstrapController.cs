@@ -55,6 +55,13 @@ public sealed class OwnerBootstrapController(
             return ValidationProblem("نام، شمارهٔ همراه و رمز عبور الزامی است.");
         }
 
+        // The most privileged account in the system must meet the same 8-character minimum as any
+        // other password change — the bootstrap flow had no length rule at all.
+        if (request.Password.Length < 8)
+        {
+            return ValidationProblem("رمز عبور باید حداقل ۸ کاراکتر باشد.");
+        }
+
         if (await OwnerAlreadyExistsAsync(ct))
         {
             return Conflict(new ProblemDetails { Status = StatusCodes.Status409Conflict, Title = "یک حساب مالک از قبل ثبت شده است." });

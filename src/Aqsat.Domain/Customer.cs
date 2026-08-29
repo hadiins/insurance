@@ -20,7 +20,8 @@ public class Customer : AgencyOwnedEntity
     [AuditSensitive]
     public string? NationalId { get; set; }
 
-    /// <summary>SHA-256 hash for lookup without decrypting.</summary>
+    /// <summary>HMAC-SHA256 hash (keyed with a server-side secret) for lookup without decrypting.
+    /// Deliberately keyed — an unkeyed hash of a 10-digit national ID is reversible by precomputation.</summary>
     public byte[]? NationalIdHash { get; set; }
 
     public string? Mobile { get; set; }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Aqsat.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldEncryptor fieldEncryptor)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     : DbContext(options)
 {
     public DbSet<Organization> Organizations => Set<Organization>();
@@ -181,14 +181,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IFieldE
     {
         base.OnModelCreating(modelBuilder);
 
-        // CustomerConfiguration and MarketerConfiguration each need an IFieldEncryptor instance to
-        // build their NationalId value converter, so neither can be discovered via the assembly
-        // scan (which requires a parameterless constructor) — applied explicitly instead.
-        modelBuilder.ApplyConfigurationsFromAssembly(
-            typeof(AppDbContext).Assembly,
-            t => t != typeof(CustomerConfiguration) && t != typeof(MarketerConfiguration));
-        modelBuilder.ApplyConfiguration(new CustomerConfiguration(fieldEncryptor));
-        modelBuilder.ApplyConfiguration(new MarketerConfiguration(fieldEncryptor));
+        // National IDs moved to plaintext storage (owner decision 2026-08-28, CLAUDE.md rule 12
+        // rewritten) — CustomerConfiguration and MarketerConfiguration no longer need an
+        // IFieldEncryptor to build a value converter, so every configuration in the assembly is
+        // discovered by the plain scan.
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         // No hard deletes anywhere (CLAUDE.md rule 7) — soft-deleted rows never come back from a
         // normal query. This is the ONLY global EF filter; AgencyId isolation is 100% DB-side RLS.

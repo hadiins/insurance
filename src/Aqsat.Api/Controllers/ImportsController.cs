@@ -65,7 +65,22 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
         }
 
         var bytes = await ReadAllBytesAsync(file, ct);
-        var preview = importService.BuildPreview(bytes);
+        if (!LooksLikeXlsx(bytes))
+        {
+            return ValidationProblem("فایل ارسالی یک فایل اکسل معتبر نیست.");
+        }
+
+        ImportPreview preview;
+        try
+        {
+            preview = importService.BuildPreview(bytes);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Includes ClosedXmlWorkbookReader's row cap — a too-large sheet is a caller error
+            // (400 with the Persian reason), never a 500.
+            return ValidationProblem(ex.Message);
+        }
 
         return Ok(new ImportPreviewResponse(
             preview.Columns
@@ -127,16 +142,29 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
         }
 
         var bytes = await ReadAllBytesAsync(file, ct);
-        var report = await importService.CommitAsync(
-            bytes,
-            file.FileName,
-            currentUser.ActiveOrganizationId,
-            parsedMeta.Mapping,
-            dateFormat,
-            parsedMeta.AmountsAreInRials,
-            ct);
+        if (!LooksLikeXlsx(bytes))
+        {
+            return ValidationProblem("فایل ارسالی یک فایل اکسل معتبر نیست.");
+        }
 
-        return Ok(new ImportCommitResponse(report.BatchId, report.NewCount, report.DuplicateCount, report.FailedCount));
+        try
+        {
+            var report = await importService.CommitAsync(
+                bytes,
+                file.FileName,
+                currentUser.ActiveOrganizationId,
+                parsedMeta.Mapping,
+                dateFormat,
+                parsedMeta.AmountsAreInRials,
+                ct);
+            return Ok(new ImportCommitResponse(report.BatchId, report.NewCount, report.DuplicateCount, report.FailedCount));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Same contract as the Fanavaran endpoint: a structurally invalid file (including the
+            // reader's row cap) is a validation problem with its Persian reason, not a 500.
+            return ValidationProblem(ex.Message);
+        }
     }
 
     /// <summary>
@@ -154,6 +182,10 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
         }
 
         var bytes = await ReadAllBytesAsync(file, ct);
+        if (!LooksLikeXlsx(bytes))
+        {
+            return ValidationProblem("فایل ارسالی یک فایل اکسل معتبر نیست.");
+        }
 
         try
         {
@@ -166,6 +198,12 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
             return ValidationProblem(ex.Message);
         }
     }
+
+    /// <summary>An xlsx is a ZIP package — every valid one starts with the "PK" zip signature.
+    /// Content-Type headers are browser-controlled and untrustworthy; this cheap byte check keeps
+    /// random payloads (HTML, JSON, executables) out of ClosedXML before it parses anything.</summary>
+    private static bool LooksLikeXlsx(byte[] bytes) =>
+        bytes.Length > 4 && bytes[0] == 0x50 && bytes[1] == 0x4B;
 
     private static async Task<byte[]> ReadAllBytesAsync(IFormFile file, CancellationToken ct)
     {

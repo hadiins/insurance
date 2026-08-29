@@ -5,6 +5,12 @@ namespace Aqsat.Infrastructure.Import;
 
 public sealed class ClosedXmlWorkbookReader : IWorkbookReader
 {
+    /// <summary>A 20 MB xlsx can legitimately decompress to hundreds of thousands of rows — reading
+    /// it all into string lists would exhaust the API container's memory on a single request.
+    /// Real cartable/Fanavaran exports are a few hundred rows; anything beyond this cap is treated
+    /// as a wrong or hostile file, not as data to import.</summary>
+    private const int MaxDataRowsPerSheet = 5_000;
+
     public RawSheet ReadFirstSheet(Stream fileStream)
     {
         using var workbook = new XLWorkbook(fileStream);
@@ -38,6 +44,12 @@ public sealed class ClosedXmlWorkbookReader : IWorkbookReader
         if (rows.Count == 0)
         {
             return new RawSheet([], []);
+        }
+
+        if (rows.Count - 1 > MaxDataRowsPerSheet)
+        {
+            throw new InvalidOperationException(
+                $"تعداد ردیفهای فایل ({rows.Count - 1}) بیش از حد مجاز ({MaxDataRowsPerSheet:N0}) است.");
         }
 
         var firstColumn = usedRange.FirstColumn().ColumnNumber();

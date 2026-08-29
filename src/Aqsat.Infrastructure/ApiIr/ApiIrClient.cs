@@ -5,6 +5,7 @@ using Aqsat.Application.ApiIr;
 using Aqsat.Domain;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Aqsat.Infrastructure.ApiIr;
@@ -15,7 +16,7 @@ namespace Aqsat.Infrastructure.ApiIr;
 /// in DependencyInjection.cs, so a single policy applies to every call uniformly rather than each
 /// method re-implementing its own.
 /// </summary>
-public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, IMemoryCache cache, IOptions<ApiIrOptions> options)
+public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, IMemoryCache cache, IOptions<ApiIrOptions> options, ILogger<ApiIrClient> logger)
     : IApiIrClient
 {
     private const decimal ShahkarCost = 550m;
@@ -156,8 +157,12 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
                 }
             }
         }
-        catch (Exception) when (ct.IsCancellationRequested is false)
+        catch (Exception ex) when (ct.IsCancellationRequested is false)
         {
+            // The failure still lands in ApiIrCallLogs as Success=false, but without this the
+            // actual cause (DNS, TLS, 5xx body, timeout) was swallowed silently — a provider
+            // outage or a misconfigured key would be indistinguishable from "no data".
+            logger.LogWarning(ex, "api.ir call to {Service} failed", service);
             success = false;
         }
 

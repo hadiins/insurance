@@ -19,6 +19,44 @@ namespace Aqsat.Api.Controllers;
 [Authorize(Policy = Permissions.PolicyRead)]
 public sealed class CustomersController(AppDbContext dbContext, TimeProvider timeProvider, IFieldEncryptor fieldEncryptor) : ControllerBase
 {
+    /// <summary>The issuance wizard's step-1 entry point (owner decision 2026-08-28): everything
+    /// starts with the national ID. Persian/Latin digits are normalized, the checksum is validated,
+    /// then a plain equality search on the plaintext column (CLAUDE.md rule 12 rewritten — no HMAC
+    /// needed to find a customer anymore). Returns Found=false for a valid-but-unknown ID so the
+    /// wizard can offer inline new-customer registration instead of an error.</summary>
+    [HttpGet("lookup")]
+    public async Task<ActionResult<CustomerLookupResultDto>> Lookup(
+        [FromQuery] string? nationalId, CancellationToken ct)
+    {
+        var normalized = DigitNormalizer.ToLatin(nationalId ?? string.Empty).Trim();
+        if (normalized.Length == 0)
+        {
+            return ValidationProblem("کد ملی الزامی است.");
+        }
+
+        if (!NationalIdValidator.IsValid(normalized))
+        {
+            return ValidationProblem("کد ملی نامعتبر است.");
+        }
+
+        var customer = await dbContext.Customers.AsNoTracking()
+            .Where(c => c.NationalId == normalized)
+            .Select(c => new CustomerLookupProfileDto(
+                c.Id, c.FullName, c.FirstName, c.LastName, c.NationalId,
+                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete))
+            .FirstOrDefaultAsync(ct);
+
+        if (customer is null)
+        {
+            return Ok(new CustomerLookupResultDto(false, null, 0));
+        }
+
+        var policyCount = await dbContext.Policies.AsNoTracking()
+            .CountAsync(p => p.CustomerId == customer.Id, ct);
+
+        return Ok(new CustomerLookupResultDto(true, customer, policyCount));
+    }
+
     /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the dashboard widget's two counts.</summary>
     [HttpGet("incomplete-summary")]
     public async Task<ActionResult<IncompleteProfileSummaryDto>> IncompleteSummary(CancellationToken ct)
@@ -276,7 +314,7 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
             .ToListAsync(ct);
 
         return Ok(new CustomerFileDto(
-            customer.Id, customer.FullName, customer.Mobile, MaskNationalId(customer.NationalId),
+            customer.Id, customer.FullName, customer.Mobile, customer.NationalId,
             policySummaries.Sum(p => p.Balance),
             policySummaries, paymentDtos, collateral, timeline));
     }
@@ -305,13 +343,6 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
 
         return Ok(openInstallments);
     }
-
-    /// <summary>CLAUDE.md rule 12 — national ID is decrypted in memory by the EF value converter on
-    /// read, but must never reach the UI unmasked.</summary>
-    private static string? MaskNationalId(string? nationalId) =>
-        string.IsNullOrEmpty(nationalId) || nationalId.Length < 7
-            ? nationalId
-            : $"{nationalId[..4]}•••{nationalId[^3..]}";
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {

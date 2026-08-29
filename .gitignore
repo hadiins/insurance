@@ -14,6 +14,10 @@ build/
 .env.*
 !.env.example
 
+# release signing keys + locally produced manifests (scripts/release, docs/UPDATE-TEST-RUNBOOK.md)
+secrets/
+release-out/
+
 # logs
 *.log
 npm-debug.log*
@@ -30,3 +34,5 @@ Thumbs.db
 # deployment artifacts / scripts with embedded secrets — never committed
 publish-monsterasp/
 deploy-ftp*.ps1
+
+.kilo/

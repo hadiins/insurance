@@ -1,7 +1,5 @@
 using Aqsat.Infrastructure.Persistence;
-using Aqsat.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Aqsat.UnitTests.DataModel;
 
@@ -17,18 +15,12 @@ internal static class TestDbContextFactory
 
     public static AppDbContext Create()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Encryption:NationalIdKey"] = "iNR6AVHkisOPGbBreM0PpHSNmUoom7d0EFVWgcwEdJk=",
-            })
-            .Build();
-
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseSqlServer(ConnectionString)
             .AddInterceptors(new AgencySessionContextInterceptor())
             .Options;
 
-        return new AppDbContext(options, new AesFieldEncryptor(configuration));
+        // No IFieldEncryptor anymore — national IDs are plaintext (owner decision 2026-08-28).
+        return new AppDbContext(options);
     }
 }

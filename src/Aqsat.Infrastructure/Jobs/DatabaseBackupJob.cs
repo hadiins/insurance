@@ -55,8 +55,19 @@ public sealed class DatabaseBackupJob(AppDbContext dbContext, IConfiguration con
         {
             if (File.GetLastWriteTimeUtc(file) < cutoff.UtcDateTime)
             {
-                File.Delete(file);
-                logger.LogInformation("Deleted expired backup {FilePath}", file);
+                try
+                {
+                    File.Delete(file);
+                    logger.LogInformation("Deleted expired backup {FilePath}", file);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Deleting a file needs write permission on its DIRECTORY; when this container's
+                    // user differs from SQL Server's own mssql uid, a missing chmod on the shared
+                    // volume surfaces here. One expired file surviving a retention sweep must not
+                    // fail the whole backup job — log it so the operator can fix the permission.
+                    logger.LogWarning(ex, "Could not delete expired backup {FilePath} — check the shared volume's permissions", file);
+                }
             }
         }
     }

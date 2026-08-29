@@ -16,12 +16,19 @@ public sealed class AesFieldEncryptor : IFieldEncryptor
     private const int TagSize = 16;
 
     private readonly byte[] _key;
+    private readonly byte[] _hmacKey;
 
     public AesFieldEncryptor(IConfiguration configuration)
     {
         var base64Key = configuration["Encryption:NationalIdKey"]
             ?? throw new InvalidOperationException("Encryption:NationalIdKey is not configured.");
         _key = Convert.FromBase64String(base64Key);
+
+        // Domain-separated subkey: Hash() must not reuse the AES key directly, and an UNKEYED hash
+        // of a 10-digit national ID is trivially reversible by precomputation from any DB or backup
+        // read — which silently defeated the whole point of encrypting NationalId at rest. Deriving
+        // a distinct HMAC key means offline reversal requires this same server-side secret.
+        _hmacKey = SHA256.HashData(Encoding.UTF8.GetBytes("Aqsat.NationalIdHash.v2").Concat(_key).ToArray());
     }
 
     public byte[] Encrypt(string plaintext)
@@ -55,5 +62,11 @@ public sealed class AesFieldEncryptor : IFieldEncryptor
         return Encoding.UTF8.GetString(plainBytes);
     }
 
-    public byte[] Hash(string plaintext) => SHA256.HashData(Encoding.UTF8.GetBytes(plaintext));
+    /// <summary>Keyed hash (HMAC-SHA256) for equality lookup without decrypting. Deliberately NOT
+    /// a plain SHA-256 — see the _hmacKey derivation comment in the constructor.</summary>
+    public byte[] Hash(string plaintext)
+    {
+        using var hmac = new HMACSHA256(_hmacKey);
+        return hmac.ComputeHash(Encoding.UTF8.GetBytes(plaintext));
+    }
 }

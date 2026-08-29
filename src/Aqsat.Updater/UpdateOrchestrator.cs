@@ -191,8 +191,19 @@ public sealed class UpdateOrchestrator(
 
     private static bool DigestMatches(string pulledDigest, string manifestSha256)
     {
-        var normalizedPulled = pulledDigest.Replace("sha256:", string.Empty, StringComparison.OrdinalIgnoreCase);
-        var normalizedManifest = manifestSha256.Replace("sha256:", string.Empty, StringComparison.OrdinalIgnoreCase);
-        return string.Equals(normalizedPulled, normalizedManifest, StringComparison.OrdinalIgnoreCase);
+        // Tolerates bare hex digests, "sha256:"-prefixed digests, and full "repo@sha256:…"
+        // RepoDigest entries — only the digest itself is ever compared.
+        static string Normalize(string value)
+        {
+            var at = value.LastIndexOf('@');
+            if (at >= 0)
+            {
+                value = value[(at + 1)..];
+            }
+
+            return value.Replace("sha256:", string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(Normalize(pulledDigest), Normalize(manifestSha256), StringComparison.OrdinalIgnoreCase);
     }
 }

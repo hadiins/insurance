@@ -1,12 +1,10 @@
-using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Aqsat.Infrastructure.Persistence.Configurations;
 
-public sealed class CustomerConfiguration(IFieldEncryptor encryptor) : AqsatEntityConfiguration<Customer>
+public sealed class CustomerConfiguration : AqsatEntityConfiguration<Customer>
 {
     public override void Configure(EntityTypeBuilder<Customer> builder)
     {
@@ -22,9 +20,14 @@ public sealed class CustomerConfiguration(IFieldEncryptor encryptor) : AqsatEnti
         builder.Property(c => c.Address).HasMaxLength(400);
         builder.Property(c => c.PostalCode).HasMaxLength(10);
 
+        // CLAUDE.md rule 12 (owner decision 2026-08-28) — the national ID is stored as PLAINTEXT
+        // (nvarchar(30)): it is the issuance wizard's entry key and must be directly queryable. The
+        // keyed HMAC NationalIdHash is still maintained alongside it (dedupe/audit paths), so this
+        // configuration no longer needs an IFieldEncryptor and joins the plain assembly scan.
+        builder.Property(c => c.NationalId).HasMaxLength(30);
+
         // docs/TASK-25-IDENTITY-VEHICLE.md §3 — persisted so it can be indexed; SQL Server computes
         // it, the app never writes it (IsProfileComplete has a private setter for exactly this).
-        // NationalId's underlying column is varbinary (encrypted) but IS NOT NULL still works on it.
         builder.Property(c => c.IsProfileComplete)
             .HasComputedColumnSql(
                 "CASE WHEN [NationalId] IS NOT NULL AND [Mobile] IS NOT NULL AND [Address] IS NOT NULL " +
@@ -32,14 +35,11 @@ public sealed class CustomerConfiguration(IFieldEncryptor encryptor) : AqsatEnti
                 "THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END",
                 stored: true);
 
-        // Encrypted at rest (CLAUDE.md rule 12) — plaintext only ever exists in memory.
-        builder.Property(c => c.NationalId)
-            .HasConversion(new ValueConverter<string?, byte[]?>(
-                v => v == null ? null : encryptor.Encrypt(v),
-                v => v == null ? null : encryptor.Decrypt(v)));
-
         builder.HasIndex(c => new { c.AgencyId, c.ExternalCode }).IsUnique();
         builder.HasIndex(c => new { c.AgencyId, c.NationalIdHash });
+        // The issuance wizard's step-1 lookup (GET /api/customers/lookup?nationalId=...) is an
+        // equality search on the plaintext national ID (rule 3: AgencyId leads every index).
+        builder.HasIndex(c => new { c.AgencyId, c.NationalId });
         // SQL Server rejects a filtered index whose filter predicate references a computed column
         // (error 10609), even a persisted one — the filter can only reference IsDeleted. The index
         // itself still covers IsProfileComplete for the "who's incomplete" query.

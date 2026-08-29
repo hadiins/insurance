@@ -120,6 +120,9 @@ public sealed class MarketerPanelController(AppDbContext dbContext, ICurrentUser
             dtos));
     }
 
+    // IsActive is part of the resolution, not just a display flag: MarketersController.Update can
+    // flip it off, and a deactivated marketer whose AppUser login still exists must lose panel
+    // access immediately — the MarketerSelfView permission alone must not keep the door open.
     private async Task<Marketer?> ResolveCurrentMarketerAsync(CancellationToken ct) =>
-        await dbContext.Marketers.FirstOrDefaultAsync(m => m.AppUserId == currentUser.UserId, ct);
+        await dbContext.Marketers.FirstOrDefaultAsync(m => m.AppUserId == currentUser.UserId && m.IsActive, ct);
 }

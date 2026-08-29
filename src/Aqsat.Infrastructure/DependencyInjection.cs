@@ -90,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<RenewalWatchJob>();
         services.AddScoped<DatabaseBackupJob>();
         services.AddScoped<AgencyCommissionBackfillJob>();
+        services.AddScoped<NationalIdHashBackfillJob>();
         services.AddScoped<Aqsat.Infrastructure.Payments.PaymentReversalService>();
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)

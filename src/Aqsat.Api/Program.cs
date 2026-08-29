@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.Net;
 using System.Reflection;
 using System.Text;
+using Aqsat.Api.Hangfire;
 using Aqsat.Api.Hubs;
 using Aqsat.Api.Middleware;
 using Aqsat.Application.Auth;
@@ -11,6 +13,7 @@ using Aqsat.Infrastructure.Persistence;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +66,16 @@ try
     builder.Services.AddInfrastructure(builder.Configuration, enableHangfireServer: !isTestHost);
 
     var jwtSection = builder.Configuration.GetSection("Jwt");
+
+    // Fail fast on a weak signing key rather than silently running with one — an HS256 key under
+    // 48 bytes is brute-forceable, and nothing else in the pipeline checks key strength. The dev
+    // appsettings key comfortably exceeds this; only a misconfigured production env var trips it.
+    if (!isTestHost && Encoding.UTF8.GetByteCount(jwtSection["Key"] ?? string.Empty) < 48)
+    {
+        throw new InvalidOperationException(
+            "Jwt:Key must be at least 48 bytes of entropy (generate one with: openssl rand -base64 48).");
+    }
+
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
@@ -151,6 +164,24 @@ try
 
     var app = builder.Build();
 
+    // Must run before anything that reads RemoteIpAddress (rate limiting partitions, audit IP
+    // attribution). Only proxies in KnownProxies are trusted; the default is loopback only, so a
+    // directly-exposed deployment cannot spoof X-Forwarded-For to rotate rate-limit buckets. When
+    // a reverse proxy runs elsewhere (a compose sidecar, an off-host LB), add its IP(s) under
+    // "Deployment:KnownProxies" — e.g. ["172.18.0.5"].
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    };
+    foreach (var knownProxy in app.Configuration.GetSection("Deployment:KnownProxies").GetChildren())
+    {
+        if (IPAddress.TryParse(knownProxy.Value, out var proxyIp))
+        {
+            forwardedHeadersOptions.KnownProxies.Add(proxyIp);
+        }
+    }
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+
     app.UseExceptionHandler();
 
     if (app.Environment.IsDevelopment())
@@ -219,6 +250,25 @@ try
                     // this, a freshly deployed production database has zero InsuranceLine rows and
                     // "ثبت بیمه‌نامه" renders with nothing selectable.
                     await Aqsat.Infrastructure.Seed.InsuranceLineSeeder.EnsureSeededAsync(migrationContext);
+                    // One-time, idempotent: decrypts the legacy NationalIdEncrypted columns into the new
+                    // plaintext NationalId columns and drops the legacy columns once empty (owner
+                    // decision 2026-08-28 — CLAUDE.md rule 12 rewritten). SQL cannot decrypt AES-GCM,
+                    // so the conversion runs here in the application, before the API starts serving.
+                    // It shares the exclusive app-lock above, so concurrent instances cannot
+                    // double-convert or drop the column out from under each other.
+                    try
+                    {
+                        var encryptor = migrationScope.ServiceProvider
+                            .GetRequiredService<Aqsat.Application.Common.IFieldEncryptor>();
+                        var backfillLogger = migrationScope.ServiceProvider
+                            .GetRequiredService<Microsoft.Extensions.Logging.ILogger<Aqsat.Infrastructure.Jobs.NationalIdPlaintextBackfillJob>>();
+                        await new Aqsat.Infrastructure.Jobs.NationalIdPlaintextBackfillJob(migrationContext, encryptor, backfillLogger)
+                            .RunAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Failed to decrypt the legacy NationalIdEncrypted columns at startup — the API will continue starting and the next startup retries. Until the conversion completes, customers issued before it may not be findable by national ID.");
+                    }
                 }
                 finally
                 {
@@ -233,8 +283,13 @@ try
             }
         }
 
-        // Dashboard defaults to local-requests-only authorization — no extra filter needed for Phase 1.
-        app.UseHangfireDashboard();
+        // Platform.Owner JWT required — Hangfire's default (loopback-IP-only "authorization") is no
+        // authorization at all against SSRF from inside the network, and it would silently break
+        // the day requests arrive through a same-host proxy. See PlatformOwnerDashboardFilter.
+        app.UseHangfireDashboard(options: new DashboardOptions
+        {
+            Authorization = [new PlatformOwnerDashboardFilter()],
+        });
 
         // docs/TASKS.md Task 19 — hardening. Registering recurring jobs acquires a distributed lock
         // over a real DB connection, synchronously, during startup. If the database happens to be
@@ -284,10 +339,17 @@ try
         {
             Hangfire.BackgroundJob.Enqueue<Aqsat.Infrastructure.Jobs.AgencyCommissionBackfillJob>(
                 job => job.RunAsync(CancellationToken.None));
+
+            // Recomputes every Customer.NationalIdHash under the new keyed (HMAC-SHA256) algorithm —
+            // hashes stored before the switch were unkeyed SHA-256 and are the weak link this
+            // hardening pass exists to remove. Re-running after success writes nothing; remove this
+            // enqueue once a run has completed cleanly in production.
+            Hangfire.BackgroundJob.Enqueue<Aqsat.Infrastructure.Jobs.NationalIdHashBackfillJob>(
+                job => job.RunAsync(CancellationToken.None));
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to enqueue AgencyCommissionBackfillJob at startup — the database may be unreachable.");
+            Log.Error(ex, "Failed to enqueue backfill jobs at startup — the database may be unreachable.");
         }
     }
 

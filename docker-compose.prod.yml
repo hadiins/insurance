@@ -26,6 +26,14 @@ services:
     build:
       context: .
       dockerfile: src/Aqsat.Api/Dockerfile
+      args:
+        # Stamped into the image (InformationalVersion) at build time — this is the version the
+        # update panel displays and the version-compatibility check reads, straight from the
+        # assembly. Set APP_VERSION in .env (e.g. 1.0.0 for the first deployment), or publish
+        # updates with scripts/release/publish-local.sh --version x.y.z. There is deliberately no
+        # runtime App__Version env var: Aqsat.Updater recreates this container copying the OLD
+        # container's env, which would freeze a stale version in place forever.
+        APP_VERSION: ${APP_VERSION:-}
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -38,13 +46,19 @@ services:
       Backup__Directory: /var/opt/mssql/backup
       Backup__RetentionDays: ${BACKUP_RETENTION_DAYS:-14}
       # docs/TASKS.md Task 22 — the panel's own outbound call to Aqsat.Updater. Same shared token
-      # on both sides; App__Version drives the "can't jump straight from 1.0 to 3.0" prerequisite
-      # check in PlatformUpdatesController, so it must actually be set at deploy time, not left to
-      # default to "unknown" (which the version-compatibility check treats as unparseable, and
-      # fails closed on — see PlatformUpdatesController.IsOlderThan).
+      # on both sides. (The version the panel shows and the "can't jump straight from 1.0 to 3.0"
+      # prerequisite check use is stamped into the image at build time — build.args APP_VERSION
+      # above; PlatformUpdatesController reads it from the assembly, never from env.)
       Updater__BaseUrl: http://aqsat-updater:8081
       Updater__SharedToken: ${UPDATER_SHARED_TOKEN}
-      App__Version: ${APP_VERSION:-unknown}
+      # docs/TASKS.md Task 23 — POST /api/platform/updates/register verifies each submitted
+      # package's signature server-side (IPackageSignatureVerifier) against this key BEFORE the
+      # package reaches the catalog a Platform.Owner sees — the same key the updater verifies
+      # with again at apply time. Without it, package registration is refused outright.
+      Updater__SigningPublicKeyPem: ${UPDATER_SIGNING_PUBLIC_KEY_PEM:-}
+      # One-time secret for POST /api/platform/bootstrap-owner (first Platform.Owner account).
+      # Gated in .env as BOOTSTRAP_SECRET; blank it out after the owner account is created.
+      Platform__BootstrapSecret: ${BOOTSTRAP_SECRET:-}
     volumes:
       # Shares the same physical files sqlserver writes backups into, so DatabaseBackupJob's
       # retention sweep (plain File I/O, running inside this container) can see and delete them.
@@ -70,6 +84,12 @@ services:
     build:
       context: .
       dockerfile: src/Aqsat.Updater/Dockerfile
+      args:
+        # GID of the host's docker.sock group (official Docker packages: 999). The updater joins
+        # this group at build time so it can talk to the socket WITHOUT running as root. Check on
+        # the host with: stat -c '%g' /var/run/docker.sock — rebuild with DOCKER_GID=<gid> if it
+        # differs, or updates will fail with "Permission denied" on the socket.
+        DOCKER_GID: ${DOCKER_GID:-999}
     restart: unless-stopped
     environment:
       ASPNETCORE_URLS: http://+:8081

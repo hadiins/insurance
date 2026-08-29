@@ -85,7 +85,8 @@ public class ApiIrClientTests
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://s.api.ir") };
         var options = Options.Create(new ApiIrOptions { BaseUrl = "https://s.api.ir", ApiKey = "test-key", AllowPaidEndpoints = allowPaidEndpoints });
-        return new ApiIrClient(httpClient, context, new MemoryCache(new MemoryCacheOptions()), options);
+        return new ApiIrClient(httpClient, context, new MemoryCache(new MemoryCacheOptions()), options,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ApiIrClient>.Instance);
     }
 
     private sealed class RecordingHandler(HttpStatusCode statusCode, string jsonBody) : HttpMessageHandler

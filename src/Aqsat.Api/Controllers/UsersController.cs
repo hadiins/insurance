@@ -60,6 +60,13 @@ public sealed class UsersController(AppDbContext dbContext, IPasswordHasher pass
             return ValidationProblem("نام، شمارهٔ همراه و رمز عبور الزامی است.");
         }
 
+        // Same minimum AuthController.ChangePassword enforces — without this, a manager could
+        // create a colleague (or themselves) an account with a one-character password.
+        if (request.Password.Length < 8)
+        {
+            return ValidationProblem("رمز عبور باید حداقل ۸ کاراکتر باشد.");
+        }
+
         var role = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId && !r.IsDeleted, ct);
         if (role is null || role.IsSystemRole)
         {
@@ -108,6 +115,22 @@ public sealed class UsersController(AppDbContext dbContext, IPasswordHasher pass
         if (membership is null)
         {
             return NotFound();
+        }
+
+        // Lockout guards: a manager must not be able to remove their own access in one click, and
+        // the agency's last remaining membership can never be deactivated (that would permanently
+        // lock everyone out with no self-service path back in). Roles here are agency-defined, so
+        // "last membership" — not "last manager" — is the enforceable invariant.
+        if (membership.UserId == currentUser.UserId)
+        {
+            return ValidationProblem("حذف دسترسی خودتان مجاز نیست؛ از مدیر دیگری بخواهید این کار را انجام دهد.");
+        }
+
+        var remainingMembers = await dbContext.UserOrgRoles.AsNoTracking()
+            .CountAsync(m => m.OrganizationId == membership.OrganizationId && !m.IsDeleted && m.Id != membership.Id, ct);
+        if (remainingMembers == 0)
+        {
+            return ValidationProblem("حداقل یک کاربر فعال باید در نمایندگی باقی بماند.");
         }
 
         membership.IsDeleted = true;

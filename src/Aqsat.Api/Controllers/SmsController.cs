@@ -26,6 +26,12 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
 {
     private const decimal SendSmsCost = 115m;
 
+    /// <summary>A loose filter (e.g. an empty date range) would otherwise enqueue a real paid SMS
+    /// to EVERY open installment in the agency in one request — at ~115 toman a message that is a
+    /// genuine financial incident, not just a slow query. Preview shows the cost; Send refuses to
+    /// cross this line so the agent must narrow the filter deliberately.</summary>
+    private const int MaxRecipientsPerSend = 200;
+
     [HttpPost("preview")]
     public async Task<ActionResult<SmsPreviewResultDto>> Preview(SmsFilterRequest filter, CancellationToken ct)
     {
@@ -38,12 +44,32 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
     {
         var installments = await BuildQuery(filter)
             .Include(i => i.Policy).ThenInclude(p => p.Customer)
+            .Take(MaxRecipientsPerSend + 1)
             .ToListAsync(ct);
+
+        if (installments.Count > MaxRecipientsPerSend)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = $"تعداد گیرندگان بیش از حد مجاز ({MaxRecipientsPerSend}) است؛ فیلتر را محدودتر کنید.",
+            });
+        }
 
         var customBody = await dbContext.SmsTemplates.AsNoTracking()
             .Where(t => t.Key == InstallmentReminderTemplate.Key)
             .Select(t => t.Body)
             .FirstOrDefaultAsync(ct);
+
+        // One query for every already-sent key in the batch instead of an AnyAsync per installment.
+        var installmentIdSet = installments.Select(i => i.Id).ToHashSet();
+        var sentKeys = (await dbContext.ReminderLogs.AsNoTracking()
+                .Where(r => r.InstallmentId != null && r.RecipientType == ReminderRecipientType.Customer
+                    && installmentIdSet.Contains(r.InstallmentId.Value))
+                .Select(r => new { r.InstallmentId, r.OffsetDays })
+                .ToListAsync(ct))
+            .Select(k => (k.InstallmentId, k.OffsetDays))
+            .ToHashSet();
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var sentCount = 0;
@@ -60,11 +86,7 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
             }
 
             var daysUntilDue = installment.DueDate.DayNumber - today.DayNumber;
-            var alreadySent = await dbContext.ReminderLogs.AsNoTracking().AnyAsync(
-                r => r.InstallmentId == installment.Id && r.OffsetDays == daysUntilDue
-                    && r.RecipientType == ReminderRecipientType.Customer,
-                ct);
-            if (alreadySent)
+            if (sentKeys.Contains((installment.Id, daysUntilDue)))
             {
                 alreadySentTodayCount++;
                 continue;
