@@ -21,6 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Run all test collections sequentially: parallel WebApplicationFactory bootstraps race on
+         shared LocalDB DDL (LCK_M_SCH_M), which intermittently breaks DML tests like
+         RoleManagementEndpointTests.Create_edit_and_delete. -->
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

@@ -66,6 +66,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UpdatePackage> UpdatePackages => Set<UpdatePackage>();
     public DbSet<UpdateRun> UpdateRuns => Set<UpdateRun>();
     public DbSet<UpdateStageLog> UpdateStageLogs => Set<UpdateStageLog>();
+    public DbSet<ApiIrSettings> ApiIrSettings => Set<ApiIrSettings>();
 
     private static readonly ConcurrentDictionary<Type, string[]> SensitivePropertyCache = new();
 

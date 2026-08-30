@@ -144,8 +144,10 @@ public sealed class PlatformUpdatesController(
             return ValidationProblem("شمارهٔ همراه کاربر ثبت نشده است.");
         }
 
-        await otpService.SendAsync(currentUser.UserId, user.Mobile, currentUser.ActiveOrganizationId, ct);
-        return Ok(new RequestOtpResponse(true, MaskMobile(user.Mobile)));
+        // The send's real outcome is surfaced (api.ir rejection, outage, no credit): the panel must
+        // never show "کد ارسال شد" for an SMS that never left the building.
+        var sent = await otpService.SendAsync(currentUser.UserId, user.Mobile, currentUser.ActiveOrganizationId, ct);
+        return Ok(new RequestOtpResponse(sent, sent ? MaskMobile(user.Mobile) : null));
     }
 
     [HttpPost("{packageId:guid}/start")]

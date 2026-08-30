@@ -27,6 +27,7 @@ export type PageKind =
   | "customer-completion"
   | "schedule-policy"
   | "platform-updates"
+  | "apiir-settings"
   | "agency-settings"
   | "desk-feed"
   | "policy-list"

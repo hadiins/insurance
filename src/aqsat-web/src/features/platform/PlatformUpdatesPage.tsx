@@ -67,6 +67,7 @@ export function PlatformUpdatesPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [mobileMasked, setMobileMasked] = useState<string | null>(null);
+  const [otpError, setOtpError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const [activeRun, setActiveRun] = useState<UpdateRunDto | null>(null);
@@ -116,12 +117,19 @@ export function PlatformUpdatesPage() {
     setOtpPackage(pkg);
     setOtpSent(false);
     setOtpCode("");
+    setOtpError(null);
     try {
       const result = await api.post<{ sent: boolean; mobileMasked: string | null }>("/platform/updates/otp", {});
-      setOtpSent(result.sent);
-      setMobileMasked(result.mobileMasked);
+      if (result.sent) {
+        setOtpSent(true);
+        setMobileMasked(result.mobileMasked);
+      } else {
+        // The API no longer pretends success when the SMS provider (api.ir) failed — surface it
+        // and let the user retry instead of staring at an eternal "sending..." state.
+        setOtpError("ارسال پیامک تأیید ناموفق بود. سرویس پیامک را از تنظیمات api.ir بررسی کنید و دوباره تلاش کنید.");
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "ارسال کد تأیید ناموفق بود.");
+      setOtpError(err instanceof ApiError ? err.message : "ارسال کد تأیید ناموفق بود.");
     }
   }
 
@@ -285,7 +293,22 @@ export function PlatformUpdatesPage() {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
           <div className="w-full max-w-sm rounded-2xl border border-(--edge) bg-(--pane) p-5">
             <b className="mb-3 block text-[14px] text-(--ice)">تأیید دومرحله‌ای — به‌روزرسانی به {otpPackage.version}</b>
-            {!otpSent ? (
+            {otpError ? (
+              <>
+                <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12px] text-(--ember)">
+                  {otpError}
+                </div>
+                <div className="mb-1">
+                  <button
+                    type="button"
+                    onClick={() => requestOtp(otpPackage)}
+                    className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                  >
+                    ارسال دوبارهٔ کد
+                  </button>
+                </div>
+              </>
+            ) : !otpSent ? (
               <div className="text-[12.5px] text-(--ice-3)">در حال ارسال کد…</div>
             ) : (
               <>

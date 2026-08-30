@@ -7,6 +7,7 @@ using Aqsat.Infrastructure.Persistence;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aqsat.Infrastructure.ApiIr;
 
@@ -93,8 +94,12 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
 
     public async Task<bool> SendSmsAsync(string mobile, string text, Guid agencyId, CancellationToken ct = default)
     {
+        // api.ir's SendSms takes `mobiles` (an ARRAY) + `message` — the bare `mobile` string this
+        // used to send is ignored server-side, so the send silently no-opped while the envelope
+        // still reported success, and the panel showed an OTP code that never arrived anywhere.
         var (success, _) = await CallAsync<SendResponse>(
-            "/api/sw1/SendSms", new { mobile, message = text }, "SendSms", SendSmsCost, isPaidEndpoint: true, agencyId, ct);
+            "/api/sw1/SendSms", new { message = text, mobiles = new[] { mobile } }, "SendSms", SendSmsCost,
+            isPaidEndpoint: true, agencyId, ct);
         return success;
     }
 
@@ -124,20 +129,22 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         string endpoint, object body, string service, decimal costToman, bool isPaidEndpoint, Guid agencyId, CancellationToken ct)
         where TResponse : class
     {
-        var wasSandboxed = isPaidEndpoint && !options.Value.AllowPaidEndpoints;
+        var (apiKey, allowPaid) = await ResolveSettingsAsync(ct);
+        var wasSandboxed = isPaidEndpoint && !allowPaid;
         var actualEndpoint = wasSandboxed ? "/api/Sandbox/Echo" : endpoint;
 
         var success = false;
         TResponse? data = null;
+        string? failureMessage = null;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, actualEndpoint)
             {
                 Content = JsonContent.Create(body),
             };
-            if (!string.IsNullOrEmpty(options.Value.ApiKey))
+            if (!string.IsNullOrEmpty(apiKey))
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.Value.ApiKey);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             }
 
             using var response = await httpClient.SendAsync(request, ct);
@@ -149,11 +156,12 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
             }
             else if (response.IsSuccessStatusCode)
             {
-                var envelope = await response.Content.ReadFromJsonAsync<ApiIrEnvelope<TResponse>>(EnvelopeJsonOptions, ct);
-                if (envelope is { Success: true })
+                (success, data, failureMessage) = await ParseEnvelopeAsync<TResponse>(response, ct);
+                if (!success && failureMessage is not null)
                 {
-                    success = true;
-                    data = envelope.Data;
+                    // api.ir puts the *reason* (insufficient credit, wrong key, …) in `message` —
+                    // without surfacing it, every rejection looks identical from the call logs.
+                    logger.LogWarning("api.ir {Service} rejected the call: {Message}", service, failureMessage);
                 }
             }
         }
@@ -178,6 +186,87 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         await dbContext.SaveChangesAsync(ct);
 
         return (success, data);
+    }
+
+    /// <summary>
+    /// api.ir's real payloads only loosely match ApiIrEnvelope&lt;T&gt;: `data` is sometimes a bare
+    /// number (SendSms answers with the numeric message id), and their docs' own warning example
+    /// ships `success:false` WITH populated `data` — so the envelope is parsed by hand instead of
+    /// bound to one rigid shape: `success` decides the outcome, `data` deserializes only when it is
+    /// actually an object (a scalar id is not needed by any caller here — the bool is the answer),
+    /// and `message` carries the provider's own failure reason up into the logs.
+    /// </summary>
+    private static async Task<(bool Success, TResponse? Data, string? Message)> ParseEnvelopeAsync<TResponse>(
+        HttpResponseMessage response, CancellationToken ct)
+        where TResponse : class
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var root = document.RootElement;
+
+        bool success;
+        if (root.TryGetProperty("success", out var successEl) && successEl.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            success = successEl.GetBoolean();
+        }
+        else if (root.TryGetProperty("code", out var codeEl) && codeEl.TryGetInt32(out var code))
+        {
+            // No explicit flag — fall back to api.ir's own numeric status code.
+            success = code is >= 200 and < 300;
+        }
+        else
+        {
+            success = false;
+        }
+
+        var message = root.TryGetProperty("message", out var messageEl) && messageEl.ValueKind == JsonValueKind.String
+            ? messageEl.GetString()
+            : null;
+
+        TResponse? data = null;
+        if (success && root.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Object)
+        {
+            data = dataEl.Deserialize<TResponse>(EnvelopeJsonOptions);
+        }
+
+        return (success, data, message);
+    }
+
+    private const string SettingsCacheKey = "apiir:settings";
+    private static readonly TimeSpan SettingsCacheTtl = TimeSpan.FromSeconds(15);
+
+    private sealed record ResolvedSettings(string ApiKey, bool AllowPaidEndpoints);
+
+    /// <summary>
+    /// Panel-editable settings (ApiIrSettings) win; configuration (ApiIrOptions) is the fallback for
+    /// every field the row leaves unset, so a fresh install behaves exactly as before the table
+    /// existed. Cached for 15s: a panel change takes effect within seconds, while bursts of
+    /// individually-priced calls never re-query the row. A DB failure here degrades to
+    /// configuration and is logged — CallAsync's own SaveChangesAsync would fail on the same
+    /// outage anyway, but sandbox/real routing must never silently flip either direction.
+    /// </summary>
+    private async Task<ResolvedSettings> ResolveSettingsAsync(CancellationToken ct)
+    {
+        if (cache.TryGetValue(SettingsCacheKey, out object? cachedObj) && cachedObj is ResolvedSettings cached)
+        {
+            return cached;
+        }
+
+        ApiIrSettings? row = null;
+        try
+        {
+            row = await dbContext.ApiIrSettings.AsNoTracking().SingleOrDefaultAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not read ApiIrSettings — falling back to configured ApiIr options");
+        }
+
+        var resolved = new ResolvedSettings(
+            string.IsNullOrWhiteSpace(row?.ApiKey) ? options.Value.ApiKey : row!.ApiKey.Trim(),
+            row?.AllowPaidEndpoints ?? options.Value.AllowPaidEndpoints);
+        cache.Set(SettingsCacheKey, resolved, SettingsCacheTtl);
+        return resolved;
     }
 
     private sealed record IsHolidayResponse(bool IsHoliday);

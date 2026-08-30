@@ -14,13 +14,21 @@ public sealed class PlatformOtpService(ISmsSender smsSender, IMemoryCache cache)
 {
     private static readonly TimeSpan Expiry = TimeSpan.FromMinutes(5);
 
-    public async Task SendAsync(Guid userId, string mobile, Guid agencyId, CancellationToken ct = default)
+    public async Task<bool> SendAsync(Guid userId, string mobile, Guid agencyId, CancellationToken ct = default)
     {
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
-        cache.Set(CacheKey(userId), code, Expiry);
 
         var text = $"کد تأیید به‌روزرسانی سامانه: {code}\nاین کد تا ۵ دقیقه معتبر است.";
-        await smsSender.SendAsync(mobile, text, agencyId, ct);
+        var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
+        if (!sent)
+        {
+            // No code is cached when nothing was actually sent — otherwise Verify would accept a
+            // code the owner never received, and a "retry" would keep verifying the phantom.
+            return false;
+        }
+
+        cache.Set(CacheKey(userId), code, Expiry);
+        return true;
     }
 
     public bool Verify(Guid userId, string code)

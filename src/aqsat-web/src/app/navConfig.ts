@@ -179,6 +179,10 @@ export const NAV: NavGroup[] = [
         navType: "platform-updates", title: "به‌روزرسانی سیستم", kind: "singleton", page: "platform-updates",
         requiresPermission: "Platform.Owner",
       },
+      {
+        navType: "apiir-settings", title: "تنظیمات api.ir", kind: "singleton", page: "apiir-settings",
+        requiresPermission: "Platform.Owner",
+      },
     ],
   },
 ];

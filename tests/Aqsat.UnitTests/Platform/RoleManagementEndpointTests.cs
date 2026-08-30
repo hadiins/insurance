@@ -55,7 +55,6 @@ public class RoleManagementEndpointTests : IClassFixture<WebApplicationFactory<P
 
         return (client, hq.Id, ownerRole.Id);
     }
-
     [Fact]
     public async Task Create_edit_and_delete_a_role_round_trips_and_the_system_role_is_protected()
     {
