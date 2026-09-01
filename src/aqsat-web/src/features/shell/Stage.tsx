@@ -22,7 +22,10 @@ import { RecordReceiptPage } from "../policies/RecordReceiptPage";
 import { InsurerRemittancePage } from "../reports/InsurerRemittancePage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { ApiIrSettingsPage } from "../platform/ApiIrSettingsPage";
+import { PaymentSettingsPage } from "../platform/PaymentSettingsPage";
 import { AgencySettingsPage } from "../settings/AgencySettingsPage";
+import { AgencyPaymentSettingsPage } from "../settings/AgencyPaymentSettingsPage";
+import { AgencySmsSettingsPage } from "../settings/AgencySmsSettingsPage";
 import { PolicyNumberSettingsPage } from "../settings/PolicyNumberSettingsPage";
 import { CashAndBankSettingsPage } from "../settings/CashAndBankSettingsPage";
 import { AgencyCommissionRateSettingsPage } from "../settings/AgencyCommissionRateSettingsPage";
@@ -42,6 +45,7 @@ import { SmsTemplatesPage } from "../sms/SmsTemplatesPage";
 import { SmsDeliveryReportPage } from "../sms/SmsDeliveryReportPage";
 import { RoleManagementPage } from "../platform/RoleManagementPage";
 import { AgenciesManagementPage } from "../platform/AgenciesManagementPage";
+import { AgencyProfilePage } from "../platform/AgencyProfilePage";
 import { ChangePasswordPage } from "../settings/ChangePasswordPage";
 import { BlankPage } from "../placeholder/BlankPage";
 import { TabKeyProvider } from "./TabContext";
@@ -92,8 +96,14 @@ function renderPage(tab: OpenTab) {
       return <PlatformUpdatesPage />;
     case "apiir-settings":
       return <ApiIrSettingsPage />;
+    case "payment-settings":
+      return <PaymentSettingsPage />;
     case "agency-settings":
       return <AgencySettingsPage />;
+    case "agency-payment-settings":
+      return <AgencyPaymentSettingsPage />;
+    case "agency-sms-settings":
+      return <AgencySmsSettingsPage />;
     case "policy-number-settings":
       return <PolicyNumberSettingsPage />;
     case "cash-and-bank-settings":
@@ -132,6 +142,8 @@ function renderPage(tab: OpenTab) {
       return <RoleManagementPage />;
     case "agencies-management":
       return <AgenciesManagementPage />;
+    case "agency-profile":
+      return <AgencyProfilePage />;
     case "change-password":
       return <ChangePasswordPage />;
     case "blank":

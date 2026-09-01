@@ -160,6 +160,8 @@ export const NAV: NavGroup[] = [
     icon: ICONS.gear,
     items: [
       { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "agency-settings" },
+      { navType: "settings-payment", title: "تنظیمات درگاه پرداخت", kind: "singleton", page: "agency-payment-settings" },
+      { navType: "settings-sms-panel", title: "تنظیمات پنل پیامکی", kind: "singleton", page: "agency-sms-settings" },
       { navType: "settings-policy-number", title: "کدهای بیمه‌نامه", kind: "singleton", page: "policy-number-settings" },
       { navType: "settings-cash-and-bank", title: "صندوق و بانک‌ها", kind: "singleton", page: "cash-and-bank-settings" },
       { navType: "settings-agency-commission", title: "کارمزد از بیمه‌گر", kind: "singleton", page: "agency-commission-settings" },
@@ -180,7 +182,11 @@ export const NAV: NavGroup[] = [
         requiresPermission: "Platform.Owner",
       },
       {
-        navType: "apiir-settings", title: "تنظیمات api.ir", kind: "singleton", page: "apiir-settings",
+        navType: "apiir-settings", title: "تنظیمات پنل پیامکی (api.ir)", kind: "singleton", page: "apiir-settings",
+        requiresPermission: "Platform.Owner",
+      },
+      {
+        navType: "payment-settings", title: "درگاه پرداخت مالک", kind: "singleton", page: "payment-settings",
         requiresPermission: "Platform.Owner",
       },
     ],

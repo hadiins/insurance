@@ -36,5 +36,8 @@ public sealed class PolicyConfiguration : AqsatEntityConfiguration<Policy>
         builder.HasIndex(p => new { p.AgencyId, p.InsuranceLineId });
         builder.HasIndex(p => new { p.AgencyId, p.MarketerId });
         builder.HasIndex(p => new { p.AgencyId, p.PnYear, p.PnSerial });
+        // The agency profile's "policies issued" count and monthly trend both filter by IssueDate
+        // within one agency — this keeps those aggregates an index seek instead of a scan.
+        builder.HasIndex(p => new { p.AgencyId, p.IssueDate });
     }
 }

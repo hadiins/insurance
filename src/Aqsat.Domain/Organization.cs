@@ -15,6 +15,7 @@ public class Organization : SoftDeletableEntity
     public OrganizationLevel Level { get; set; }
     public string Code { get; set; } = default!;
     public string Name { get; set; } = default!;
+    public string? Province { get; set; }
     public string? City { get; set; }
     public string? InsurerName { get; set; }
     public bool IsActive { get; set; } = true;

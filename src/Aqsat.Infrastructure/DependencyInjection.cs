@@ -89,9 +89,16 @@ public static class DependencyInjection
         services.AddScoped<SmsReminderJob>();
         services.AddScoped<RenewalWatchJob>();
         services.AddScoped<DatabaseBackupJob>();
+        services.AddScoped<AgencyStatsRollupJob>();
+        services.AddScoped<Aqsat.Infrastructure.Stats.AgencyStatsService>();
         services.AddScoped<AgencyCommissionBackfillJob>();
         services.AddScoped<NationalIdHashBackfillJob>();
         services.AddScoped<Aqsat.Infrastructure.Payments.PaymentReversalService>();
+        // The portal's gateway abstraction — Mock is the only implementation for now; ZarinPal is a
+        // separate future task (no new packages without asking). Registered open: the service picks
+        // by Provider, so later implementations just add themselves here.
+        services.AddScoped<Aqsat.Application.Payments.IPaymentGateway, Aqsat.Infrastructure.Payments.MockPaymentGateway>();
+        services.AddScoped<Aqsat.Infrastructure.Portal.PortalInvitationService>();
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()

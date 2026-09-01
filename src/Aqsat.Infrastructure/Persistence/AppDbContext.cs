@@ -23,6 +23,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UserOrgRole> UserOrgRoles => Set<UserOrgRole>();
 
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerPortalInvitation> CustomerPortalInvitations => Set<CustomerPortalInvitation>();
+    public DbSet<PortalInvitationTokenIndex> PortalInvitationTokenIndex => Set<PortalInvitationTokenIndex>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<PropertySubject> PropertySubjects => Set<PropertySubject>();
     public DbSet<InsuranceLine> InsuranceLines => Set<InsuranceLine>();
@@ -57,6 +59,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ApiIrCallLog> ApiIrCallLogs => Set<ApiIrCallLog>();
     public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
 
+    // Platform-level (docs/TASKS.md Task 22) — no AgencyId, not RLS-scoped, same as
+    // Organization/AppUser/Role above. AgencyStatsDaily carries an AgencyId but is likewise
+    // outside the security policy: it is the owner's cross-agency reporting rollup, and an RLS
+    // predicate on it would silently blank the whole owner dashboard (rule 17).
+    public DbSet<AgencyStatsDaily> AgencyStatsDaily => Set<AgencyStatsDaily>();
+
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<RecordPresence> RecordPresences => Set<RecordPresence>();
     public DbSet<RecordLock> RecordLocks => Set<RecordLock>();
@@ -67,6 +75,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UpdateRun> UpdateRuns => Set<UpdateRun>();
     public DbSet<UpdateStageLog> UpdateStageLogs => Set<UpdateStageLog>();
     public DbSet<ApiIrSettings> ApiIrSettings => Set<ApiIrSettings>();
+    public DbSet<PlatformPaymentSettings> PlatformPaymentSettings => Set<PlatformPaymentSettings>();
 
     private static readonly ConcurrentDictionary<Type, string[]> SensitivePropertyCache = new();
 

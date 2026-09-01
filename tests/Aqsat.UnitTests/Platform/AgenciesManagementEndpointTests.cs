@@ -63,14 +63,16 @@ public class AgenciesManagementEndpointTests : IClassFixture<WebApplicationFacto
         var managerMobile = $"0917{uniqueTag[..7]}";
 
         var createResponse = await client.PostAsJsonAsync("/api/platform/agencies", new CreateAgencyRequest(
-            $"AG-{uniqueTag}", $"نمایندگی آزمایشی {uniqueTag}", "تهران", "بیمهٔ آزمایشی",
+            $"AG-{uniqueTag}", $"نمایندگی آزمایشی {uniqueTag}", "تهران", "تهران", "بیمهٔ آزمایشی",
             "مدیر جدید", managerMobile, "Manager-Pass1", null));
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<CreateAgencyResultDto>();
         Assert.Equal("مدیر نمایندگی", created!.RoleName);
 
-        var agencies = await client.GetFromJsonAsync<List<AgencyDto>>("/api/platform/agencies");
-        Assert.Contains(agencies!, a => a.Id == created.Agency.Id && a.UserCount == 1);
+        // The list is paged — search by the unique code so the row is guaranteed on the page even
+        // with the hundreds of fixture agencies the shared dev database accumulates mid-run.
+        var agencies = await client.GetFromJsonAsync<AgencyListPageDto>($"/api/platform/agencies?search={created.Agency.Code}");
+        Assert.Contains(agencies!.Rows, a => a.Id == created.Agency.Id && a.UserCount == 1);
 
         // The freshly created manager can actually log in and reach agency-scoped data.
         var managerClient = _factory.CreateClient();
@@ -93,11 +95,11 @@ public class AgenciesManagementEndpointTests : IClassFixture<WebApplicationFacto
         var code = $"AG-{uniqueTag}";
 
         var first = await client.PostAsJsonAsync("/api/platform/agencies", new CreateAgencyRequest(
-            code, "نمایندگی اول", null, null, "مدیر اول", $"0918{uniqueTag[..7]}", "Manager-Pass1", null));
+            code, "نمایندگی اول", null, null, null, "مدیر اول", $"0918{uniqueTag[..7]}", "Manager-Pass1", null));
         first.EnsureSuccessStatusCode();
 
         var second = await client.PostAsJsonAsync("/api/platform/agencies", new CreateAgencyRequest(
-            code, "نمایندگی دوم", null, null, "مدیر دوم", $"0919{uniqueTag[..7]}", "Manager-Pass2", null));
+            code, "نمایندگی دوم", null, null, null, "مدیر دوم", $"0919{uniqueTag[..7]}", "Manager-Pass2", null));
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
     }
 }

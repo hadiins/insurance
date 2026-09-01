@@ -28,6 +28,9 @@ export type PageKind =
   | "schedule-policy"
   | "platform-updates"
   | "apiir-settings"
+  | "payment-settings"
+  | "agency-payment-settings"
+  | "agency-sms-settings"
   | "agency-settings"
   | "desk-feed"
   | "policy-list"
@@ -43,6 +46,7 @@ export type PageKind =
   | "sms-delivery-report"
   | "role-management"
   | "agencies-management"
+  | "agency-profile"
   | "change-password"
   | "blank";
 
