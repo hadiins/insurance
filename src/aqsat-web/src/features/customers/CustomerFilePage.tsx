@@ -42,6 +42,15 @@ interface TimelineEntryDto {
   description: string;
 }
 
+interface PortalInvitationDto {
+  id: string;
+  createdAtUtc: string;
+  expiresAtUtc: string;
+  status: "Pending" | "Paid" | "Expired";
+  inquiryFeeToman: number;
+  token: string;
+}
+
 interface CustomerFileDto {
   customerId: string;
   fullName: string;
@@ -64,7 +73,13 @@ export function CustomerFilePage() {
 
   const [file, setFile] = useState<CustomerFileDto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [section, setSection] = useState<"policies" | "payments" | "collateral" | "timeline">("policies");
+  const [section, setSection] = useState<"policies" | "payments" | "collateral" | "portal" | "timeline">("policies");
+
+  const [invitations, setInvitations] = useState<PortalInvitationDto[] | null>(null);
+  const [invitationsError, setInvitationsError] = useState<string | null>(null);
+  const [issueBusy, setIssueBusy] = useState(false);
+  const [issueMessage, setIssueMessage] = useState<string | null>(null);
+  const [issueError, setIssueError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!payload?.customerId) return;
@@ -76,6 +91,39 @@ export function CustomerFilePage() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری پروندهٔ مشتری"));
   }, [payload?.customerId]);
+
+  useEffect(() => {
+    if (!payload?.customerId || section !== "portal") return;
+    loadInvitations();
+  }, [payload?.customerId, section]);
+
+  function loadInvitations() {
+    setInvitations(null);
+    setInvitationsError(null);
+    api
+      .get<PortalInvitationDto[]>(`/portal/invitations/customer/${payload!.customerId}`)
+      .then(setInvitations)
+      .catch((err) => setInvitationsError(err instanceof ApiError ? err.message : "خطا در بارگذاری دعوت‌نامه‌ها"));
+  }
+
+  async function issueLink() {
+    setIssueBusy(true);
+    setIssueMessage(null);
+    setIssueError(null);
+    try {
+      const created = await api.post<PortalInvitationDto>("/portal/invitations", {
+        customerId: payload!.customerId,
+      });
+      setIssueMessage(
+        `لینک پورتال ساخته و برای مشتری پیامک شد:\n${window.location.origin}/portal/${created.token}`,
+      );
+      loadInvitations();
+    } catch (err) {
+      setIssueError(err instanceof ApiError ? err.message : "خطای غیرمنتظره");
+    } finally {
+      setIssueBusy(false);
+    }
+  }
 
   if (!payload) return null;
 
@@ -137,6 +185,7 @@ export function CustomerFilePage() {
                 ["policies", `بیمه‌نامه‌ها (${fa(file.policies.length)})`],
                 ["payments", `پرداخت‌ها (${fa(file.payments.length)})`],
                 ["collateral", `وثیقه (${fa(file.collateral.length)})`],
+                ["portal", `پورتال (${fa(invitations?.length ?? 0)})`],
                 ["timeline", `تاریخچه (${fa(file.timeline.length)})`],
               ] as const
             ).map(([key, label]) => (
@@ -248,6 +297,78 @@ export function CustomerFilePage() {
                 </table>
               </div>
             ))}
+
+          {section === "portal" && (
+            <div>
+              {issueError && (
+                <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+                  {issueError}
+                </div>
+              )}
+              {issueMessage && (
+                <div className="mb-3 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--mint)">
+                  {issueMessage}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={issueLink}
+                disabled={issueBusy}
+                className="mb-4.5 rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {issueBusy ? "در حال ساخت…" : "ارسال لینک پورتال به مشتری"}
+              </button>
+
+              {invitationsError && (
+                <div className="rounded-2xl border border-(--ember)/30 bg-(--ember)/10 p-4 text-[13px] text-(--ember)">
+                  {invitationsError}
+                </div>
+              )}
+              {!invitationsError && invitations === null && (
+                <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
+              )}
+              {invitations !== null &&
+                (invitations.length === 0 ? (
+                  <Empty text="هنوز لینکی برای این مشتری ساخته نشده." />
+                ) : (
+                  <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          {["تاریخ ساخت", "انقضا", "کارمزد", "وضعیت"].map((h) => (
+                            <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invitations.map((i) => (
+                          <tr key={i.id} className="border-t border-(--edge) first:border-t-0">
+                            <td className="px-3 py-2.75 text-[13px]">{toJalaliDateTimeDisplay(i.createdAtUtc)}</td>
+                            <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{toJalaliDateTimeDisplay(i.expiresAtUtc)}</td>
+                            <td className="px-3 py-2.75 text-[13px] font-bold tabular-nums">{money(i.inquiryFeeToman)}</td>
+                            <td className="px-3 py-2.75 text-[13px]">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                  i.status === "Paid"
+                                    ? "bg-(--mint)/15 text-(--mint)"
+                                    : i.status === "Pending"
+                                      ? "bg-(--amber)/15 text-(--amber)"
+                                      : "bg-(--ice-3)/15 text-(--ice-3)"
+                                }`}
+                              >
+                                {i.status === "Paid" ? "پرداخت‌شده" : i.status === "Pending" ? "در انتظار پرداخت" : "منقضی"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+            </div>
+          )}
 
           {section === "timeline" && (
             <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">

@@ -4,6 +4,7 @@ import { AUTH_CLEARED_EVENT } from "./lib/api";
 import { Shell } from "./features/shell/Shell";
 import { LoginPage } from "./features/auth/LoginPage";
 import { OwnerSetupPage } from "./features/auth/OwnerSetupPage";
+import { PortalPage } from "./features/portal/PortalPage";
 
 function App() {
   const status = useAuthStore((s) => s.status);
@@ -23,6 +24,11 @@ function App() {
   // Standalone, never linked from the sidebar — reached only by typing the URL directly.
   if (window.location.pathname === "/owner-setup") {
     return <OwnerSetupPage />;
+  }
+
+  // The public customer portal — anonymous, the token in the URL is the credential.
+  if (window.location.pathname.startsWith("/portal/")) {
+    return <PortalPage />;
   }
 
   if (status !== "ready") {
