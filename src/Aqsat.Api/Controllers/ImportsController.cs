@@ -113,7 +113,7 @@ public sealed class ImportsController(ImportService importService, ICurrentUserC
     [HttpPost("commit")]
     [RequestSizeLimit(MaxFileSizeBytes)]
     public async Task<ActionResult<ImportCommitResponse>> Commit(
-        [FromForm] IFormFile file, [FromForm] string meta, CancellationToken ct)
+        IFormFile file, [FromForm] string meta, CancellationToken ct)
     {
         if (file.Length == 0)
         {

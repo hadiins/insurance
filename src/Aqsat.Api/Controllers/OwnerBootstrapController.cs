@@ -81,8 +81,15 @@ public sealed class OwnerBootstrapController(
             await dbContext.SaveChangesAsync(ct);
         }
 
-        var ownerRole = await dbContext.Roles.Include(r => r.RolePermissions)
-            .FirstOrDefaultAsync(r => r.IsSystemRole && !r.IsDeleted, ct);
+        // The owner role is identified by HOLDING Platform.Owner, not by IsSystemRole alone —
+        // test seeders create many IsSystemRole roles with no permissions, and picking the first
+        // of those would bootstrap a powerless "owner".
+        var ownerRole = await dbContext.Roles
+            .Include(r => r.RolePermissions)
+            .FirstOrDefaultAsync(
+                r => r.IsSystemRole && !r.IsDeleted
+                    && r.RolePermissions.Any(p => p.Permission == Permissions.PlatformOwner && !p.IsDeleted),
+                ct);
         if (ownerRole is null)
         {
             ownerRole = new Role { Name = "مالک نرم‌افزار", IsSystemRole = true };

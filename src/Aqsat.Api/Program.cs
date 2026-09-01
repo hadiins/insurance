@@ -49,6 +49,16 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // The test suite wipes its tables on every assembly load, so a WebApplicationFactory-hosted
+    // instance must never connect to the developer's real database — route it to the dedicated
+    // test database (kept in sync with TestDbContextFactory) unless CI points elsewhere.
+    if (isTestHost)
+    {
+        builder.Configuration["ConnectionStrings:Default"] =
+            Environment.GetEnvironmentVariable("AQSAT_TEST_CONNECTION")
+            ?? "Server=localhost;Database=AqsatTest;User Id=sa;Password=4Q45BPLZyL8yOWdqCglj;TrustServerCertificate=True;MultipleActiveResultSets=true";
+    }
+
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
@@ -149,6 +159,17 @@ try
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = isTestHost ? int.MaxValue : 10,
+                Window = TimeSpan.FromMinutes(1),
+            }));
+
+        // The public portal (api/portal/{token}) is anonymous — its only unauthenticated attack
+        // surface is token guessing, so per-IP limits keep a guesser to a crawl without touching
+        // real customers. Test host is unlimited like "login": tests probe tokens deliberately.
+        options.AddPolicy("portal", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = isTestHost ? int.MaxValue : 20,
                 Window = TimeSpan.FromMinutes(1),
             }));
     });
@@ -321,6 +342,16 @@ try
                 "database-backup",
                 job => job.RunAsync(CancellationToken.None),
                 Cron.Daily(3));
+            RecurringJob.AddOrUpdate<AgencyStatsRollupJob>(
+                "agency-stats-rollup",
+                job => job.RunAsync(CancellationToken.None),
+                Cron.Daily(4));
+            // Backdated IssueDates (Fanavaran imports carry historical dates) are invisible to the
+            // nightly trailing window — a monthly full rebuild is what keeps lifetime totals true.
+            RecurringJob.AddOrUpdate<AgencyStatsRollupJob>(
+                "agency-stats-full-rebuild",
+                job => job.RunFullRebuildAsync(CancellationToken.None),
+                Cron.Monthly(1, 5));
         }
         catch (Exception ex)
         {

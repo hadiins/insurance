@@ -46,14 +46,17 @@ public class DatabaseBackupJobTests
         {
             await job.RunAsync();
 
-            var backupFiles = Directory.GetFiles(backupDirectory, "Aqsat-*.bak");
+            // The job names backups after the connection's database — AqsatTest here, Aqsat in
+            // production — so derive the pattern instead of hardcoding either name.
+            var databaseName = context.Database.GetDbConnection().Database;
+            var backupFiles = Directory.GetFiles(backupDirectory, $"{databaseName}-*.bak");
             Assert.Single(backupFiles);
             var backupFile = backupFiles[0];
             Assert.True(new FileInfo(backupFile).Length > 0);
 
             var restoredDbName = $"AqsatRestoreTest_{Guid.NewGuid():N}"[..30];
             const string masterConnectionString =
-                "Server=(localdb)\\MSSQLLocalDB;Database=master;Trusted_Connection=True;TrustServerCertificate=True";
+                "Server=localhost;Database=master;User Id=sa;Password=4Q45BPLZyL8yOWdqCglj;TrustServerCertificate=True";
 
             await using var masterConnection = new SqlConnection(masterConnectionString);
             await masterConnection.OpenAsync();
@@ -96,9 +99,9 @@ public class DatabaseBackupJobTests
 
                 // Confirm the data — the whole point of the check. RLS's security policy is bound to
                 // this specific database, so query the restored copy directly rather than through
-                // AppDbContext (which always targets the original "Aqsat" database in tests).
+                // AppDbContext (which targets the original test database, not the restored one).
                 await using var restoredConnection = new SqlConnection(
-                    $"Server=(localdb)\\MSSQLLocalDB;Database={restoredDbName};Trusted_Connection=True;TrustServerCertificate=True");
+                    $"Server=localhost;Database={restoredDbName};User Id=sa;Password=4Q45BPLZyL8yOWdqCglj;TrustServerCertificate=True");
                 await restoredConnection.OpenAsync();
                 await using var countCommand = restoredConnection.CreateCommand();
                 countCommand.CommandText = "SELECT COUNT(*) FROM Organizations WHERE Id IN (@id0, @id1, @id2, @id3);";

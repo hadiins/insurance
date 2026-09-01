@@ -9,10 +9,20 @@ namespace Aqsat.UnitTests.DataModel;
 /// hand-maintained SQL at the bottom of each migration, so a new AgencyId-bearing table whose
 /// author forgets that ALTER SECURITY POLICY would silently expose cross-tenant rows in every
 /// controller. This test closes that loop: every entity type in the EF model carrying an AgencyId
-/// property must have a FILTER predicate under the policy — no exceptions, no allowlist.
+/// property must have a FILTER predicate under the policy. The carve-outs are deliberate,
+/// documented RLS exemptions, not oversights:
+/// - PortalInvitationTokenIndex — the public portal's token→agency resolver (anonymous visitors
+///   hold no session context); it carries no tenant data beyond AgencyId itself.
+/// - AgencyStatsDaily — the owner-platform's pre-aggregated reporting rollup. It is populated by
+///   the nightly AgencyStatsRollupJob (which enters each agency's scope to compute it) and read
+///   only by Platform.Owner-gated controllers; agency users never query it.
 /// </summary>
 public class RlsCoverageTests
 {
+    /// <summary>Deliberately NOT under the RLS policy — see the class summary. Adding a table
+    /// here requires an explicit security justification, not an oversight.</summary>
+    private static readonly string[] RlsExemptTables = ["PortalInvitationTokenIndex", "AgencyStatsDaily"];
+
     [Fact]
     public async Task Every_entity_with_an_AgencyId_property_is_covered_by_the_RLS_policy()
     {
@@ -45,7 +55,11 @@ public class RlsCoverageTests
 
         Assert.NotEmpty(coveredTables);
 
-        var uncovered = agencyScopedTables.Except(coveredTables).OrderBy(t => t).ToList();
+        var exemptTables = RlsExemptTables.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var uncovered = agencyScopedTables
+            .Except(coveredTables.Concat(exemptTables))
+            .OrderBy(t => t)
+            .ToList();
         Assert.True(
             uncovered.Count == 0,
             $"Tables with an AgencyId column missing from dbo.AgencyAccessPolicy (cross-tenant leak): {string.Join(", ", uncovered)}. " +
