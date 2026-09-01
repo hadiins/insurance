@@ -17,6 +17,26 @@ public sealed record UpdateAgencyCodeRequest(string AgencyCode);
 /// accidental click on an irreversible bulk action.</summary>
 public sealed record ClearAgencyDataRequest(string ConfirmCode);
 
+/// <summary>docs/CUSTOMER-PORTAL-SPEC.md §3 — the agency's own customer-portal gateway (the
+/// customer's down payment lands HERE, in the agency's own account; the inquiry fee's gateway is
+/// the platform-level one). AgentMerchantId is only returned masked. A dedicated partial update,
+/// not a field on the general PUT: the «تنظیمات درگاه پرداخت» sub-page saves only these fields,
+/// so it can never clobber concurrent edits to the operational parameters.</summary>
+public sealed record AgencyPaymentGatewayDto(
+    string Name, string Code, string PaymentProvider, bool CustomerPortalEnabled,
+    bool HasAgentMerchantId, string? AgentMerchantIdMasked, int PortalInvitationTtlHours);
+
+public sealed record UpdateAgencyPaymentGatewayRequest(
+    string PaymentProvider, bool CustomerPortalEnabled, string? AgentMerchantId, int PortalInvitationTtlHours);
+
+/// <summary>«تنظیمات پنل پیامکی» — the agency's own api.ir key for sending SMS. SmsApiKey is only
+/// returned masked, and null/whitespace on PUT keeps the stored one (the same write-only contract
+/// as every other credential panel).</summary>
+public sealed record AgencySmsPanelDto(
+    string Name, string Code, bool HasSmsApiKey, string? SmsApiKeyMasked);
+
+public sealed record UpdateAgencySmsPanelRequest(string? SmsApiKey);
+
 public sealed record UpdateAgencySettingsRequest(
     string Name, string? City, string? InsurerName,
     int SettlementDeadlineDays, string LockScope, bool ShiftOnHoliday,

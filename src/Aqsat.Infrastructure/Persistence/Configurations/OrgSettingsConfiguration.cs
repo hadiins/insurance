@@ -13,6 +13,11 @@ public sealed class OrgSettingsConfiguration : IEntityTypeConfiguration<OrgSetti
 
         builder.Property(s => s.RowVersion).IsRowVersion();
         builder.Property(s => s.ReminderDaysBefore).HasMaxLength(40).IsRequired();
+        builder.Property(s => s.AgentMerchantId).HasMaxLength(128);
+        builder.Property(s => s.SmsApiKey).HasMaxLength(256);
+        builder.Property(s => s.PaymentProvider)
+            .HasConversion<string>()
+            .HasMaxLength(32);
 
         builder.HasOne(s => s.Organization)
             .WithOne()

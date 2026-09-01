@@ -129,7 +129,8 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         string endpoint, object body, string service, decimal costToman, bool isPaidEndpoint, Guid agencyId, CancellationToken ct)
         where TResponse : class
     {
-        var (apiKey, allowPaid) = await ResolveSettingsAsync(ct);
+        var (_, allowPaid) = await ResolveSettingsAsync(ct);
+        var apiKey = await ResolveApiKeyAsync(agencyId, ct);
         var wasSandboxed = isPaidEndpoint && !allowPaid;
         var actualEndpoint = wasSandboxed ? "/api/Sandbox/Echo" : endpoint;
 
@@ -266,6 +267,44 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
             string.IsNullOrWhiteSpace(row?.ApiKey) ? options.Value.ApiKey : row!.ApiKey.Trim(),
             row?.AllowPaidEndpoints ?? options.Value.AllowPaidEndpoints);
         cache.Set(SettingsCacheKey, resolved, SettingsCacheTtl);
+        return resolved;
+    }
+
+    /// <summary>
+    /// The agency's own SmsApiKey (OrgSettings) wins; the platform-level key is the fallback, so an
+    /// agency without its own key sends exactly like before per-agency keys existed. Cached per
+    /// agency for 15s alongside the platform settings for the same reasons (panel change visible in
+    /// seconds, no per-call row read).
+    /// </summary>
+    private async Task<string> ResolveApiKeyAsync(Guid agencyId, CancellationToken ct)
+    {
+        var (platformKey, _) = await ResolveSettingsAsync(ct);
+        if (agencyId == Guid.Empty)
+        {
+            return platformKey;
+        }
+
+        var cacheKey = $"apiir:agencykey:{agencyId}";
+        if (cache.TryGetValue(cacheKey, out string? agencyKey) && agencyKey is not null)
+        {
+            return agencyKey;
+        }
+
+        string? key = null;
+        try
+        {
+            key = await dbContext.OrgSettings.AsNoTracking()
+                .Where(s => s.OrganizationId == agencyId)
+                .Select(s => s.SmsApiKey)
+                .FirstOrDefaultAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not read OrgSettings.SmsApiKey for agency {AgencyId} — falling back to the platform key", agencyId);
+        }
+
+        var resolved = string.IsNullOrWhiteSpace(key) ? platformKey : key.Trim();
+        cache.Set(cacheKey, resolved, SettingsCacheTtl);
         return resolved;
     }
 

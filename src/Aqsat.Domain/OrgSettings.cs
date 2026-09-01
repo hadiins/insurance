@@ -32,5 +32,28 @@ public class OrgSettings
     /// constant.</summary>
     public int RenewalAutoWatchLeadDays { get; set; } = 60;
 
+    // ---- Customer portal & payment gateway (docs/CUSTOMER-PORTAL-SPEC.md §3) ----
+
+    /// <summary>The gateway this agency's CUSTOMERS pay the down payment through (goes to the
+    /// agency's own account — the inquiry fee's owner-side gateway is PlatformPaymentSettings).
+    /// Mock = simulated, no real money moves; the safe default before any credential exists.</summary>
+    public PaymentProvider PaymentProvider { get; set; } = PaymentProvider.Mock;
+
+    /// <summary>The agency's own merchant credential at the PSP. Null/empty = real-gateway calls
+    /// fail closed. Never returned in clear by the panel — masked like ApiIrSettings.ApiKey.</summary>
+    public string? AgentMerchantId { get; set; }
+
+    /// <summary>This agency's own api.ir key (its SMS panel credential). Null/empty = fall back to
+    /// the platform-level ApiIrSettings key, so a fresh agency sends exactly like before this
+    /// existed. Never returned in clear by the panel — masked like ApiIrSettings.ApiKey.</summary>
+    public string? SmsApiKey { get; set; }
+
+    /// <summary>How long a portal invitation link stays valid after the agent creates it.</summary>
+    public int PortalInvitationTtlHours { get; set; } = 72;
+
+    /// <summary>Master switch for this agency's customer portal — the link-issuing endpoint
+    /// refuses when false, regardless of anything else.</summary>
+    public bool CustomerPortalEnabled { get; set; }
+
     public byte[] RowVersion { get; set; } = default!;
 }

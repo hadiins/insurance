@@ -64,11 +64,6 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
     [Authorize(Policy = Permissions.SettingsWrite)]
     public async Task<ActionResult<AgencySettingsDto>> UpdateAgencyCode(UpdateAgencyCodeRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.AgencyCode))
-        {
-            return ValidationProblem("کد نمایندگی الزامی است.");
-        }
-
         var organization = await dbContext.Organizations.FirstOrDefaultAsync(o => o.Id == currentUser.ActiveOrganizationId, ct);
         if (organization is null)
         {
@@ -149,6 +144,113 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
         return await Get(ct);
     }
 
+    /// <summary>«تنظیمات درگاه پرداخت» — the gateway half of the agency settings as its own
+    /// endpoint. The agency's gateway receives ONLY its own customers' down payments and
+    /// installments; the inquiry fee goes through the owner's platform gateway (two independent
+    /// accounts that must never interfere — owner decision 2026-09-01).</summary>
+    [HttpGet("payment-gateway")]
+    public async Task<ActionResult<AgencyPaymentGatewayDto>> GetPaymentGateway(CancellationToken ct)
+    {
+        var organization = await dbContext.Organizations.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == currentUser.ActiveOrganizationId, ct);
+        if (organization is null)
+        {
+            return NotFound();
+        }
+
+        var settings = await dbContext.OrgSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
+        var defaults = new OrgSettings();
+
+        return Ok(new AgencyPaymentGatewayDto(
+            organization.Name, organization.Code,
+            (settings?.PaymentProvider ?? defaults.PaymentProvider).ToString(),
+            settings?.CustomerPortalEnabled ?? defaults.CustomerPortalEnabled,
+            !string.IsNullOrWhiteSpace(settings?.AgentMerchantId),
+            Mask(settings?.AgentMerchantId),
+            settings?.PortalInvitationTtlHours ?? defaults.PortalInvitationTtlHours));
+    }
+
+    [HttpPut("payment-gateway")]
+    [Authorize(Policy = Permissions.SettingsWrite)]
+    public async Task<ActionResult<AgencyPaymentGatewayDto>> UpdatePaymentGateway(
+        UpdateAgencyPaymentGatewayRequest request, CancellationToken ct)
+    {
+        if (!Enum.TryParse<PaymentProvider>(request.PaymentProvider, ignoreCase: true, out var paymentProvider))
+        {
+            return ValidationProblem("درگاه پرداخت نامعتبر است.");
+        }
+
+        if (request.PortalInvitationTtlHours <= 0)
+        {
+            return ValidationProblem("مدت اعتبار لینک باید مثبت باشد.");
+        }
+
+        var settings = await dbContext.OrgSettings.FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
+        if (settings is null)
+        {
+            settings = new OrgSettings { OrganizationId = currentUser.ActiveOrganizationId };
+            dbContext.OrgSettings.Add(settings);
+        }
+
+        settings.PaymentProvider = paymentProvider;
+        settings.CustomerPortalEnabled = request.CustomerPortalEnabled;
+        // Null/whitespace = keep the stored credential — same contract as the platform panel and
+        // ApiIrSettings: an ordinary save can never wipe a working merchant ID.
+        if (!string.IsNullOrWhiteSpace(request.AgentMerchantId))
+        {
+            settings.AgentMerchantId = request.AgentMerchantId.Trim();
+        }
+        settings.PortalInvitationTtlHours = request.PortalInvitationTtlHours;
+
+        await dbContext.SaveChangesAsync(ct);
+
+        return await GetPaymentGateway(ct);
+    }
+
+    /// <summary>«تنظیمات پنل پیامکی» — the agency's own api.ir key for sending SMS. Empty key =
+    /// fall back to the platform-level key, so GET distinguishes "has its own" from "inheriting".</summary>
+    [HttpGet("sms-panel")]
+    public async Task<ActionResult<AgencySmsPanelDto>> GetSmsPanel(CancellationToken ct)
+    {
+        var organization = await dbContext.Organizations.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == currentUser.ActiveOrganizationId, ct);
+        if (organization is null)
+        {
+            return NotFound();
+        }
+
+        var settings = await dbContext.OrgSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
+
+        return Ok(new AgencySmsPanelDto(
+            organization.Name, organization.Code,
+            !string.IsNullOrWhiteSpace(settings?.SmsApiKey),
+            Mask(settings?.SmsApiKey)));
+    }
+
+    [HttpPut("sms-panel")]
+    [Authorize(Policy = Permissions.SettingsWrite)]
+    public async Task<ActionResult<AgencySmsPanelDto>> UpdateSmsPanel(UpdateAgencySmsPanelRequest request, CancellationToken ct)
+    {
+        var settings = await dbContext.OrgSettings.FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
+        if (settings is null)
+        {
+            settings = new OrgSettings { OrganizationId = currentUser.ActiveOrganizationId };
+            dbContext.OrgSettings.Add(settings);
+        }
+
+        // Null/whitespace = keep the stored credential — an ordinary save can never wipe a working key.
+        if (!string.IsNullOrWhiteSpace(request.SmsApiKey))
+        {
+            settings.SmsApiKey = request.SmsApiKey.Trim();
+        }
+
+        await dbContext.SaveChangesAsync(ct);
+
+        return await GetSmsPanel(ct);
+    }
+
     /// <summary>Wipes every operational record for this agency — policies, installments,
     /// payments/allocations, collateral, and commission entries — via soft-delete (CLAUDE.md rule
     /// 7: no hard deletes, so this is reversible at the database level even though there is no undo
@@ -212,6 +314,13 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
         !string.IsNullOrWhiteSpace(value) &&
         value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .All(part => int.TryParse(part, out var n) && n >= 0);
+
+    /// <summary>Same masking rule as ApiIrSettingsController/PlatformPaymentController — the
+    /// merchant ID is write-only through this API; GET never returns it in clear.</summary>
+    private static string? Mask(string? merchantId) =>
+        string.IsNullOrWhiteSpace(merchantId) ? null
+        : merchantId.Length <= 8 ? "••••"
+        : $"{merchantId[..4]}••••{merchantId[^4..]}";
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {

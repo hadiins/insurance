@@ -35,6 +35,19 @@ public class AgencySettingsEndpointTests : IClassFixture<WebApplicationFactory<P
         Assert.Equal("7,3,0", settings.ReminderDaysBefore);
         Assert.Equal(30, settings.DefaultWriteOffDays);
         Assert.Equal(60, settings.RenewalAutoWatchLeadDays);
+
+        // The gateway half moved to its own endpoints («تنظیمات درگاه پرداخت») — the general DTO
+        // no longer carries it, so a settings-page save cannot clobber gateway config.
+        var gateway = await client.GetFromJsonAsync<AgencyPaymentGatewayDto>("/api/settings/agency/payment-gateway");
+        Assert.Equal("Mock", gateway!.PaymentProvider);
+        Assert.False(gateway.CustomerPortalEnabled);
+        Assert.False(gateway.HasAgentMerchantId);
+        Assert.Null(gateway.AgentMerchantIdMasked);
+        Assert.Equal(72, gateway.PortalInvitationTtlHours);
+
+        var smsPanel = await client.GetFromJsonAsync<AgencySmsPanelDto>("/api/settings/agency/sms-panel");
+        Assert.False(smsPanel!.HasSmsApiKey);
+        Assert.Null(smsPanel.SmsApiKeyMasked);
     }
 
     [Fact]
@@ -62,12 +75,74 @@ public class AgencySettingsEndpointTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task The_gateway_page_saves_only_its_own_fields_and_never_returns_the_merchant_id()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var updateResponse = await client.PutAsJsonAsync("/api/settings/agency/payment-gateway",
+            new UpdateAgencyPaymentGatewayRequest("Mock", true, "AGT-MERCHANT-12345678", 48));
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<AgencyPaymentGatewayDto>();
+
+        Assert.Equal("Mock", updated!.PaymentProvider);
+        Assert.True(updated.CustomerPortalEnabled);
+        Assert.True(updated.HasAgentMerchantId);
+        // Merchant ID is never returned in clear — responses carry the mask only.
+        Assert.Equal("AGT-••••5678", updated.AgentMerchantIdMasked);
+        Assert.DoesNotContain("AGT-MERCHANT-12345678", await updateResponse.Content.ReadAsStringAsync());
+        Assert.Equal(48, updated.PortalInvitationTtlHours);
+
+        // A null merchant ID keeps the stored one — an ordinary save can never wipe a credential.
+        var keepResponse = await client.PutAsJsonAsync("/api/settings/agency/payment-gateway",
+            new UpdateAgencyPaymentGatewayRequest("Mock", true, null, 24));
+        var kept = await keepResponse.Content.ReadFromJsonAsync<AgencyPaymentGatewayDto>();
+        Assert.True(kept!.HasAgentMerchantId);
+        Assert.Equal("AGT-••••5678", kept.AgentMerchantIdMasked);
+        Assert.Equal(24, kept.PortalInvitationTtlHours);
+
+        var reread = await client.GetFromJsonAsync<AgencyPaymentGatewayDto>("/api/settings/agency/payment-gateway");
+        Assert.Equal("AGT-••••5678", reread!.AgentMerchantIdMasked);
+    }
+
+    [Fact]
+    public async Task The_sms_panel_page_stores_the_agency_key_masked_and_null_keeps_the_stored_one()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var updateResponse = await client.PutAsJsonAsync("/api/settings/agency/sms-panel",
+            new UpdateAgencySmsPanelRequest("AGENCY-SMS-KEY-abcdef123456"));
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<AgencySmsPanelDto>();
+
+        Assert.True(updated!.HasSmsApiKey);
+        Assert.Equal("AGEN••••3456", updated.SmsApiKeyMasked);
+        Assert.DoesNotContain("AGENCY-SMS-KEY-abcdef123456", await updateResponse.Content.ReadAsStringAsync());
+
+        var keepResponse = await client.PutAsJsonAsync("/api/settings/agency/sms-panel",
+            new UpdateAgencySmsPanelRequest(null));
+        var kept = await keepResponse.Content.ReadFromJsonAsync<AgencySmsPanelDto>();
+        Assert.True(kept!.HasSmsApiKey);
+        Assert.Equal("AGEN••••3456", kept.SmsApiKeyMasked);
+    }
+
+    [Fact]
     public async Task Malformed_reminder_offsets_are_rejected()
     {
         var client = await AuthenticatedClientAsync();
 
         var response = await client.PutAsJsonAsync("/api/settings/agency", new UpdateAgencySettingsRequest(
             "نمایندگی", null, null, 3, "Full", true, 9, "not,numbers", 12, 0m, "Fixed", 30, 60));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_zero_ttl_on_the_gateway_page_is_rejected()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PutAsJsonAsync("/api/settings/agency/payment-gateway",
+            new UpdateAgencyPaymentGatewayRequest("Mock", true, null, 0));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
