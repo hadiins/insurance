@@ -71,4 +71,26 @@ public sealed class CountdownController(AppDbContext dbContext, TimeProvider tim
 
         return Ok(new CountdownDashboardDto(owed, collected, owed - collected, dtos));
     }
+
+    /// <summary>Backs the header notification bell — the three counters it shows, in one call so
+    /// the shell never fires three requests on every poll.</summary>
+    [HttpGet("summary")]
+    public async Task<ActionResult<TodaySummaryDto>> Summary(CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+
+        var overdue = await dbContext.Installments.AsNoTracking()
+            .CountAsync(i => i.Status != InstallmentStatus.Settled && i.SettlementDeadline < today, ct);
+
+        var dueRenewals = await dbContext.RenewalWatches.AsNoTracking()
+            .CountAsync(w => w.Status == RenewalWatchStatus.Watching
+                && w.CurrentExpiryDate <= today.AddDays(w.NotifyDaysBefore), ct);
+
+        var total = await dbContext.Customers.AsNoTracking().CountAsync(c => !c.IsProfileComplete, ct);
+        var withoutMobile = await dbContext.Customers.AsNoTracking().CountAsync(c => c.Mobile == null, ct);
+        var withoutNationalId = await dbContext.Customers.AsNoTracking().CountAsync(c => c.NationalId == null, ct);
+
+        return Ok(new TodaySummaryDto(overdue, dueRenewals,
+            new IncompleteProfileSummaryDto(total, withoutMobile, withoutNationalId)));
+    }
 }

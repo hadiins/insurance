@@ -247,7 +247,15 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            query = query.Where(c => c.FullName.Contains(term) || (c.Mobile != null && c.Mobile.Contains(term)));
+            var normalized = DigitNormalizer.ToLatin(term);
+            query = query.Where(c =>
+                c.FullName.Contains(term)
+                || (c.Mobile != null && c.Mobile.Contains(normalized))
+                || (c.NationalId != null && c.NationalId.Contains(normalized))
+                || dbContext.Policies.Any(p => p.CustomerId == c.Id
+                    && p.Vehicle != null
+                    && p.Vehicle.PlateNormalized != null
+                    && p.Vehicle.PlateNormalized.Contains(normalized)));
         }
 
         var customers = await query

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { fa } from "../../lib/persian";
 import type { OpenTab, OpenTabRequest } from "../types";
 
@@ -40,61 +41,76 @@ function keyFor(request: OpenTabRequest): string {
   }
 }
 
-export const useTabsStore = create<TabsState>((set, get) => ({
-  tabs: [],
-  activeKey: null,
-  maxTabs: 12,
-  pendingCloseKey: null,
-  toastMessage: null,
+/** Draft form values of a closing tab must not outlive it — their tab key is gone, so on refresh
+ * they would be restored for a tab that no longer exists. */
+function clearDrafts(tabKey: string): void {
+  const prefix = `aqsat_draft:${tabKey}:`;
+  const doomed: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(prefix)) doomed.push(key);
+  }
+  for (const key of doomed) localStorage.removeItem(key);
+}
 
-  openTab: (request) => {
-    const { tabs } = get();
-    const isNewEveryTime = request.kind === "multi-create";
-    if (!isNewEveryTime) {
-      const key = keyFor(request);
-      const existing = tabs.find((t) => t.key === key);
-      if (existing) {
-        set({ activeKey: key });
-        return;
-      }
-    }
+export const useTabsStore = create<TabsState>()(
+  persist(
+    (set, get) => ({
+      tabs: [],
+      activeKey: null,
+      maxTabs: 12,
+      pendingCloseKey: null,
+      toastMessage: null,
 
-    if (tabs.length >= get().maxTabs) {
-      set({ toastMessage: `حداکثر ${fa(get().maxTabs)} تب باز می‌شود` });
-      return;
-    }
+      openTab: (request) => {
+        const { tabs } = get();
+        const isNewEveryTime = request.kind === "multi-create";
+        if (!isNewEveryTime) {
+          const key = keyFor(request);
+          const existing = tabs.find((t) => t.key === key);
+          if (existing) {
+            set({ activeKey: key });
+            return;
+          }
+        }
 
-    const key = keyFor(request);
-    const newTab: OpenTab = {
-      key,
-      navType: request.navType,
-      page: request.page,
-      title: request.title,
-      pinned: request.pinned ?? false,
-      dirty: false,
-      payload: request.payload,
-    };
-    set({ tabs: [...tabs, newTab], activeKey: key });
-  },
+        if (tabs.length >= get().maxTabs) {
+          set({ toastMessage: `حداکثر ${fa(get().maxTabs)} تب باز می‌شود` });
+          return;
+        }
 
-  closeTab: (key, force) => {
-    const { tabs, activeKey } = get();
-    const tab = tabs.find((t) => t.key === key);
-    if (!tab || tab.pinned) return;
+        const key = keyFor(request);
+        const newTab: OpenTab = {
+          key,
+          navType: request.navType,
+          page: request.page,
+          title: request.title,
+          pinned: request.pinned ?? false,
+          dirty: false,
+          payload: request.payload,
+        };
+        set({ tabs: [...tabs, newTab], activeKey: key });
+      },
 
-    if (tab.dirty && !force) {
-      set({ pendingCloseKey: key });
-      return;
-    }
+      closeTab: (key, force) => {
+        const { tabs, activeKey } = get();
+        const tab = tabs.find((t) => t.key === key);
+        if (!tab || tab.pinned) return;
 
-    const index = tabs.findIndex((t) => t.key === key);
-    const nextTabs = tabs.filter((t) => t.key !== key);
-    let nextActive = activeKey;
-    if (activeKey === key) {
-      nextActive = nextTabs[index - 1]?.key ?? nextTabs[0]?.key ?? null;
-    }
-    set({ tabs: nextTabs, activeKey: nextActive, pendingCloseKey: null });
-  },
+        if (tab.dirty && !force) {
+          set({ pendingCloseKey: key });
+          return;
+        }
+
+        const index = tabs.findIndex((t) => t.key === key);
+        const nextTabs = tabs.filter((t) => t.key !== key);
+        let nextActive = activeKey;
+        if (activeKey === key) {
+          nextActive = nextTabs[index - 1]?.key ?? nextTabs[0]?.key ?? null;
+        }
+        clearDrafts(key);
+        set({ tabs: nextTabs, activeKey: nextActive, pendingCloseKey: null });
+      },
 
   confirmClose: () => {
     const key = get().pendingCloseKey;
@@ -123,4 +139,12 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   },
 
   dismissToast: () => set({ toastMessage: null }),
-}));
+    }),
+    {
+      name: "aqsat_tabs",
+      // Only the durable tab list survives a refresh — pendingCloseKey/toastMessage are transient
+      // dialog state, restoring them against no dialog would be nonsense.
+      partialize: (state) => ({ tabs: state.tabs, activeKey: state.activeKey, maxTabs: state.maxTabs }),
+    },
+  ),
+);

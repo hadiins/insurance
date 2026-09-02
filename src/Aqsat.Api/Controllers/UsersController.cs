@@ -34,14 +34,16 @@ public sealed class UsersController(AppDbContext dbContext, IPasswordHasher pass
         return Ok(memberships);
     }
 
-    /// <summary>The system "مالک نرم‌افزار" role is deliberately excluded — an agency manager must
-    /// never be able to hand Platform.Owner to their own staff through this list (that role only
-    /// exists via the one-time owner bootstrap, docs/UPDATE-SYSTEM.md rule 1).</summary>
+    /// <summary>The system roles are deliberately excluded — except the seeded "بازاریاب" role,
+    /// which only exists to be assigned here. The real cut is by permission: any role holding
+    /// Platform.Owner must never be assignable by an agency manager (docs/UPDATE-SYSTEM.md rule 1),
+    /// which covers the owner-bootstrap system role without hiding the marketer one.</summary>
     [HttpGet("roles")]
     public async Task<ActionResult<IReadOnlyList<RoleOptionDto>>> Roles(CancellationToken ct)
     {
         var roles = await dbContext.Roles.AsNoTracking()
-            .Where(r => !r.IsDeleted && !r.IsSystemRole)
+            .Where(r => !r.IsDeleted)
+            .Where(r => !r.RolePermissions.Any(p => !p.IsDeleted && p.Permission == Permissions.PlatformOwner))
             .OrderBy(r => r.Name)
             .Select(r => new RoleOptionDto(r.Id, r.Name))
             .ToListAsync(ct);
@@ -67,8 +69,10 @@ public sealed class UsersController(AppDbContext dbContext, IPasswordHasher pass
             return ValidationProblem("رمز عبور باید حداقل ۸ کاراکتر باشد.");
         }
 
-        var role = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId && !r.IsDeleted, ct);
-        if (role is null || role.IsSystemRole)
+        var role = await dbContext.Roles
+            .Include(r => r.RolePermissions)
+            .FirstOrDefaultAsync(r => r.Id == request.RoleId && !r.IsDeleted, ct);
+        if (role is null || role.RolePermissions.Any(p => !p.IsDeleted && p.Permission == Permissions.PlatformOwner))
         {
             return ValidationProblem("نقش یافت نشد.");
         }

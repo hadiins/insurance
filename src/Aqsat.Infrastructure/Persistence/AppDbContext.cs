@@ -25,6 +25,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerPortalInvitation> CustomerPortalInvitations => Set<CustomerPortalInvitation>();
     public DbSet<PortalInvitationTokenIndex> PortalInvitationTokenIndex => Set<PortalInvitationTokenIndex>();
+    public DbSet<CreditReport> CreditReports => Set<CreditReport>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<PropertySubject> PropertySubjects => Set<PropertySubject>();
     public DbSet<InsuranceLine> InsuranceLines => Set<InsuranceLine>();
@@ -38,12 +39,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<Collateral> Collaterals => Set<Collateral>();
     public DbSet<CashBox> CashBoxes => Set<CashBox>();
+    public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<PaymentCheque> PaymentCheques => Set<PaymentCheque>();
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<InsurerRemittance> InsurerRemittances => Set<InsurerRemittance>();
     public DbSet<InsurerRemittanceLine> InsurerRemittanceLines => Set<InsurerRemittanceLine>();
+    public DbSet<FundTransfer> FundTransfers => Set<FundTransfer>();
+    public DbSet<CommissionPayout> CommissionPayouts => Set<CommissionPayout>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportRow> ImportRows => Set<ImportRow>();
     public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();

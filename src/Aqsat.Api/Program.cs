@@ -249,6 +249,39 @@ try
         // isn't reachable yet must not take the whole process down with it.
         if (app.Configuration.GetValue("Deployment:ApplyMigrationsOnStartup", true))
         {
+            // One-time deploy utility: drop the whole database so MigrateAsync below recreates it
+            // from scratch — the "wipe all previous data" move between hosting generations where
+            // the SQL server is only reachable from inside the host network (no out-of-band wipe
+            // possible). MUST be removed from configuration after the first successful start:
+            // leaving it on wipes again on every app-pool recycle.
+            if (app.Configuration.GetValue("Deployment:ResetDatabaseOnStartup", false))
+            {
+                try
+                {
+                    using var resetScope = app.Services.CreateScope();
+                    var cs = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
+                        resetScope.ServiceProvider.GetRequiredService<AppDbContext>().Database.GetDbConnection().ConnectionString);
+                    var databaseName = cs.InitialCatalog;
+                    cs.InitialCatalog = "master";
+                    await using var master = new Microsoft.Data.SqlClient.SqlConnection(cs.ConnectionString);
+                    await master.OpenAsync();
+                    // SINGLE_USER with ROLLBACK IMMEDIATE kills every other connection first —
+                    // a plain DROP fails as long as anything (a previous app instance, a stray
+                    // Hangfire server) still holds a connection to the database.
+                    await using var quarantine = master.CreateCommand();
+                    quarantine.CommandText = $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE";
+                    await quarantine.ExecuteNonQueryAsync();
+                    await using var drop = master.CreateCommand();
+                    drop.CommandText = $"DROP DATABASE [{databaseName}]";
+                    await drop.ExecuteNonQueryAsync();
+                    Log.Warning("Deployment:ResetDatabaseOnStartup was set — database {Database} dropped; migrations will recreate it empty.", databaseName);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Deployment:ResetDatabaseOnStartup failed — continuing against the existing database.");
+                }
+            }
+
             try
             {
                 using var migrationScope = app.Services.CreateScope();
@@ -271,6 +304,10 @@ try
                     // this, a freshly deployed production database has zero InsuranceLine rows and
                     // "ثبت بیمه‌نامه" renders with nothing selectable.
                     await Aqsat.Infrastructure.Seed.InsuranceLineSeeder.EnsureSeededAsync(migrationContext);
+                    // The seeded "بازاریاب" system role — what an agency's manager assigns when giving
+                    // a marketer panel access (MarketersController's panel-access endpoints). Idempotent
+                    // get-or-create, so it lands here alongside the other startup seeding.
+                    await Aqsat.Infrastructure.Seed.MarketerRoleSeeder.EnsureSeededAsync(migrationContext);
                     // One-time, idempotent: decrypts the legacy NationalIdEncrypted columns into the new
                     // plaintext NationalId columns and drops the legacy columns once empty (owner
                     // decision 2026-08-28 — CLAUDE.md rule 12 rewritten). SQL cannot decrypt AES-GCM,

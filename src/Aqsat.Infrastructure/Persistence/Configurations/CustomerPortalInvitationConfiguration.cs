@@ -26,5 +26,15 @@ public sealed class CustomerPortalInvitationConfiguration : AqsatEntityConfigura
 
         // Every FK gets its own index (rule 5).
         builder.HasIndex(i => new { i.AgencyId, i.CustomerId });
+
+        // The policy link for issuance-verification invitations — nullable, one chain per link.
+        builder.HasOne(i => i.Policy)
+            .WithMany()
+            .HasForeignKey(i => i.PolicyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // The wizard's verification step looks the chain up by policy.
+        builder.HasIndex(i => new { i.AgencyId, i.PolicyId })
+            .HasFilter("[PolicyId] IS NOT NULL AND [IsDeleted] = 0");
     }
 }

@@ -74,6 +74,65 @@ public sealed class InsurerRemittancesController(AppDbContext dbContext, ICurren
         return Ok(rows.OrderBy(r => r.CollectedOn).ToList());
     }
 
+    /// <summary>The pending-remittance liability rolled up per insurer — what the agency still
+    /// owes each insurer. Policy.InsurerName is the grouping key; policies issued before the
+    /// column existed (and imports) fall back to the agency's own Organization.InsurerName.</summary>
+    [HttpGet("by-insurer")]
+    public async Task<ActionResult<IReadOnlyList<InsurerLiabilityRow>>> ByInsurer(CancellationToken ct)
+    {
+        var orgInsurer = await dbContext.Organizations.AsNoTracking()
+            .Where(o => o.Id == currentUser.ActiveOrganizationId)
+            .Select(o => o.InsurerName)
+            .FirstOrDefaultAsync(ct);
+
+        var pending = await dbContext.Installments
+            .AsNoTracking()
+            .Where(i => i.Status == Domain.Enums.InstallmentStatus.Settled)
+            .Where(i => !dbContext.InsurerRemittanceLines.Any(l => l.InstallmentId == i.Id))
+            .Select(i => new { i.Id, Insurer = i.Policy.InsurerName ?? orgInsurer ?? "نامشخص", i.Amount, Deadline = i.SettlementDeadline })
+            .ToListAsync(ct);
+
+        // Down-payment and non-installment full-payment receipts have no PaymentAllocation rows —
+        // InstallmentIdHint holds the policy's own Id in both cases (no real FK, PaymentConfiguration.cs).
+        var barePayments = await dbContext.Payments
+            .AsNoTracking()
+            .Where(p => !p.Allocations.Any() && !p.IsDeleted)
+            .Where(p => !dbContext.InsurerRemittanceLines.Any(l => l.InstallmentId == null && l.PolicyId == p.InstallmentIdHint))
+            .Join(dbContext.Policies, p => p.InstallmentIdHint, pol => pol.Id,
+                (p, pol) => new { Insurer = pol.InsurerName ?? orgInsurer ?? "نامشخص", p.Amount, CollectedOn = p.PaidOn })
+            .ToListAsync(ct);
+
+        // For settled installments, use the last actual collection date (same as Pending) rather
+        // than the deadline — the liability clock starts when the money came in.
+        var lastPaidByInstallment = await dbContext.PaymentAllocations
+            .AsNoTracking()
+            .GroupBy(a => a.InstallmentId)
+            .Select(g => new { InstallmentId = g.Key, LastPaidOn = g.Max(a => a.Payment.PaidOn) })
+            .ToListAsync(ct);
+        var lastPaid = lastPaidByInstallment.ToDictionary(x => x.InstallmentId, x => x.LastPaidOn);
+
+        var pendingRows = pending.Select(i => (i.Insurer, i.Amount, CollectedOn: lastPaid.GetValueOrDefault(i.Id, i.Deadline))).ToList();
+
+        var remitted = await dbContext.InsurerRemittanceLines
+            .AsNoTracking()
+            .Join(dbContext.Policies, l => l.PolicyId, pol => pol.Id,
+                (l, pol) => new { Insurer = pol.InsurerName ?? orgInsurer ?? "نامشخص", l.Amount })
+            .ToListAsync(ct);
+
+        var result = pendingRows.Concat(barePayments.Select(p => (p.Insurer, p.Amount, p.CollectedOn)))
+            .GroupBy(x => x.Insurer)
+            .Select(g => new InsurerLiabilityRow(
+                g.Key,
+                g.Count(),
+                g.Sum(x => x.Amount),
+                g.Min(x => (DateOnly?)x.CollectedOn),
+                remitted.Where(r => r.Insurer == g.Key).Sum(r => r.Amount)))
+            .OrderByDescending(r => r.PendingAmount)
+            .ToList();
+
+        return Ok(result);
+    }
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<InsurerRemittanceDto>>> List(CancellationToken ct)
     {

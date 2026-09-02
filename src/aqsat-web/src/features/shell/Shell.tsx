@@ -6,7 +6,9 @@ import { TabBar } from "./TabBar";
 import { Stage } from "./Stage";
 import { ConfirmCloseDialog } from "./ConfirmCloseDialog";
 import { ThemeToggle } from "./ThemeToggle";
+import { ThemePalettePicker } from "./ThemePalettePicker";
 import { Toast } from "./Toast";
+import { NotificationBell } from "./NotificationBell";
 import { MaintenanceBanner } from "../platform/MaintenanceBanner";
 
 export function Shell() {
@@ -22,7 +24,13 @@ export function Shell() {
 
   useEffect(() => {
     if (tabs.length === 0) {
-      openTab({ navType: "today", page: "today", kind: "singleton", title: "امروز", pinned: true });
+      // A marketer-only login (Marketer.SelfView, no Policy.Read) cannot use «امروز» — their
+      // landing tab is their own panel instead of a pinned tab full of 403s.
+      if (user?.permissions.includes("Marketer.SelfView") && !user.permissions.includes("Policy.Read")) {
+        openTab({ navType: "marketer-panel", page: "marketer-panel", kind: "singleton", title: "پنل بازاریاب", pinned: true });
+      } else {
+        openTab({ navType: "today", page: "today", kind: "singleton", title: "امروز", pinned: true });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -54,6 +62,10 @@ export function Shell() {
         <b className="text-[14.5px] font-bold text-(--ice)">دفتر اقساط</b>
         <span className="flex-1" />
 
+        <NotificationBell />
+        <ThemeToggle />
+        <ThemePalettePicker />
+
         {user && user.organizations.length > 1 ? (
           <select
             value={user.activeOrganizationId}
@@ -79,8 +91,6 @@ export function Shell() {
         >
           خروج
         </button>
-
-        <ThemeToggle />
       </div>
 
       <div className="flex min-h-0 flex-1">

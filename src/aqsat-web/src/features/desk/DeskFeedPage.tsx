@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
@@ -96,6 +97,8 @@ export function DeskFeedPage() {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useLiveReload(reload);
 
   const filtered =
     rows === null

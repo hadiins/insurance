@@ -2,6 +2,22 @@ namespace Aqsat.Application.ApiIr;
 
 public readonly record struct ShahkarResult(bool Matched);
 
+/// <summary>استعلام تعداد چک برگشتی (/api/sw1/UnpaidCheque). Amounts are RIALS as api.ir returns
+/// them — callers convert to toman (rule 19). Null fields mean "no real answer" (sandboxed call or
+/// failure); a null return itself means the call was rejected outright.</summary>
+public sealed record UnpaidChequeResult(int? Count, decimal? SumAmountRial, decimal? SumBouncedAmountRial);
+
+/// <summary>استعلام تسهیلات فعال بانکی (/api/sw1/ActiveLoans). Amounts are RIALS; every amount is
+/// nullable because api.ir returns `info` as null when the person has no active facilities.</summary>
+public sealed record ActiveLoansResult(
+    int? Count,
+    decimal? TotalAmountRial,
+    decimal? DebtTotalAmountRial,
+    decimal? PastExpiredTotalAmountRial,
+    decimal? DeferredTotalAmountRial,
+    decimal? SuspiciousTotalAmountRial,
+    decimal? DishonoredRial);
+
 /// <summary>
 /// docs/PHASE-1-SPEC.md §6 — the six api.ir services Phase 1 uses. Every call is logged for cost
 /// (docs/TASKS.md Task 14) and, where the spec says so, cached (CLAUDE.md rule 26). Sandbox by
@@ -27,4 +43,12 @@ public interface IApiIrClient
     Task<bool> SmsOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default);
 
     Task<bool> CallOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default);
+
+    /// <summary>Never cached — the issuance-time credit check must see the customer's situation as
+    /// of right now. Null = the call was rejected (bad key, no credit); a non-null result with null
+    /// fields = sandboxed, no real data.</summary>
+    Task<UnpaidChequeResult?> UnpaidChequeAsync(string nationalCode, Guid agencyId, CancellationToken ct = default);
+
+    /// <summary>Never cached, same contract as UnpaidChequeAsync.</summary>
+    Task<ActiveLoansResult?> ActiveLoansAsync(string nationalCode, Guid agencyId, CancellationToken ct = default);
 }

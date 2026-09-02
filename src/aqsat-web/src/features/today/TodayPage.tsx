@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDisplay } from "../../lib/jalali";
+import { useLiveReload } from "../shell/useLiveReload";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 
 interface CountdownRowDto {
@@ -65,6 +67,27 @@ interface IncompleteProfileSummaryDto {
   withoutNationalId: number;
 }
 
+interface RenewalWatchDto {
+  id: string;
+  customerId: string | null;
+  customerFullName: string | null;
+  prospectName: string | null;
+  prospectMobile: string | null;
+  insuranceLineName: string;
+  currentInsurer: string | null;
+  currentExpiryDate: string;
+  notifyDaysBefore: number;
+  status: string;
+}
+
+/** The watch window is already open: expiry is at or before today + NotifyDaysBefore. */
+function isRenewalDue(w: RenewalWatchDto): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(`${w.currentExpiryDate}T00:00:00`);
+  return expiry.getTime() <= today.getTime() + w.notifyDaysBefore * 86_400_000;
+}
+
 export function TodayPage() {
   const openTab = useTabsStore((s) => s.openTab);
   const [data, setData] = useState<CountdownDashboardDto | null>(null);
@@ -72,13 +95,20 @@ export function TodayPage() {
   const [payingRow, setPayingRow] = useState<CountdownRowDto | null>(null);
   const [pnl, setPnl] = useState<PnlSummaryDto | null>(null);
   const [incompleteProfiles, setIncompleteProfiles] = useState<IncompleteProfileSummaryDto | null>(null);
+  const [dueRenewals, setDueRenewals] = useState<RenewalWatchDto[] | null>(null);
 
   const reload = useCallback(() => {
     api
       .get<CountdownDashboardDto>("/countdown")
       .then(setData)
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری اطلاعات"));
+    api
+      .get<RenewalWatchDto[]>("/renewal-watches?status=Watching")
+      .then((rows) => setDueRenewals(rows.filter(isRenewalDue)))
+      .catch(() => setDueRenewals(null));
   }, []);
+
+  useLiveReload(reload);
 
   useEffect(() => {
     reload();
@@ -156,6 +186,73 @@ export function TodayPage() {
             <span>
               بدون کد ملی: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutNationalId)}</b> ← اعتبارسنجی ممکن نیست
             </span>
+          </div>
+        </div>
+      )}
+
+      {dueRenewals !== null && dueRenewals.length > 0 && (
+        <div className="mb-4.5 rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-[13px] font-bold text-(--ice)">
+              🔁 سررسیدهای تمدید نزدیک — {fa(dueRenewals.length)} مورد
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                openTab({
+                  navType: "renewal-watches",
+                  page: "renewal-watches",
+                  kind: "singleton",
+                  title: "سررسید تمدید",
+                })
+              }
+              className="text-[11px] text-(--ice-3) transition-colors hover:text-(--ice)"
+            >
+              مشاهدهٔ همه ←
+            </button>
+          </div>
+          <div className="overflow-hidden rounded-[10px] border border-(--edge)">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    بیمه‌گذار
+                  </th>
+                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    رشته
+                  </th>
+                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    بیمه‌گر فعلی
+                  </th>
+                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    تاریخ انقضا
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {dueRenewals.map((w) => (
+                  <tr
+                    key={w.id}
+                    onClick={() =>
+                      openTab({
+                        navType: "renewal-watches",
+                        page: "renewal-watches",
+                        kind: "singleton",
+                        title: "سررسید تمدید",
+                      })
+                    }
+                    className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
+                  >
+                    <td className="px-3 py-2 text-[13px] font-semibold">
+                      {w.customerFullName ?? w.prospectName ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-[12.5px] text-(--ice-3)">{w.insuranceLineName}</td>
+                    <td className="px-3 py-2 text-[12.5px] text-(--ice-3)">{w.currentInsurer ?? "—"}</td>
+                    <td className="px-3 py-2 text-[12.5px] font-bold">{toJalaliDisplay(w.currentExpiryDate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

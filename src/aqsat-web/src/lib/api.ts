@@ -1,3 +1,6 @@
+import { emitDataChanged } from "./dataEvents";
+import { clearPersistedWorkspace } from "./sessionStorage";
+
 const TOKEN_KEY = "aqsat_token";
 const ORG_KEY = "aqsat_active_org";
 
@@ -62,6 +65,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (response.status === 401 && path !== "/auth/login") {
     setToken(null);
     setActiveOrgId(null);
+    // A new login must start from a clean workspace — another user (or a stale
+    // draft from before the session expired) must not inherit these tabs/drafts.
+    clearPersistedWorkspace();
     window.dispatchEvent(new Event(AUTH_CLEARED_EVENT));
     throw new ApiError(401, "نشست شما منقضی شده است.");
   }
@@ -87,10 +93,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (response.status === 204) {
+    notifyMutation(options.method);
     return undefined as T;
   }
 
+  notifyMutation(options.method);
   return (await response.json()) as T;
+}
+
+/** A successful non-GET means server data changed — tell the live-reload subscribers. */
+function notifyMutation(method: string | undefined): void {
+  if (method && method !== "GET") emitDataChanged();
 }
 
 export const api = {

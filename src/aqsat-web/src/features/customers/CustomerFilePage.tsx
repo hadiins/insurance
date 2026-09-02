@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
@@ -81,7 +82,7 @@ export function CustomerFilePage() {
   const [issueMessage, setIssueMessage] = useState<string | null>(null);
   const [issueError, setIssueError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadFile = () => {
     if (!payload?.customerId) return;
     api
       .get<CustomerFileDto>(`/customers/${payload.customerId}/file`)
@@ -90,7 +91,11 @@ export function CustomerFilePage() {
         setError(null);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری پروندهٔ مشتری"));
-  }, [payload?.customerId]);
+  };
+
+  useEffect(loadFile, [payload?.customerId]);
+
+  useLiveReload(loadFile);
 
   useEffect(() => {
     if (!payload?.customerId || section !== "portal") return;

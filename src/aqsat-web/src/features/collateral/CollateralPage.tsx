@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
+import { useDraftState } from "../shell/useDraftState";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
@@ -26,6 +28,12 @@ interface CollateralDto {
   status: "Held" | "AtBank" | "Cleared" | "Bounced";
   colorCode: string | null;
   checkedAt: string | null;
+}
+
+interface BankDto {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 const TYPE_LABEL: Record<CollateralDto["type"], string> = {
@@ -58,13 +66,22 @@ export function CollateralPage() {
   const [statusFilter, setStatusFilter] = useState(initial.status ?? "");
   const [upcomingOnly, setUpcomingOnly] = useState(Boolean(initial.upcomingDays));
   const [error, setError] = useState<string | null>(null);
+  const [banks, setBanks] = useState<BankDto[]>([]);
 
-  const [policyId, setPolicyId] = useState("");
-  const [type, setType] = useState("ChequeSayadi");
-  const [sayadId, setSayadId] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [form, setForm] = useDraftState("register-form", {
+    policyId: "",
+    type: "ChequeSayadi",
+    sayadId: "",
+    bankName: "",
+    amount: "",
+    dueDate: "",
+  });
+  const policyId = form.policyId;
+  const type = form.type;
+  const sayadId = form.sayadId;
+  const bankName = form.bankName;
+  const amount = form.amount;
+  const dueDate = form.dueDate;
 
   function reload() {
     const params = new URLSearchParams();
@@ -78,6 +95,15 @@ export function CollateralPage() {
   }
 
   useEffect(reload, [typeFilter, statusFilter, upcomingOnly]);
+
+  useLiveReload(reload);
+
+  useEffect(() => {
+    api
+      .get<BankDto[]>("/settings/cash-and-bank/banks")
+      .then(setBanks)
+      .catch(() => {});
+  }, []);
 
   async function register() {
     if (!policyId.trim() || !amount) {
@@ -98,11 +124,7 @@ export function CollateralPage() {
         amount: Number(amount),
         dueDate: dueDate || null,
       });
-      setPolicyId("");
-      setSayadId("");
-      setBankName("");
-      setAmount("");
-      setDueDate("");
+      setForm({ ...form, policyId: "", sayadId: "", amount: "", dueDate: "" });
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت ناموفق بود.");
@@ -147,13 +169,13 @@ export function CollateralPage() {
         <div className="mb-3 grid grid-cols-6 gap-3">
           <input
             value={policyId}
-            onChange={(e) => setPolicyId(e.target.value)}
+            onChange={(e) => setForm({ ...form, policyId: e.target.value })}
             placeholder="شناسهٔ بیمه‌نامه"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <select
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
           >
             <option value="ChequeSayadi">چک صیادی</option>
@@ -162,26 +184,32 @@ export function CollateralPage() {
           {type === "ChequeSayadi" && (
             <input
               value={sayadId}
-              onChange={(e) => setSayadId(e.target.value)}
+              onChange={(e) => setForm({ ...form, sayadId: e.target.value })}
               placeholder="شناسهٔ صیادی"
               className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
             />
           )}
-          <input
+          <select
             value={bankName}
-            onChange={(e) => setBankName(e.target.value)}
-            placeholder="نام بانک"
+            onChange={(e) => setForm({ ...form, bankName: e.target.value })}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
-          />
+          >
+            <option value="">بانک…</option>
+            {banks.filter((b) => b.isActive).map((b) => (
+              <option key={b.id} value={b.name}>
+                {b.name}
+              </option>
+            ))}
+          </select>
           <MoneyInput
             value={amount}
-            onChange={setAmount}
+            onChange={(v) => setForm({ ...form, amount: v })}
             placeholder="مبلغ"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
           />
           <JalaliDateField
             value={dueDate}
-            onChange={setDueDate}
+            onChange={(iso) => setForm({ ...form, dueDate: iso })}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
           />
         </div>

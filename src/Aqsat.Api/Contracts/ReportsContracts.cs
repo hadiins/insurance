@@ -12,7 +12,18 @@ public sealed record PnlResultDto(
     decimal AgencyCommissionIncome, decimal ServiceFeeIncome, decimal MarketerCommissionExpense, decimal DefaultWriteOffExpense,
     decimal TotalIncome, decimal TotalExpense, decimal NetProfit,
     IReadOnlyList<PnlBreakdownRow> ByLine, IReadOnlyList<PnlBreakdownRow> ByMarketer, IReadOnlyList<PnlBreakdownRow> ByMonth,
-    decimal OperatingExpense = 0);
+    decimal OperatingExpense = 0, decimal MarketerCommissionPaid = 0);
+
+/// <summary>Aging of open installments by days past due — the standard collections tool. Buckets
+/// hold the remaining Balance, never the original Amount.</summary>
+public sealed record AgingReportRow(
+    Guid CustomerId, string CustomerFullName, string? CustomerMobile,
+    int OpenCount, decimal CurrentAmount, decimal Overdue1To30, decimal Overdue31To60, decimal Overdue60Plus,
+    decimal TotalOpen, DateOnly? OldestOverdueDueDate);
+
+public sealed record AgingReportDto(
+    decimal TotalCurrentAmount, decimal TotalOverdue1To30, decimal TotalOverdue31To60, decimal TotalOverdue60Plus,
+    decimal TotalOpen, IReadOnlyList<AgingReportRow> Rows);
 
 /// <summary>docs/TASKS.md Task 18 — filtered, server-side-paged collections report. Reads only
 /// indexed columns on Installment (AgencyId, Status, SettlementDeadline) — no heavy join on live

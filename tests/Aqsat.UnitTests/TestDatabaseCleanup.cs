@@ -44,6 +44,7 @@ internal static class TestDatabaseCleanup
             "DELETE FROM UserOrgRoles; DELETE FROM RolePermissions; DELETE FROM Roles; " +
             "DELETE FROM Users; DELETE FROM Organizations; DELETE FROM ApiIrSettings; " +
             "DELETE FROM AgencyStatsDaily; DELETE FROM CustomerPortalInvitations; " +
+            "DELETE FROM CreditReports; DELETE FROM Banks; " +
             "DELETE FROM PortalInvitationTokenIndex; DELETE FROM ApiIrCallLogs; " +
             "EXEC sp_MSforeachtable 'ALTER TABLE ? CHECK CONSTRAINT ALL'; " +
             "ALTER SECURITY POLICY AgencyAccessPolicy WITH (STATE = ON);");

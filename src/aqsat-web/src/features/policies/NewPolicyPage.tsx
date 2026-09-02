@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
+import { useDraftState } from "../shell/useDraftState";
 import { api, ApiError } from "../../lib/api";
 import { fa, isValidNationalId, money, toLatinDigits } from "../../lib/persian";
 import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
@@ -8,6 +9,7 @@ import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./Plate
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { addOneJalaliYear, toJalaliDisplay } from "../../lib/jalali";
 import { MoneyInput } from "../../components/MoneyInput";
+import { PolicyVerificationStep } from "./PolicyVerificationStep";
 
 interface InsuranceLineDto {
   id: string;
@@ -23,6 +25,20 @@ interface CreatePolicyResultDto {
   policyId: string;
   policyNumber: string;
   customerId: string;
+}
+
+interface MarketerOptionDto {
+  id: string;
+  fullName: string;
+  isActive: boolean;
+}
+
+interface MarketerRateLiteDto {
+  id: string;
+  insuranceLineId: string;
+  ratePercent: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
 }
 
 interface CustomerLookupProfileDto {
@@ -71,7 +87,21 @@ interface BankAccountDto {
 
 type MethodType = "Cash" | "BankTransfer" | "Cheque" | "PosDirect";
 
-type Step = 1 | 2 | 3 | 4;
+/** Step 4 (اعتبارسنجی) only exists on the installment path; cash jumps 2 → 5. */
+type Step = 1 | 2 | 3 | 4 | 5;
+
+type PaymentType = "installment" | "cash";
+
+interface WizardDraft {
+  step: Step;
+  form: FormState;
+  plate: PlateParts;
+  nationalIdInput: string;
+  serialInput: string;
+  manualEntry: boolean;
+  manualNumberInput: string;
+  paymentType: PaymentType;
+}
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -79,7 +109,15 @@ const STEP_LABELS: Record<Step, string> = {
   1: "مشتری",
   2: "بیمهنامه",
   3: "اقساط",
-  4: "دریافت و ثبت نهایی",
+  4: "اعتبارسنجی",
+  5: "دریافت و ثبت نهایی",
+};
+
+const METHOD_LABELS: Record<MethodType, string> = {
+  Cash: "نقدی",
+  BankTransfer: "واریز بانکی",
+  Cheque: "چک",
+  PosDirect: "پوز مستقیم بیمهگر",
 };
 
 const INPUT_CLASS =
@@ -99,6 +137,8 @@ interface FormState {
   customerAddress: string;
   customerPostalCode: string;
   insuranceLineId: string;
+  marketerId: string;
+  insurerName: string;
   propertyAddress: string;
   propertyPostalCode: string;
   netPremium: string;
@@ -122,6 +162,8 @@ const EMPTY: FormState = {
   customerAddress: "",
   customerPostalCode: "",
   insuranceLineId: "",
+  marketerId: "",
+  insurerName: "",
   propertyAddress: "",
   propertyPostalCode: "",
   netPremium: "",
@@ -151,6 +193,7 @@ export function NewPolicyPage() {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [lines, setLines] = useState<InsuranceLineDto[] | null>(null);
+  const [marketers, setMarketers] = useState<MarketerOptionDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -205,12 +248,101 @@ export function NewPolicyPage() {
   const [chequePresenterName, setChequePresenterName] = useState("");
   const [finalized, setFinalized] = useState(false);
 
+  // Step 2's نقدی/اقساطی choice (owner decision 2026-09-01) — it decides the whole tail of the
+  // wizard: cash goes straight to the full-payment receipt, installment goes through scheduling
+  // and the portal verification chain.
+  const [paymentType, setPaymentType] = useState<PaymentType>("installment");
+  const [verificationRejected, setVerificationRejected] = useState(false);
+
+  // Draft survival across refresh — only steps 1-2 are safe to restore: from step 3 on the policy
+  // row already exists server-side (`created`), and re-running the wizard would duplicate it.
+  const [draft, setDraft, clearDraft] = useDraftState<WizardDraft | null>("wizard", null);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  useEffect(() => {
+    if (draft === null || draft.step > 2) {
+      clearDraft();
+    } else {
+      setForm(draft.form);
+      setPlate(draft.plate);
+      setNationalIdInput(draft.nationalIdInput);
+      setSerialInput(draft.serialInput);
+      setManualEntry(draft.manualEntry);
+      setManualNumberInput(draft.manualNumberInput);
+      setPaymentType(draft.paymentType);
+      setStep(draft.step);
+    }
+    setDraftRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!draftRestored) return;
+    // Once the policy exists server-side (step > 2) or the wizard is finished, the draft must
+    // not survive — restoring it would re-issue an already-issued policy.
+    if (finalized || step > 2) {
+      clearDraft();
+      return;
+    }
+    setDraft({
+      step,
+      form,
+      plate,
+      nationalIdInput,
+      serialInput,
+      manualEntry,
+      manualNumberInput,
+      paymentType,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftRestored, step, form, plate, nationalIdInput, serialInput, manualEntry, manualNumberInput, paymentType]);
+
   useEffect(() => {
     api
       .get<InsuranceLineDto[]>("/insurance-lines")
       .then(setLines)
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری رشتههای بیمه"));
+    // A user without Marketer.Manage legitimately cannot list marketers — the selector simply
+    // stays hidden for them rather than erroring the whole wizard.
+    api
+      .get<MarketerOptionDto[]>("/marketers")
+      .then((all) => setMarketers(all.filter((m) => m.isActive)))
+      .catch(() => setMarketers(null));
   }, []);
+
+  // The commission rate that will be locked at issuance — read from the marketer's rate history
+  // (rows newest-first) and matched against the chosen line and issue date.
+  const [marketerRates, setMarketerRates] = useState<MarketerRateLiteDto[] | null>(null);
+  useEffect(() => {
+    if (!form.marketerId) {
+      setMarketerRates(null);
+      return;
+    }
+    let stale = false;
+    api
+      .get<MarketerRateLiteDto[]>(`/marketers/${form.marketerId}/rates`)
+      .then((rates) => {
+        if (!stale) setMarketerRates(rates);
+      })
+      .catch(() => {
+        if (!stale) setMarketerRates(null);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [form.marketerId]);
+
+  const applicableMarketerRate = useMemo(() => {
+    if (!marketerRates || !form.insuranceLineId || !form.issueDate) return null;
+    return (
+      marketerRates.find(
+        (r) =>
+          r.insuranceLineId === form.insuranceLineId &&
+          r.effectiveFrom <= form.issueDate &&
+          (!r.effectiveTo || r.effectiveTo >= form.issueDate),
+      ) ?? null
+    );
+  }, [marketerRates, form.insuranceLineId, form.issueDate]);
 
   const selectedLine = lines?.find((l) => l.id === form.insuranceLineId) ?? null;
 
@@ -305,9 +437,9 @@ export function NewPolicyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [created, installmentCount, downPaymentTouched]);
 
-  // Step 4 — cash boxes / bank accounts are only needed once the receipt form is reachable.
+  // Step 5 — cash boxes / bank accounts are only needed once the receipt form is reachable.
   useEffect(() => {
-    if (step !== 4) return;
+    if (step !== 5) return;
     api
       .get<CashBoxDto[]>("/settings/cash-and-bank/cash-boxes")
       .then((list) => {
@@ -499,12 +631,14 @@ export function NewPolicyPage() {
         endDate: form.endDate,
         netPremium: Number(form.netPremium) || 0,
         serviceFee: Number(form.serviceFee) || 0,
-        marketerId: null,
+        marketerId: form.marketerId || null,
         previousInsurer: null,
         isRenewal: false,
+        paymentType,
+        insurerName: form.insurerName.trim() || null,
       });
       setCreated(createdResult);
-      setStep(3);
+      setStep(paymentType === "cash" ? 5 : 3);
       setDirty(tabKey, true); // the wizard is still mid-flight (schedule + receipt pending)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت بیمهنامه ناموفق بود.");
@@ -580,10 +714,68 @@ export function NewPolicyPage() {
     }
   }
 
+  // Step 5, cash path — the whole policy is settled in one shot (record-full-payment), reusing
+  // the same method/cash-box/cheque form the down-payment receipt uses.
+  async function recordFullPayment() {
+    if (!created) return;
+    const total = (Number(form.netPremium) || 0) + (Number(form.serviceFee) || 0);
+    if (total <= 0) {
+      setError("مبلغ کل باید مثبت باشد.");
+      return;
+    }
+    if ((receiveMethodType === "Cash" || receiveMethodType === "Cheque") && !receiveCashBoxId) {
+      setError("انتخاب صندوق الزامی است.");
+      return;
+    }
+    if (receiveMethodType === "BankTransfer" && !receiveBankAccountId) {
+      setError("انتخاب حساب بانکی الزامی است.");
+      return;
+    }
+    if (receiveMethodType === "Cheque" && (!chequeNumber.trim() || !chequeBankName.trim() || !chequePresenterName.trim())) {
+      setError("شمارهٔ چک، بانک عامل و نام تحویلدهنده الزامی است.");
+      return;
+    }
+
+    setReceiving(true);
+    setError(null);
+    try {
+      await api.post(`/policies/${created.policyId}/record-full-payment`, {
+        amount: total,
+        paidOn: receivePaidOn,
+        method: METHOD_LABELS[receiveMethodType],
+        referenceNo: receiveReferenceNo.trim() || null,
+        methodType: receiveMethodType,
+        cashBoxId: receiveMethodType === "Cash" || receiveMethodType === "Cheque" ? receiveCashBoxId : null,
+        bankAccountId: receiveMethodType === "BankTransfer" ? receiveBankAccountId : null,
+        cheque:
+          receiveMethodType === "Cheque"
+            ? {
+                chequeNumber: chequeNumber.trim(),
+                bankName: chequeBankName.trim(),
+                dueDate: chequeDueDate,
+                presenterName: chequePresenterName.trim(),
+                cashBoxId: receiveCashBoxId,
+              }
+            : null,
+      });
+      setReceived(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ثبت پرداخت کامل ناموفق بود.");
+    } finally {
+      setReceiving(false);
+    }
+  }
+
   // Owner decision 2026-08-28: «ثبت نهایی» only enables once the defined down payment has actually
   // been received; with no down payment at all the agent finalizes right after reviewing the file
-  // summary above.
-  const canFinalize = scheduleResult !== null && (scheduledDownPayment <= 0 || received);
+  // summary above. The cash path needs its one full payment recorded instead.
+  const canFinalize =
+    paymentType === "cash"
+      ? received
+      : scheduleResult !== null && (scheduledDownPayment <= 0 || received);
+
+  const stepOrder: Step[] = paymentType === "cash" ? [1, 2, 5] : [1, 2, 3, 4, 5];
+  const stepIndex = stepOrder.indexOf(step);
 
   function openPolicyFile() {
     if (!created) return;
@@ -605,6 +797,7 @@ export function NewPolicyPage() {
   }
 
   function reset() {
+    clearDraft();
     setStep(1);
     setForm(EMPTY);
     setError(null);
@@ -643,6 +836,8 @@ export function NewPolicyPage() {
     setChequeDueDate(TODAY);
     setChequePresenterName("");
     setFinalized(false);
+    setPaymentType("installment");
+    setVerificationRejected(false);
     setDirty(tabKey, false);
     setTitle(tabKey, "ثبت بیمهنامه");
   }
@@ -652,22 +847,24 @@ export function NewPolicyPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         ثبت <em className="font-extralight not-italic text-(--ice-2)">بیمهنامهٔ جدید</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">کد ملی ← بیمهنامه ← اقساط ← دریافت پیشپرداخت و ثبت نهایی</div>
+      <div className="mb-4.5 text-xs text-(--ice-3)">
+        کد ملی ← بیمهنامه ← اقساط ← اعتبارسنجی ← دریافت پیشپرداخت و ثبت نهایی
+      </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-1.5">
-        {([1, 2, 3, 4] as Step[]).map((s, i) => (
+        {stepOrder.map((s, i) => (
           <div key={s} className="flex items-center gap-1.5">
             {i > 0 && <div className="h-px w-5 bg-(--edge-2)" />}
             <div
               className={
                 s === step
                   ? "rounded-full border border-(--mint) bg-(--mint) px-3 py-1 text-[11.5px] font-bold text-(--on-mint)"
-                  : s < step
+                  : i < stepIndex
                     ? "rounded-full border border-(--mint)/40 bg-(--mint)/10 px-3 py-1 text-[11.5px] font-semibold text-(--mint)"
                     : "rounded-full border border-(--edge-2) bg-(--btn-bg) px-3 py-1 text-[11.5px] font-semibold text-(--ice-3)"
               }
             >
-              گام {fa(s)} — {STEP_LABELS[s]}
+              گام {fa(i + 1)} — {STEP_LABELS[s]}
             </div>
           </div>
         ))}
@@ -818,6 +1015,74 @@ export function NewPolicyPage() {
               <MoneyInput value={form.serviceFee} onChange={(v) => update("serviceFee", v)} placeholder="۵۰۰٬۰۰۰" />
             </div>
 
+            <div>
+              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">بیمه‌گر (اختیاری)</label>
+              <input
+                value={form.insurerName}
+                onChange={(e) => update("insurerName", e.target.value)}
+                placeholder="مثلاً بیمهٔ آسیا — خالی یعنی بیمه‌گر پیش‌فرض نمایندگی"
+                className={INPUT_CLASS}
+              />
+            </div>
+
+            <div className="col-span-full">
+              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">نوع پرداخت</label>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["installment", "اقساطی"],
+                    ["cash", "نقدی"],
+                  ] as [PaymentType, string][]
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setPaymentType(value);
+                      setDirty(tabKey, true);
+                    }}
+                    className={
+                      paymentType === value
+                        ? "rounded-[10px] border border-(--mint) bg-(--mint)/15 px-4 py-2 text-[12.5px] font-semibold text-(--mint)"
+                        : "rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 text-[11px] leading-relaxed text-(--ice-3)">
+                {paymentType === "cash"
+                  ? "پرداخت کامل مبلغ در یک مرحله — بدون اقساط و بدون اعتبارسنجی."
+                  : "پیشپرداخت و اقساط — مشتری از طریق لینک پورتال کارمزد استعلام را پرداخت میکند، استعلام اعتباری انجام میشود و پس از تأیید شما و تأیید قرارداد توسط مشتری، پیشپرداخت قابل دریافت است."}
+              </div>
+            </div>
+
+            {marketers !== null && (
+              <div className="col-span-full">
+                <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">بازاریاب</label>
+                <select
+                  value={form.marketerId}
+                  onChange={(e) => update("marketerId", e.target.value)}
+                  className={INPUT_CLASS}
+                >
+                  <option value="">بدون بازاریاب</option>
+                  {marketers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.fullName}
+                    </option>
+                  ))}
+                </select>
+                {form.marketerId && form.insuranceLineId && marketerRates !== null && (
+                  <div className={`mt-1.5 text-[11px] leading-relaxed ${applicableMarketerRate ? "text-(--mint)" : "text-(--ember)"}`}>
+                    {applicableMarketerRate
+                      ? `نرخ پورسانت: ${fa(applicableMarketerRate.ratePercent)}٪ — هنگام ثبت قفل میشود و مبنای برشهای قسط به قسط خواهد بود.`
+                      : "برای این بازاریاب در این رشته نرخ پورسانت ثبت نشده — برای این بیمه‌نامه پورسانتی تولید نخواهد شد."}
+                  </div>
+                )}
+              </div>
+            )}
+
             <DateField label="تاریخ صدور" value={form.issueDate} onChange={(v) => update("issueDate", v)} />
             <DateField label="تاریخ شروع" value={form.startDate} onChange={(v) => update("startDate", v)} />
             <DateField label="تاریخ پایان" value={form.endDate} onChange={(v) => update("endDate", v)} />
@@ -934,9 +1199,45 @@ export function NewPolicyPage() {
         </div>
       )}
 
-      {step === 4 && created && scheduleResult && (
+      {step === 4 && created && scheduleResult && paymentType === "installment" && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-3 text-[13px] font-bold text-(--ice)">بررسی پرونده، دریافت پیشپرداخت و ثبت نهایی</div>
+          <div className="mb-1 text-[13px] font-bold text-(--ice)">
+            اعتبارسنجی مشتری — بیمهنامهٔ <span className="tabular-nums">{created.policyNumber}</span>
+          </div>
+          <div className="mb-4 text-[12px] leading-relaxed text-(--ice-3)">
+            زنجیرهٔ اعتبارسنجی: پرداخت کارمزد ← استعلام اعتباری ← تأیید شما ← تأیید قرارداد توسط مشتری ← پیشپرداخت.
+            سرور هم بدون تکمیل این زنجیره، دریافت پیشپرداخت را نمیپذیرد.
+          </div>
+          <PolicyVerificationStep
+            policyId={created.policyId}
+            onChainCompleted={(paidOnline) => {
+              if (paidOnline) setReceived(true);
+              setStep(5);
+            }}
+            onRejected={() => setVerificationRejected(true)}
+          />
+          {!verificationRejected && (
+            <div className="mt-4">
+              <button type="button" onClick={() => setStep(3)} className={BTN_SECONDARY}>
+                مرحلهٔ قبل
+              </button>
+            </div>
+          )}
+          {verificationRejected && (
+            <div className="mt-4">
+              <button type="button" onClick={reset} className={BTN_SECONDARY}>
+                ثبت بیمهنامهٔ جدید
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {step === 5 && created && (paymentType === "cash" || scheduleResult) && (
+        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+          <div className="mb-3 text-[13px] font-bold text-(--ice)">
+            بررسی پرونده، {paymentType === "cash" ? "ثبت پرداخت کامل" : "دریافت پیشپرداخت"} و ثبت نهایی
+          </div>
 
           <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 rounded-[12px] border border-(--edge-2) bg-(--fld) p-4 text-[12.5px] text-(--ice-2)">
             <div>شمارهٔ بیمهنامه: <b className="tabular-nums text-(--ice)">{created.policyNumber}</b></div>
@@ -950,17 +1251,29 @@ export function NewPolicyPage() {
             <div>
               مبلغ کل: <b className="tabular-nums text-(--ice)">{money((Number(form.netPremium) || 0) + (Number(form.serviceFee) || 0))}</b> تومان
             </div>
-            <div>پیشپرداخت: <b className="tabular-nums text-(--ice)">{money(scheduledDownPayment)}</b> تومان</div>
-            <div>تعداد اقساط: <b className="tabular-nums text-(--ice)">{fa(scheduleResult.installments.length)}</b></div>
+            {paymentType === "cash" ? (
+              <div className="col-span-2">نوع پرداخت: <b className="text-(--ice)">نقدی — پرداخت کامل در یک مرحله</b></div>
+            ) : (
+              <>
+                <div>پیشپرداخت: <b className="tabular-nums text-(--ice)">{money(scheduledDownPayment)}</b> تومان</div>
+                <div>تعداد اقساط: <b className="tabular-nums text-(--ice)">{fa(scheduleResult!.installments.length)}</b></div>
+              </>
+            )}
           </div>
 
-          {scheduledDownPayment > 0 && (
+          {(paymentType === "cash" || scheduledDownPayment > 0) && (
             <div className="mb-4 border-t border-(--edge)/50 pt-3">
               {received ? (
-                <div className="text-[12.5px] font-semibold text-(--mint)">پیشپرداخت با موفقیت دریافت و ثبت شد.</div>
+                <div className="text-[12.5px] font-semibold text-(--mint)">
+                  {paymentType === "cash" ? "پرداخت کامل با موفقیت ثبت شد." : "پیشپرداخت با موفقیت دریافت و ثبت شد."}
+                </div>
               ) : (
                 <>
-                  <div className="mb-2 text-[12.5px] font-semibold text-(--ice)">دریافت پیشپرداخت — {money(scheduledDownPayment)} تومان</div>
+                  <div className="mb-2 text-[12.5px] font-semibold text-(--ice)">
+                    {paymentType === "cash"
+                      ? `ثبت پرداخت کامل — ${money((Number(form.netPremium) || 0) + (Number(form.serviceFee) || 0))} تومان`
+                      : `دریافت پیشپرداخت — ${money(scheduledDownPayment)} تومان`}
+                  </div>
                   <div className="mb-2 grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
@@ -1025,14 +1338,19 @@ export function NewPolicyPage() {
                       </div>
                     </div>
                   )}
-                  <button type="button" onClick={receiveDownPayment} disabled={receiving} className={BTN_PRIMARY}>
+                  <button
+                    type="button"
+                    onClick={paymentType === "cash" ? recordFullPayment : receiveDownPayment}
+                    disabled={receiving}
+                    className={BTN_PRIMARY}
+                  >
                     {receiving ? "در حال ثبت..." : "ثبت دریافت"}
                   </button>
                 </>
               )}
             </div>
           )}
-                    {scheduledDownPayment <= 0 && (
+          {paymentType === "installment" && scheduledDownPayment <= 0 && (
             <div className="mb-4 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] leading-relaxed text-(--ice-3)">
               برای این بیمهنامه پیشپرداخت تعریف نشده — پس از مرور پرونده در بالا میتوانید ثبت نهایی کنید.
             </div>
@@ -1043,17 +1361,24 @@ export function NewPolicyPage() {
               type="button"
               onClick={finalize}
               disabled={!canFinalize}
-              title={canFinalize ? undefined : "ابتدا دریافت پیشپرداخت را ثبت کنید"}
+              title={canFinalize ? undefined : "ابتدا دریافت را ثبت کنید"}
               className={BTN_PRIMARY}
             >
               ثبت نهایی
             </button>
-            <button type="button" onClick={() => setStep(3)} className={BTN_SECONDARY}>
+            <button
+              type="button"
+              onClick={() => setStep(paymentType === "cash" ? 2 : 4)}
+              className={BTN_SECONDARY}
+            >
               مرحلهٔ قبل
             </button>
           </div>
-          {scheduledDownPayment > 0 && !received && (
-            <div className="mt-2 text-[11.5px] text-(--ice-3)">«ثبت نهایی» پس از ثبت دریافت پیشپرداخت فعال میشود.</div>
+          {((paymentType === "cash" && !received) ||
+            (paymentType === "installment" && scheduledDownPayment > 0 && !received)) && (
+            <div className="mt-2 text-[11.5px] text-(--ice-3)">
+              «ثبت نهایی» پس از ثبت {paymentType === "cash" ? "پرداخت کامل" : "دریافت پیشپرداخت"} فعال میشود.
+            </div>
           )}
         </div>
       )}

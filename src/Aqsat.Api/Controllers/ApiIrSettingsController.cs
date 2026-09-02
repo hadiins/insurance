@@ -40,7 +40,12 @@ public sealed class ApiIrSettingsController(AppDbContext dbContext, ICurrentUser
         settings.AllowPaidEndpoints = request.AllowPaidEndpoints;
         if (!string.IsNullOrWhiteSpace(request.ApiKey))
         {
-            settings.ApiKey = request.ApiKey.Trim();
+            // A pasted whole Authorization header ("Bearer eyJ…") would double up on the wire and
+            // 401 at api.ir — store the bare key only.
+            var trimmed = request.ApiKey.Trim();
+            settings.ApiKey = trimmed.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? trimmed["Bearer ".Length..].Trim()
+                : trimmed;
         }
         settings.UpdatedAt = DateTimeOffset.UtcNow;
         settings.UpdatedByUserId = currentUser.UserId;

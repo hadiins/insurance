@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
+import { useDraftState } from "../shell/useDraftState";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 
@@ -12,23 +14,28 @@ interface CustomerListItemDto {
 
 export function CustomersListPage() {
   const openTab = useTabsStore((s) => s.openTab);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useDraftState<string>("search", "");
   const [customers, setCustomers] = useState<CustomerListItemDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const reload = () => {
+    const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+    api
+      .get<CustomerListItemDto[]>(`/customers${query}`)
+      .then((data) => {
+        setCustomers(data);
+        setError(null);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری فهرست مشتریان"));
+  };
+
   useEffect(() => {
-    const handle = setTimeout(() => {
-      const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-      api
-        .get<CustomerListItemDto[]>(`/customers${query}`)
-        .then((data) => {
-          setCustomers(data);
-          setError(null);
-        })
-        .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری فهرست مشتریان"));
-    }, 250);
+    const handle = setTimeout(reload, 250);
     return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  useLiveReload(reload);
 
   function openCustomer(customer: CustomerListItemDto) {
     openTab({
@@ -46,12 +53,12 @@ export function CustomersListPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         فهرست <em className="font-extralight not-italic text-(--ice-2)">مشتریان</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">جست‌وجو بر اساس نام یا شمارهٔ همراه</div>
+      <div className="mb-4.5 text-xs text-(--ice-3)">جست‌وجو بر اساس نام، کد ملی، شمارهٔ همراه یا پلاک خودرو</div>
 
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="نام یا شمارهٔ همراه…"
+        placeholder="نام، کد ملی، موبایل، پلاک…"
         className="mb-4.5 w-full max-w-sm rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
       />
 

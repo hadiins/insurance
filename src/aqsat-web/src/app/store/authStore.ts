@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, ApiError, getActiveOrgId, getToken, setActiveOrgId, setToken } from "../../lib/api";
+import { clearPersistedWorkspace } from "../../lib/sessionStorage";
 
 export interface OrganizationMembership {
   organizationId: string;
@@ -48,6 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     setToken(null);
     setActiveOrgId(null);
+    clearPersistedWorkspace();
     set({ user: null, status: "ready", error: null });
   },
 

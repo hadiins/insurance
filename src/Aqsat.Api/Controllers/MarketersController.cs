@@ -4,6 +4,7 @@ using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,8 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/marketers")]
 [Authorize(Policy = Permissions.MarketerManage)]
-public sealed class MarketersController(AppDbContext dbContext, ICurrentUserContext currentUser) : ControllerBase
+public sealed class MarketersController(
+    AppDbContext dbContext, ICurrentUserContext currentUser, IPasswordHasher passwordHasher) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<MarketerDto>>> List(CancellationToken ct)
@@ -26,7 +28,9 @@ public sealed class MarketersController(AppDbContext dbContext, ICurrentUserCont
         var marketers = await dbContext.Marketers
             .AsNoTracking()
             .OrderBy(m => m.FullName)
-            .Select(m => new MarketerDto(m.Id, m.FullName, m.Mobile, m.Type.ToString(), m.IsActive, m.AppUserId))
+            .Select(m => new MarketerDto(m.Id, m.FullName, m.Mobile, m.Type.ToString(), m.IsActive, m.AppUserId,
+                m.AppUser != null ? m.AppUser.FullName : null,
+                m.AppUser != null ? m.AppUser.Mobile : null))
             .ToListAsync(ct);
 
         return Ok(marketers);
@@ -72,13 +76,13 @@ public sealed class MarketersController(AppDbContext dbContext, ICurrentUserCont
         dbContext.Marketers.Add(marketer);
         await dbContext.SaveChangesAsync(ct);
 
-        return Ok(new MarketerDto(marketer.Id, marketer.FullName, marketer.Mobile, marketer.Type.ToString(), marketer.IsActive, marketer.AppUserId));
+        return Ok(new MarketerDto(marketer.Id, marketer.FullName, marketer.Mobile, marketer.Type.ToString(), marketer.IsActive, marketer.AppUserId, null, null));
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<MarketerDto>> Update(Guid id, UpdateMarketerRequest request, CancellationToken ct)
     {
-        var marketer = await dbContext.Marketers.FirstOrDefaultAsync(m => m.Id == id, ct);
+        var marketer = await dbContext.Marketers.Include(m => m.AppUser).FirstOrDefaultAsync(m => m.Id == id, ct);
         if (marketer is null)
         {
             return NotFound();
@@ -94,7 +98,8 @@ public sealed class MarketersController(AppDbContext dbContext, ICurrentUserCont
         marketer.IsActive = request.IsActive;
         await dbContext.SaveChangesAsync(ct);
 
-        return Ok(new MarketerDto(marketer.Id, marketer.FullName, marketer.Mobile, marketer.Type.ToString(), marketer.IsActive, marketer.AppUserId));
+        return Ok(new MarketerDto(marketer.Id, marketer.FullName, marketer.Mobile, marketer.Type.ToString(), marketer.IsActive, marketer.AppUserId,
+            marketer.AppUser?.FullName, marketer.AppUser?.Mobile));
     }
 
     [HttpGet("{id:guid}/rates")]
@@ -200,9 +205,138 @@ public sealed class MarketersController(AppDbContext dbContext, ICurrentUserCont
             entry.PaymentBatchId = batchId;
         }
 
+        // The same batch as an actual money outflow — without this row no cash ever left a
+        // CashBox/BankAccount and the balance/movement views (CashFlowController) missed payouts.
+        dbContext.CommissionPayouts.Add(new CommissionPayout
+        {
+            AgencyId = currentUser.ActiveOrganizationId,
+            MarketerId = id,
+            PaymentBatchId = batchId,
+            Amount = entries.Sum(e => e.Amount),
+            PaidOn = request.PaidOn ?? DateOnly.FromDateTime(now.UtcDateTime),
+            MethodType = request.MethodType,
+            CashBoxId = request.CashBoxId,
+            BankAccountId = request.BankAccountId,
+            ReferenceNo = string.IsNullOrWhiteSpace(request.ReferenceNo) ? null : request.ReferenceNo.Trim(),
+        });
+
         await dbContext.SaveChangesAsync(ct);
 
         return Ok(new PayCommissionsResultDto(batchId, entries.Count, entries.Sum(e => e.Amount)));
+    }
+
+    /// <summary>Gives a marketer panel access in one step: creates the AppUser login if the mobile
+    /// is unseen (password only matters then — an existing user keeps their own), grants the seeded
+    /// "بازاریاب" role in this agency, and links it via Marketer.AppUserId — the exact link
+    /// MarketerPanelController resolves the session's marketer by. Same one-user-one-marketer rule
+    /// Create enforces above.</summary>
+    [HttpPost("{id:guid}/panel-access")]
+    public async Task<ActionResult<MarketerDto>> GrantPanelAccess(Guid id, CreateMarketerPanelAccessRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Mobile))
+        {
+            return ValidationProblem("شمارهٔ همراه الزامی است.");
+        }
+
+        var marketer = await dbContext.Marketers.FirstOrDefaultAsync(m => m.Id == id, ct);
+        if (marketer is null)
+        {
+            return NotFound();
+        }
+
+        if (marketer.AppUserId is not null)
+        {
+            return ValidationProblem("این بازاریاب قبلاً حساب پنل دارد.");
+        }
+
+        var mobile = request.Mobile.Trim();
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Mobile == mobile && !u.IsDeleted, ct);
+
+        if (user is null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                return ValidationProblem("برای کاربر جدید رمز عبور الزامی است.");
+            }
+
+            // Same minimum AuthController.ChangePassword and UsersController.Create enforce.
+            if (request.Password.Length < 8)
+            {
+                return ValidationProblem("رمز عبور باید حداقل ۸ کاراکتر باشد.");
+            }
+
+            user = new AppUser
+            {
+                FullName = (string.IsNullOrWhiteSpace(request.FullName) ? marketer.FullName : request.FullName).Trim(),
+                Mobile = mobile,
+                PasswordHash = passwordHasher.Hash(request.Password),
+                IsActive = true,
+            };
+            dbContext.Users.Add(user);
+            await dbContext.SaveChangesAsync(ct);
+        }
+        else
+        {
+            var alreadyLinked = await dbContext.Marketers.AsNoTracking().AnyAsync(m => m.AppUserId == user.Id, ct);
+            if (alreadyLinked)
+            {
+                return ValidationProblem("این کاربر قبلاً به یک بازاریاب دیگر متصل است.");
+            }
+        }
+
+        var marketerRole = await MarketerRoleSeeder.EnsureSeededAsync(dbContext, ct);
+        var alreadyMember = await dbContext.UserOrgRoles.AnyAsync(
+            m => m.UserId == user.Id && m.OrganizationId == marketer.AgencyId && m.RoleId == marketerRole.Id && !m.IsDeleted, ct);
+        if (!alreadyMember)
+        {
+            // A user who is already staff here keeps that membership — the marketer role is added
+            // alongside it, and revoking panel access below only ever removes the marketer one.
+            dbContext.UserOrgRoles.Add(new UserOrgRole
+            {
+                UserId = user.Id,
+                OrganizationId = marketer.AgencyId,
+                RoleId = marketerRole.Id,
+            });
+        }
+
+        marketer.AppUserId = user.Id;
+        await dbContext.SaveChangesAsync(ct);
+
+        return Ok(new MarketerDto(marketer.Id, marketer.FullName, marketer.Mobile, marketer.Type.ToString(), marketer.IsActive, marketer.AppUserId,
+            user.FullName, user.Mobile));
+    }
+
+    /// <summary>Unlinks the panel login: Marketer.AppUserId is cleared (the panel no longer resolves
+    /// this user) and the user's seeded-marketer-role membership in this agency is soft-deleted —
+    /// never any other role's membership.</summary>
+    [HttpDelete("{id:guid}/panel-access")]
+    public async Task<ActionResult<MarketerDto>> RevokePanelAccess(Guid id, CancellationToken ct)
+    {
+        var marketer = await dbContext.Marketers.FirstOrDefaultAsync(m => m.Id == id, ct);
+        if (marketer is null)
+        {
+            return NotFound();
+        }
+
+        if (marketer.AppUserId is not { } userId)
+        {
+            return ValidationProblem("این بازاریاب حساب پنل ندارد.");
+        }
+
+        var marketerRole = await MarketerRoleSeeder.EnsureSeededAsync(dbContext, ct);
+        var memberships = await dbContext.UserOrgRoles
+            .Where(m => m.UserId == userId && m.OrganizationId == marketer.AgencyId && !m.IsDeleted)
+            .ToListAsync(ct);
+        foreach (var membership in memberships.Where(m => m.RoleId == marketerRole.Id))
+        {
+            membership.IsDeleted = true;
+            membership.DeletedAt = DateTimeOffset.UtcNow;
+        }
+
+        marketer.AppUserId = null;
+        await dbContext.SaveChangesAsync(ct);
+
+        return Ok(new MarketerDto(marketer.Id, marketer.FullName, marketer.Mobile, marketer.Type.ToString(), marketer.IsActive, marketer.AppUserId, null, null));
     }
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails

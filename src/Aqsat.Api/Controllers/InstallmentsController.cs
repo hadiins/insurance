@@ -1,5 +1,6 @@
 using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Application.Common;
 using Aqsat.Application.Countdown;
 using Aqsat.Application.Schedule;
 using Aqsat.Domain.Enums;
@@ -24,11 +25,15 @@ public sealed class InstallmentsController(AppDbContext dbContext, IHolidayCheck
 {
     /// <summary>Backs اقساط معوق / تسویه‌های جزئی. Unlike /api/countdown, this has no date window —
     /// every unsettled installment past its deadline, or every partially-paid one, regardless of
-    /// how far in the past or future its due date sits.</summary>
+    /// how far in the past or future its due date sits — unless the caller narrows it with
+    /// from/to. Rows come back ordered by due date (the date the customer must pay), not by the
+    /// settlement deadline (the date the agency must remit).</summary>
     [HttpGet]
     [Authorize(Policy = Permissions.PolicyRead)]
     public async Task<ActionResult<IReadOnlyList<InstallmentWorklistRowDto>>> List(
-        [FromQuery] bool? overdueOnly, [FromQuery] string? status, CancellationToken ct)
+        [FromQuery] bool? overdueOnly, [FromQuery] string? status,
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] string? search,
+        CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var query = dbContext.Installments.AsNoTracking().Where(i => i.Status != InstallmentStatus.Settled).AsQueryable();
@@ -43,15 +48,40 @@ public sealed class InstallmentsController(AppDbContext dbContext, IHolidayCheck
             query = query.Where(i => i.Status == parsedStatus);
         }
 
+        if (from is { } fromDate)
+        {
+            query = query.Where(i => i.DueDate >= fromDate);
+        }
+
+        if (to is { } toDate)
+        {
+            query = query.Where(i => i.DueDate <= toDate);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            var normalized = DigitNormalizer.ToLatin(term);
+            query = query.Where(i =>
+                i.Policy.PolicyNumber.Contains(term)
+                || i.Policy.Customer.FullName.Contains(term)
+                || (i.Policy.Customer.Mobile != null && i.Policy.Customer.Mobile.Contains(normalized))
+                || (i.Policy.Customer.NationalId != null && i.Policy.Customer.NationalId.Contains(normalized))
+                || (i.Policy.Vehicle != null && i.Policy.Vehicle.PlateNormalized != null
+                    && i.Policy.Vehicle.PlateNormalized.Contains(normalized)));
+        }
+
         var rows = await query
             .Include(i => i.Policy).ThenInclude(p => p.Customer)
-            .OrderBy(i => i.SettlementDeadline)
+            .Include(i => i.Policy).ThenInclude(p => p.Vehicle)
+            .OrderBy(i => i.DueDate).ThenBy(i => i.SeqNo)
             .Take(300)
             .ToListAsync(ct);
 
         var dtos = rows
             .Select(i => new InstallmentWorklistRowDto(
-                i.Id, i.PolicyId, i.Policy.PolicyNumber, i.Policy.Customer.FullName, i.SeqNo, i.DueDate, i.SettlementDeadline,
+                i.Id, i.PolicyId, i.Policy.PolicyNumber, i.Policy.Customer.FullName, i.Policy.Customer.Mobile,
+                i.SeqNo, i.DueDate, i.SettlementDeadline,
                 i.Amount, i.PaidAmount, i.Balance, i.Status.ToString(),
                 CountdownUrgencyClassifier.Classify(today, i.DueDate, i.SettlementDeadline).ToString()))
             .ToList();
@@ -106,6 +136,24 @@ public sealed class InstallmentsController(AppDbContext dbContext, IHolidayCheck
             installment.DueDate = newDueDate;
             installment.SettlementDeadline = await DueDateCalculator.CalculateSettlementDeadlineAsync(
                 newDueDate, deadlineDays, shiftOnHoliday, holidayChecker, ct);
+
+            if (request.ShiftFollowing)
+            {
+                // Re-lay the remaining unsettled installments on the same monthly cadence, anchored
+                // to the edited date (AddPersianMonths = the issuance due-date rule). Settled ones
+                // are history and never move.
+                var following = await dbContext.Installments
+                    .Where(i => i.PolicyId == installment.PolicyId && i.SeqNo > installment.SeqNo
+                        && i.Status != InstallmentStatus.Settled)
+                    .ToListAsync(ct);
+                foreach (var next in following)
+                {
+                    next.DueDate = DueDateCalculator.AddPersianMonths(newDueDate, next.SeqNo - installment.SeqNo);
+                    next.SettlementDeadline = await DueDateCalculator.CalculateSettlementDeadlineAsync(
+                        next.DueDate, deadlineDays, shiftOnHoliday, holidayChecker, ct);
+                    next.IsManuallyEdited = true;
+                }
+            }
         }
 
         installment.IsManuallyEdited = true;

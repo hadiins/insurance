@@ -47,7 +47,8 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             GroupBy(items, i => (i.InsuranceLineId?.ToString() ?? "none", i.LineLabel)),
             GroupBy(items, i => (i.MarketerId?.ToString() ?? "none", i.MarketerLabel)),
             GroupBy(items, i => (i.EventDate.ToString("yyyy-MM"), i.EventDate.ToString("yyyy-MM"))),
-            totals.OperatingExpense));
+            totals.OperatingExpense,
+            totals.MarketerCommissionPaid));
     }
 
     [HttpGet("export")]
@@ -78,6 +79,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
         WriteRow("جمع درآمد", totals.TotalIncome);
         row++;
         WriteRow("پورسانت بازاریاب", totals.MarketerCommissionExpense);
+        WriteRow("پورسانت پرداخت‌شدهٔ دوره", totals.MarketerCommissionPaid);
         WriteRow("سوخت نکول", totals.DefaultWriteOffExpense);
         WriteRow("هزینه‌های عملیاتی", totals.OperatingExpense);
         WriteRow("جمع هزینه", totals.TotalExpense);
@@ -126,6 +128,10 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             var policies = await dbContext.Policies
                 .AsNoTracking()
                 .Where(p => p.IssueDate >= from && p.IssueDate <= to)
+                // A cancelled policy never earned its commission — leaving it in would count
+                // income the insurer claws back. PendingConfirmation stays: the policy is real,
+                // the agent's sign-off flag is an internal worklist detail.
+                .Where(p => p.Status != PolicyStatus.Cancelled)
                 .Include(p => p.InsuranceLine)
                 .Include(p => p.Marketer)
                 .ToListAsync(ct);
@@ -139,6 +145,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             var allocations = await dbContext.PaymentAllocations
                 .AsNoTracking()
                 .Where(a => a.Payment.PaidOn >= from && a.Payment.PaidOn <= to)
+                .Where(a => !a.Payment.IsDeleted && a.Installment.Policy.Status != PolicyStatus.Cancelled)
                 .Include(a => a.Payment)
                 .Include(a => a.Installment).ThenInclude(i => i.Policy).ThenInclude(p => p.InsuranceLine)
                 .Include(a => a.Installment).ThenInclude(i => i.Policy).ThenInclude(p => p.Marketer)
@@ -161,6 +168,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             var downPayments = await dbContext.Payments
                 .AsNoTracking()
                 .Where(p => p.Method == PoliciesController.DownPaymentMethod && p.PaidOn >= from && p.PaidOn <= to)
+                .Where(p => !p.IsDeleted)
                 .ToListAsync(ct);
 
             if (downPayments.Count > 0)
@@ -168,7 +176,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
                 var policyIds = downPayments.Select(p => p.InstallmentIdHint).ToList();
                 var policiesById = await dbContext.Policies
                     .AsNoTracking()
-                    .Where(p => policyIds.Contains(p.Id))
+                    .Where(p => policyIds.Contains(p.Id) && p.Status != PolicyStatus.Cancelled)
                     .Include(p => p.InsuranceLine)
                     .Include(p => p.Marketer)
                     .ToDictionaryAsync(p => p.Id, ct);
@@ -191,6 +199,9 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             .Where(c => (c.Status == CommissionStatus.Payable || c.Status == CommissionStatus.Paid)
                 && c.EligibleAt != null && c.EligibleAt.Value.Date >= from.ToDateTime(TimeOnly.MinValue)
                 && c.EligibleAt.Value.Date <= to.ToDateTime(TimeOnly.MinValue))
+            // Same cancelled-policy exclusion as the income side — a cancelled policy must not
+            // carry commission expense either, or the P&L nets to a phantom loss.
+            .Where(c => c.Policy.Status != PolicyStatus.Cancelled)
             .Include(c => c.Policy).ThenInclude(p => p.InsuranceLine)
             .Include(c => c.Marketer)
             .ToListAsync(ct);
@@ -209,6 +220,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
         var overdueInstallments = await dbContext.Installments
             .AsNoTracking()
             .Where(i => i.Status != InstallmentStatus.Settled && i.SettlementDeadline >= from && i.SettlementDeadline <= to)
+            .Where(i => i.Policy.Status != PolicyStatus.Cancelled)
             .Include(i => i.Policy).ThenInclude(p => p.InsuranceLine)
             .Include(i => i.Policy).ThenInclude(p => p.Marketer)
             .ToListAsync(ct);
@@ -229,6 +241,17 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
 
         items.AddRange(expenses.Select(e => new LineItem(
             null, "بدون رشته", null, "بدون بازاریاب", e.Date, new PnlTotals(0, 0, 0, 0, e.Amount))));
+
+        // Informational, not an expense — the expense itself is already recognized at EligibleAt
+        // above; this is the cash actually handed over (CommissionPayout) within the period, so the
+        // two lines can legitimately differ when a batch is paid late/early.
+        var payouts = await dbContext.CommissionPayouts
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted && p.PaidOn >= from && p.PaidOn <= to)
+            .ToListAsync(ct);
+
+        items.AddRange(payouts.Select(p => new LineItem(
+            null, "بدون رشته", null, "بدون بازاریاب", p.PaidOn, new PnlTotals(0, 0, 0, 0, 0, p.Amount))));
 
         var totals = items.Aggregate(default(PnlTotals), (acc, item) => acc + item.Totals);
         return (totals, items);

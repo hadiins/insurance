@@ -26,7 +26,7 @@ export function Sidebar() {
         items: g.items
           .filter((i) => !i.requiresPermission || permissions.includes(i.requiresPermission))
           .filter((i) => !trimmedQuery || i.title.includes(trimmedQuery)),
-      })),
+      })).filter((g) => g.items.length > 0),
     [trimmedQuery, permissions],
   );
   const hasResults = filteredGroups.some((g) => g.items.length > 0);

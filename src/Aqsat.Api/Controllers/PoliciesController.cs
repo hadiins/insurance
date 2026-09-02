@@ -33,7 +33,7 @@ public sealed class PoliciesController(
     /// <summary>The marker ReportsController's cash-basis P&amp;L filters on to recognize a
     /// down-payment Payment (which carries no PaymentAllocation rows, since it isn't collected
     /// against any specific installment).</summary>
-    public const string DownPaymentMethod = "پیش‌پرداخت";
+    public const string DownPaymentMethod = WellKnownPaymentMethods.DownPayment;
 
     /// <summary>docs/TASK-24-POLICY-NUMBER.md §2/§3 — backs the issuance form's locked
     /// line/agency/year display and its serial suggestion.</summary>
@@ -300,6 +300,23 @@ public sealed class PoliciesController(
             ? PolicyNumberParser.Parse(policyNumber, format)
             : new PolicyNumberParts(policyNumber, null, null, null, null, false, "الگوی شماره‌ای برای این نمایندگی تنظیم نشده است.");
 
+        // The wizard's step-3 نقدی/اقساطی choice (owner decision 2026-09-01). IsInstallment defaults
+        // to on for legacy callers, but the hard verification block is armed only by an EXPLICIT
+        // "installment" — the one caller that made the choice is the wizard, and the import pipeline
+        // never goes through this endpoint (ImportService builds its own Policy rows), so nothing
+        // historical gets blocked from having a down payment recorded.
+        var paymentType = request.PaymentType?.Trim();
+        var isInstallment = !string.Equals(paymentType, "cash", StringComparison.OrdinalIgnoreCase);
+        var requiresVerification = string.Equals(paymentType, "installment", StringComparison.OrdinalIgnoreCase);
+
+        // Multi-insurer agencies issue through more than one insurer; the per-insurer remittance
+        // liability view groups on this. Unspecified → the agency's own insurer (Organization.
+        // InsurerName), which is also what every existing policy predating this column resolves to.
+        var insurerName = string.IsNullOrWhiteSpace(request.InsurerName)
+            ? await dbContext.Organizations.AsNoTracking()
+                .Where(o => o.Id == agencyId).Select(o => o.InsurerName).FirstOrDefaultAsync(ct)
+            : request.InsurerName.Trim();
+
         var policy = new Policy
         {
             AgencyId = agencyId,
@@ -309,9 +326,10 @@ public sealed class PoliciesController(
             VehicleId = vehicleId,
             PropertySubjectId = propertySubjectId,
             // Manually issued policies have no Fanavaran-style contract name to match against a
-            // template — IsInstallment is simply true by construction (the agent chose this flow).
+            // template — IsInstallment is the agent's own نقدی/اقساطی choice at step 3.
             ContractName = "صدور دستی",
-            IsInstallment = true,
+            IsInstallment = isInstallment,
+            RequiresVerification = requiresVerification,
             IssueDate = request.IssueDate,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
@@ -323,6 +341,7 @@ public sealed class PoliciesController(
             MarketerRatePercent = marketerRatePercent,
             PreviousInsurer = request.PreviousInsurer,
             IsRenewal = request.IsRenewal,
+            InsurerName = insurerName,
             AgencyCommissionPercent = agencyCommissionPercent,
             AgencyCommissionAmount = agencyCommissionPercent is { } pct ? request.NetPremium * pct / 100m : null,
             PnLineCode = parts.LineCode,
@@ -579,11 +598,21 @@ public sealed class PoliciesController(
                     || p.PnSerial == normalized
                     || p.PnSerial == paddedSerial
                     || (candidateYear != null && p.PnYear == candidateYear)
-                    || p.PnLineCode == normalized);
+                    || p.PnLineCode == normalized
+                    || (p.Customer.Mobile != null && p.Customer.Mobile.Contains(normalized))
+                    || (p.Customer.NationalId != null && p.Customer.NationalId.Contains(normalized))
+                    || (p.Vehicle != null && p.Vehicle.PlateNormalized != null
+                        && p.Vehicle.PlateNormalized.Contains(normalized)));
             }
             else
             {
-                query = query.Where(p => p.PolicyNumber.Contains(term) || p.Customer.FullName.Contains(term));
+                query = query.Where(p =>
+                    p.PolicyNumber.Contains(term)
+                    || p.Customer.FullName.Contains(term)
+                    || (p.Customer.Mobile != null && p.Customer.Mobile.Contains(normalized))
+                    || (p.Customer.NationalId != null && p.Customer.NationalId.Contains(normalized))
+                    || (p.Vehicle != null && p.Vehicle.PlateNormalized != null
+                        && p.Vehicle.PlateNormalized.Contains(normalized)));
             }
         }
 
@@ -693,6 +722,24 @@ public sealed class PoliciesController(
         if (policy.InstallmentCount == 0)
         {
             return ValidationProblem("این بیمه‌نامه هنوز زمان‌بندی نشده است.");
+        }
+
+        // انسداد کامل (owner decision 2026-09-01) — a wizard-issued installment policy's down
+        // payment cannot be recorded, manually or otherwise, until the portal verification chain
+        // (fee paid → credit report → agency approval → customer contract approval) is done. The
+        // online portal path satisfies this by construction: PayDownPaymentAsync only runs at
+        // stage CustomerApproved.
+        if (policy.RequiresVerification)
+        {
+            var chainDone = await dbContext.CustomerPortalInvitations.AsNoTracking()
+                .AnyAsync(i => i.PolicyId == policy.Id
+                    && (i.Stage == PolicyVerificationStage.CustomerApproved || i.Stage == PolicyVerificationStage.Completed)
+                    && !i.IsDeleted, ct);
+            if (!chainDone)
+            {
+                return ValidationProblem(
+                    "دریافت پیش‌پرداخت این بیمه‌نامهٔ اقساطی قبل از تکمیل اعتبارسنجی مشتری (پرداخت کارمزد، استعلام اعتباری، تأیید نمایندگی و تأیید قرارداد توسط مشتری) امکان‌پذیر نیست.");
+            }
         }
 
         if (policy.DownPayment <= 0)
@@ -985,7 +1032,7 @@ public sealed class PoliciesController(
         var installments = await dbContext.Installments.AsNoTracking()
             .Where(i => i.PolicyId == id)
             .OrderBy(i => i.SeqNo)
-            .Select(i => new PolicyInstallmentDto(i.Id, i.SeqNo, i.DueDate, i.SettlementDeadline, i.Amount, i.PaidAmount, i.Balance, i.Status.ToString()))
+            .Select(i => new PolicyInstallmentDto(i.Id, i.SeqNo, i.DueDate, i.SettlementDeadline, i.Amount, i.PaidAmount, i.Balance, i.Status.ToString(), i.IsManuallyEdited))
             .ToListAsync(ct);
 
         var endorsements = await dbContext.Endorsements.AsNoTracking()

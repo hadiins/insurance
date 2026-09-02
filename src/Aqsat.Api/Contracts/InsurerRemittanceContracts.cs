@@ -19,3 +19,9 @@ public sealed record InsurerRemittanceLineDto(Guid PolicyId, string PolicyNumber
 public sealed record InsurerRemittanceDto(
     Guid Id, DateOnly Date, decimal Amount, string MethodType, string? CashBoxName, string? BankAccountLabel,
     string? ReferenceNo, IReadOnlyList<InsurerRemittanceLineDto> Lines);
+
+/// <summary>The pending-remittance liability rolled up per insurer — what the agency still owes
+/// each insurer and how long the oldest collected-but-unremitted money has been sitting.</summary>
+public sealed record InsurerLiabilityRow(
+    string InsurerName, int PendingCount, decimal PendingAmount,
+    DateOnly? OldestCollectedOn, decimal RemittedTotal);

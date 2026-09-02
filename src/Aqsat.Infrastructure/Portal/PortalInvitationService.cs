@@ -32,6 +32,7 @@ public sealed class PortalInvitationService(
     ISmsSender smsSender,
     IEnumerable<IPaymentGateway> gateways,
     IScopeGuard scopeGuard,
+    PolicyVerificationService policyVerificationService,
     IConfiguration configuration,
     ILogger<PortalInvitationService> logger)
 {
@@ -207,6 +208,13 @@ public sealed class PortalInvitationService(
             }
 
             invitation.Status = PortalInvitationStatus.Paid;
+            // A policy-verification chain records the fee landing in its own stage too — the retry
+            // endpoint (RetryInquiriesAsync) keys off FeePaid, so skipping this would strand a
+            // paid-but-failed chain at FeePending with no way to re-fire the inquiries.
+            if (invitation.PolicyId is not null)
+            {
+                invitation.Stage = PolicyVerificationStage.FeePaid;
+            }
             invitation.PaidAtUtc = DateTimeOffset.UtcNow;
             invitation.PaidAmountToman = result.PaidAmountToman ?? invitation.InquiryFeeToman;
 
@@ -226,6 +234,22 @@ public sealed class PortalInvitationService(
                 IpAddress = customerIp,
             });
             await dbContext.SaveChangesAsync(ct);
+
+            // A policy-verification link continues its chain the moment the fee lands: both credit
+            // inquiries fire and the stage advances to ReportReady. The fee itself is already
+            // persisted, so an inquiry failure is logged and surfaced via the stage (still FeePaid,
+            // retryable through POST /policies/{id}/verification/retry-inquiries) rather than thrown —
+            // never an empty catch (rule 15), and the customer must not see the pay call as failed.
+            if (invitation.PolicyId is not null)
+            {
+                var inquiry = await policyVerificationService.RunInquiriesAsync(invitation, agencyId, ct);
+                if (!inquiry.Succeeded)
+                {
+                    logger.LogWarning(
+                        "Credit inquiries after fee payment failed for policy {PolicyId}: {Error}",
+                        invitation.PolicyId, inquiry.Error);
+                }
+            }
 
             return new PortalPaymentResult(invitation.PaidAmountToman!.Value, invitation.PaidAtUtc!.Value);
         });

@@ -15,6 +15,7 @@ interface PnlResultDto {
   agencyCommissionIncome: number;
   serviceFeeIncome: number;
   marketerCommissionExpense: number;
+  marketerCommissionPaid: number;
   defaultWriteOffExpense: number;
   operatingExpense: number;
   totalIncome: number;
@@ -174,6 +175,7 @@ function PnlSummaryCard({ title, result, highlight }: { title: string; result: P
         <Line label="کارمزد از بیمه‌گر" value={result.agencyCommissionIncome} />
         <Line label="کارمزد خدمات" value={result.serviceFeeIncome} />
         <Line label="پورسانت بازاریاب" value={-result.marketerCommissionExpense} />
+        <Line label="پورسانت پرداخت‌شدهٔ دوره" value={result.marketerCommissionPaid} muted />
         <Line label="سوخت نکول" value={-result.defaultWriteOffExpense} />
         <Line label="هزینه‌های عملیاتی" value={-result.operatingExpense} />
       </div>
@@ -185,11 +187,11 @@ function PnlSummaryCard({ title, result, highlight }: { title: string; result: P
   );
 }
 
-function Line({ label, value }: { label: string; value: number }) {
+function Line({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-(--ice-3)">{label}</span>
-      <span className={value < 0 ? "text-(--ember)" : "text-(--ice)"}>{money(value)}</span>
+      <span className={muted ? "text-(--ice-3)/70" : "text-(--ice-3)"}>{label}</span>
+      <span className={`${value < 0 ? "text-(--ember)" : "text-(--ice)"} ${muted ? "text-(--ice-3)" : ""}`}>{money(value)}</span>
     </div>
   );
 }

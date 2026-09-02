@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDraftState } from "../shell/useDraftState";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
@@ -61,13 +62,22 @@ export function ExpensesPage() {
   const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccountDto[]>([]);
 
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(TODAY);
-  const [categoryId, setCategoryId] = useState("");
-  const [methodType, setMethodType] = useState<MethodType>("Cash");
-  const [cashBoxId, setCashBoxId] = useState("");
-  const [bankAccountId, setBankAccountId] = useState("");
+  const [form, setForm] = useDraftState("expense-form", {
+    title: "",
+    amount: "",
+    date: TODAY,
+    categoryId: "",
+    methodType: "Cash" as MethodType,
+    cashBoxId: "",
+    bankAccountId: "",
+  });
+  const title = form.title;
+  const amount = form.amount;
+  const date = form.date;
+  const categoryId = form.categoryId;
+  const methodType = form.methodType;
+  const cashBoxId = form.cashBoxId;
+  const bankAccountId = form.bankAccountId;
   const [saving, setSaving] = useState(false);
 
   const [from, setFrom] = useState(MONTH_AGO);
@@ -83,7 +93,7 @@ export function ExpensesPage() {
       .then((list) => {
         setCashBoxes(list);
         const active = list.find((b) => b.isActive);
-        if (active) setCashBoxId(active.id);
+        if (active) setForm({ ...form, cashBoxId: active.id });
       })
       .catch(() => {});
     api.get<BankAccountDto[]>("/settings/cash-and-bank/bank-accounts").then(setBankAccounts).catch(() => {});
@@ -139,8 +149,7 @@ export function ExpensesPage() {
         cashBoxId: methodType === "Cash" ? cashBoxId : null,
         bankAccountId: methodType === "BankTransfer" ? bankAccountId : null,
       });
-      setTitle("");
-      setAmount("");
+      setForm({ ...form, title: "", amount: "" });
       loadReport();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت هزینه ناموفق بود.");
@@ -169,17 +178,17 @@ export function ExpensesPage() {
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">عنوان</label>
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">مبلغ (تومان)</label>
-            <MoneyInput value={amount} onChange={setAmount} />
+            <MoneyInput value={amount} onChange={(v) => setForm({ ...form, amount: v })} />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تاریخ</label>
-            <JalaliDateField value={date} onChange={setDate} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <JalaliDateField value={date} onChange={(iso) => setForm({ ...form, date: iso })} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
           </div>
         </div>
         <div className="mb-3.5 grid grid-cols-4 gap-3">
@@ -187,7 +196,7 @@ export function ExpensesPage() {
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">دسته</label>
             <select
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
               className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
             >
               <option value="">انتخاب کنید…</option>
@@ -202,7 +211,7 @@ export function ExpensesPage() {
             <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">روش پرداخت</label>
             <select
               value={methodType}
-              onChange={(e) => setMethodType(e.target.value as MethodType)}
+              onChange={(e) => setForm({ ...form, methodType: e.target.value as MethodType })}
               className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
             >
               <option value="Cash">نقدی</option>
@@ -214,7 +223,7 @@ export function ExpensesPage() {
               <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">صندوق</label>
               <select
                 value={cashBoxId}
-                onChange={(e) => setCashBoxId(e.target.value)}
+                onChange={(e) => setForm({ ...form, cashBoxId: e.target.value })}
                 className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="">انتخاب کنید…</option>
@@ -230,7 +239,7 @@ export function ExpensesPage() {
               <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
               <select
                 value={bankAccountId}
-                onChange={(e) => setBankAccountId(e.target.value)}
+                onChange={(e) => setForm({ ...form, bankAccountId: e.target.value })}
                 className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="">انتخاب کنید…</option>

@@ -21,6 +21,8 @@ interface AgencySettingsDto {
   renewalAutoWatchLeadDays: number;
   agencyCode: string | null;
   agencyCodeLocked: boolean;
+  installmentContractText: string | null;
+  dangerZoneManagerMobile: string | null;
 }
 
 export function AgencySettingsPage() {
@@ -31,6 +33,9 @@ export function AgencySettingsPage() {
   const [agencyCodeInput, setAgencyCodeInput] = useState("");
   const [agencyCodeBusy, setAgencyCodeBusy] = useState(false);
   const [agencyCodeError, setAgencyCodeError] = useState<string | null>(null);
+  // The contract text follows backend keep/clear semantics (null keeps stored, empty clears to the
+  // system default), so it is only sent when the operator actually edited it.
+  const [contractTouched, setContractTouched] = useState(false);
 
   useEffect(() => {
     api
@@ -78,8 +83,11 @@ export function AgencySettingsPage() {
         serviceFeeMode: form.serviceFeeMode,
         defaultWriteOffDays: Number(form.defaultWriteOffDays),
         renewalAutoWatchLeadDays: Number(form.renewalAutoWatchLeadDays),
+        ...(contractTouched ? { installmentContractText: form.installmentContractText ?? "" } : {}),
+        dangerZoneManagerMobile: form.dangerZoneManagerMobile ?? "",
       });
       setForm(updated);
+      setContractTouched(false);
       setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ذخیرهٔ تنظیمات ناموفق بود.");
@@ -130,6 +138,15 @@ export function AgencySettingsPage() {
           </Field>
           <Field label="شرکت بیمهٔ طرف قرارداد">
             <input value={form.insurerName ?? ""} onChange={(e) => update("insurerName", e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="موبایل مدیر نمایندگی (ارسال کد عملیات حساس)">
+            <input
+              value={form.dangerZoneManagerMobile ?? ""}
+              onChange={(e) => update("dangerZoneManagerMobile", e.target.value)}
+              placeholder="09123456789"
+              dir="ltr"
+              className={inputClass}
+            />
           </Field>
         </div>
 
@@ -232,6 +249,24 @@ export function AgencySettingsPage() {
         </div>
       </div>
 
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">متن قرارداد اقساط</div>
+        <div className="mb-3 text-[11.5px] leading-relaxed text-(--ice-3)">
+          متنی که مشتری هنگام تأیید قرارداد در پورتال می‌بیند و می‌پذیرد. خالی گذاشتن = بازگشت به متن پیش‌فرض سیستم.
+        </div>
+        <textarea
+          value={form.installmentContractText ?? ""}
+          onChange={(e) => {
+            update("installmentContractText", e.target.value);
+            setContractTouched(true);
+          }}
+          rows={7}
+          dir="rtl"
+          placeholder="متن پیش‌فرض سیستم فعال است — برای ویرایش، متن دلخواه را بنویسید."
+          className={`${inputClass} min-h-36 resize-y leading-relaxed`}
+        />
+      </div>
+
       <button
         type="button"
         disabled={busy}
@@ -248,17 +283,38 @@ export function AgencySettingsPage() {
 
 function DangerZone({ code }: { code: string }) {
   const [confirmText, setConfirmText] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  async function requestOtp() {
+    setOtpBusy(true);
+    setError(null);
+    try {
+      await api.post("/settings/agency/data/request-otp", {});
+      setOtpSent(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ارسال کد تأیید ناموفق بود.");
+    } finally {
+      setOtpBusy(false);
+    }
+  }
 
   async function clearData() {
     setBusy(true);
     setError(null);
     try {
-      await api.delete("/settings/agency/data", { confirmCode: confirmText.trim() });
+      await api.delete("/settings/agency/data", {
+        confirmCode: confirmText.trim(),
+        otpCode: otpCode.trim(),
+      });
       setDone(true);
       setConfirmText("");
+      setOtpCode("");
+      setOtpSent(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "پاکسازی ناموفق بود.");
     } finally {
@@ -270,7 +326,7 @@ function DangerZone({ code }: { code: string }) {
     <div className="mt-6 rounded-2xl border border-(--ember)/30 bg-(--ember)/5 p-5">
       <div className="mb-1 text-[12.5px] font-semibold text-(--ember)">منطقهٔ خطر</div>
       <div className="mb-3 text-[11.5px] text-(--ice-3)">
-        پاک‌کردن کامل داده‌های این نمایندگی — همهٔ بیمه‌نامه‌ها، اقساط، پرداخت‌ها و وثیقه‌ها. مشتریان و کاربران دست‌نخورده می‌مانند. غیرقابل بازگشت از داخل برنامه.
+        پاک‌کردن کامل داده‌های این نمایندگی — همهٔ بیمه‌نامه‌ها، اقساط، پرداخت‌ها و وثیقه‌ها. مشتریان و کاربران دست‌نخورده می‌مانند. غیرقابل بازگشت از داخل برنامه. برای انجام، یک کد تأیید پیامکی به موبایل مدیر نمایندگی (در تنظیمات بالا) ارسال می‌شود.
       </div>
       {error && (
         <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
@@ -278,16 +334,33 @@ function DangerZone({ code }: { code: string }) {
       {done && (
         <div className="mb-3 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">داده‌ها پاک شدند.</div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder={`برای تأیید، «${code}» را تایپ کنید`}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--ember)"
+          className="w-64 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--ember)"
         />
         <button
           type="button"
-          disabled={busy || confirmText.trim() !== code}
+          disabled={otpBusy || confirmText.trim() !== code}
+          onClick={requestOtp}
+          className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {otpBusy ? "در حال ارسال…" : otpSent ? "ارسال مجدد کد" : "ارسال کد تأیید پیامکی"}
+        </button>
+        {otpSent && (
+          <input
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value)}
+            placeholder="کد ۶ رقمی پیامک‌شده"
+            dir="ltr"
+            className="w-40 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--ember)"
+          />
+        )}
+        <button
+          type="button"
+          disabled={busy || confirmText.trim() !== code || !otpSent || otpCode.trim().length < 6}
           onClick={clearData}
           className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >

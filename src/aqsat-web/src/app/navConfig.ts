@@ -13,6 +13,10 @@ export const ICONS = {
   up: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
 } as const;
 
+// Every item carries the permission its page's backend controller demands ([Authorize(Policy = ...)]
+// on the driving endpoint) — the sidebar hides what the logged-in user cannot call, so a marketer
+// whose only permission is Marketer.SelfView sees just their panel and "تغییر رمز عبور".
+// "تغییر رمز عبور" stays ungated: it backs AuthController, which every logged-in user may call.
 export const NAV: NavGroup[] = [
   {
     id: "desk",
@@ -20,18 +24,18 @@ export const NAV: NavGroup[] = [
     icon: ICONS.today,
     defaultOpen: true,
     items: [
-      { navType: "today", title: "امروز", kind: "singleton", page: "today", pinned: true },
+      { navType: "today", title: "امروز", kind: "singleton", page: "today", pinned: true, requiresPermission: "Policy.Read" },
       {
         navType: "today-reminders", title: "یادآوری‌های امروز", kind: "singleton", page: "desk-feed",
-        payload: { mode: "reminders" },
+        payload: { mode: "reminders" }, requiresPermission: "Policy.Read",
       },
       {
         navType: "overdue-tasks", title: "کارهای معوق", kind: "singleton", page: "desk-feed",
-        payload: { mode: "overdue" },
+        payload: { mode: "overdue" }, requiresPermission: "Policy.Read",
       },
       {
         navType: "notifications", title: "اعلان‌ها", kind: "singleton", page: "desk-feed",
-        payload: { mode: "notifications" },
+        payload: { mode: "notifications" }, requiresPermission: "Policy.Read",
       },
     ],
   },
@@ -40,17 +44,17 @@ export const NAV: NavGroup[] = [
     label: "بیمه‌نامه‌ها",
     icon: ICONS.doc,
     items: [
-      { navType: "policy-new", title: "ثبت بیمه‌نامه", kind: "multi-create", page: "new-policy" },
-      { navType: "policies-list", title: "فهرست بیمه‌نامه‌ها", kind: "singleton", page: "policy-list" },
+      { navType: "policy-new", title: "ثبت بیمه‌نامه", kind: "multi-create", page: "new-policy", requiresPermission: "Policy.Write" },
+      { navType: "policies-list", title: "فهرست بیمه‌نامه‌ها", kind: "singleton", page: "policy-list", requiresPermission: "Policy.Read" },
       {
         navType: "policies-pending", title: "در انتظار تأیید مشتری", kind: "singleton", page: "policy-list",
-        payload: { status: "PendingConfirmation" },
+        payload: { status: "PendingConfirmation" }, requiresPermission: "Policy.Read",
       },
       {
         navType: "policies-cancelled", title: "باطل‌شده‌ها", kind: "singleton", page: "policy-list",
-        payload: { status: "Cancelled" },
+        payload: { status: "Cancelled" }, requiresPermission: "Policy.Read",
       },
-      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "renewal-watches" },
+      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "renewal-watches", requiresPermission: "Policy.Read" },
     ],
   },
   {
@@ -58,19 +62,23 @@ export const NAV: NavGroup[] = [
     label: "اقساط و وصول",
     icon: ICONS.coin,
     items: [
-      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-worklist" },
-      { navType: "installments-schedule", title: "در انتظار زمان‌بندی", kind: "singleton", page: "schedule-policy" },
+      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-worklist", requiresPermission: "Policy.Read" },
+      { navType: "installments-schedule", title: "در انتظار زمان‌بندی", kind: "singleton", page: "schedule-policy", requiresPermission: "Policy.Write" },
       {
         navType: "customer-statement", title: "صورت‌حساب مشتری", kind: "singleton", page: "customer-lookup",
-        payload: { mode: "statement" },
+        payload: { mode: "statement" }, requiresPermission: "Policy.Read",
       },
       {
-        navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "collateral",
-        payload: { type: "ChequeSayadi", upcomingDays: "30" },
+        navType: "checks-all", title: "همهٔ چک‌ها", kind: "singleton", page: "cheques-list",
+        requiresPermission: "Policy.Read",
       },
       {
-        navType: "checks-bounced", title: "چک‌های برگشتی", kind: "singleton", page: "collateral",
-        payload: { type: "ChequeSayadi", status: "Bounced" },
+        navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "cheques-list",
+        payload: { upcomingDays: "30" }, requiresPermission: "Policy.Read",
+      },
+      {
+        navType: "checks-bounced", title: "چک‌های برگشتی", kind: "singleton", page: "cheques-list",
+        payload: { status: "Bounced" }, requiresPermission: "Policy.Read",
       },
     ],
   },
@@ -79,8 +87,8 @@ export const NAV: NavGroup[] = [
     label: "وثیقه و ضمانت",
     icon: ICONS.card,
     items: [
-      { navType: "check-new", title: "ثبت چک صیادی", kind: "singleton", page: "collateral", payload: { type: "ChequeSayadi" } },
-      { navType: "promissory-notes", title: "سفته‌ها", kind: "singleton", page: "collateral", payload: { type: "PromissoryNote" } },
+      { navType: "check-new", title: "ثبت چک صیادی", kind: "singleton", page: "collateral", payload: { type: "ChequeSayadi" }, requiresPermission: "Policy.Read" },
+      { navType: "promissory-notes", title: "سفته‌ها", kind: "singleton", page: "collateral", payload: { type: "PromissoryNote" }, requiresPermission: "Policy.Read" },
     ],
   },
   {
@@ -88,13 +96,13 @@ export const NAV: NavGroup[] = [
     label: "مشتریان",
     icon: ICONS.users,
     items: [
-      { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "customers-list" },
+      { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "customers-list", requiresPermission: "Policy.Read" },
       {
         navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "customer-lookup",
-        payload: { mode: "payments" },
+        payload: { mode: "payments" }, requiresPermission: "Policy.Read",
       },
-      { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "high-risk-customers" },
-      { navType: "customer-completion", title: "تکمیل پروندهٔ مشتریان", kind: "singleton", page: "customer-completion" },
+      { navType: "customers-high-risk", title: "مشتریان پرریسک", kind: "singleton", page: "high-risk-customers", requiresPermission: "Policy.Read" },
+      { navType: "customer-completion", title: "تکمیل پروندهٔ مشتریان", kind: "singleton", page: "customer-completion", requiresPermission: "Policy.Read" },
     ],
   },
   {
@@ -102,9 +110,10 @@ export const NAV: NavGroup[] = [
     label: "دریافت و پرداخت",
     icon: ICONS.coin,
     items: [
-      { navType: "cash-flow-record-receipt", title: "ثبت دریافتی‌ها", kind: "singleton", page: "record-receipt" },
-      { navType: "cash-flow-expenses", title: "ثبت هزینه‌ها", kind: "singleton", page: "expenses" },
-      { navType: "cash-flow-insurer-remittance", title: "پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance" },
+      { navType: "cash-flow-record-receipt", title: "ثبت دریافتی‌ها", kind: "singleton", page: "record-receipt", requiresPermission: "Payment.Write" },
+      { navType: "cash-flow-expenses", title: "ثبت هزینه‌ها", kind: "singleton", page: "expenses", requiresPermission: "Finance.Read" },
+      { navType: "cash-flow-balances", title: "موجودی و گردش صندوق و بانک", kind: "singleton", page: "cash-flow", requiresPermission: "Finance.Read" },
+      { navType: "cash-flow-insurer-remittance", title: "پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance", requiresPermission: "Finance.Read" },
     ],
   },
   {
@@ -112,10 +121,10 @@ export const NAV: NavGroup[] = [
     label: "پیامک و اطلاع‌رسانی",
     icon: ICONS.msg,
     items: [
-      { navType: "sms-outbox", title: "صندوق ارسال", kind: "singleton", page: "sms-outbox" },
-      { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "sms-templates" },
-      { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "sms-reminders" },
-      { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "sms-delivery-report" },
+      { navType: "sms-outbox", title: "صندوق ارسال", kind: "singleton", page: "sms-outbox", requiresPermission: "Policy.Write" },
+      { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "sms-templates", requiresPermission: "Settings.Write" },
+      { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "sms-reminders", requiresPermission: "Policy.Write" },
+      { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "sms-delivery-report", requiresPermission: "Policy.Write" },
     ],
   },
   {
@@ -123,8 +132,8 @@ export const NAV: NavGroup[] = [
     label: "بازاریاب‌ها",
     icon: ICONS.users,
     items: [
-      { navType: "marketers-manage", title: "بازاریاب‌ها و پورسانت", kind: "singleton", page: "marketers" },
-      { navType: "marketer-panel", title: "پنل بازاریاب", kind: "singleton", page: "marketer-panel" },
+      { navType: "marketers-manage", title: "بازاریاب‌ها و پورسانت", kind: "singleton", page: "marketers", requiresPermission: "Marketer.Manage" },
+      { navType: "marketer-panel", title: "پنل بازاریاب", kind: "singleton", page: "marketer-panel", requiresPermission: "Marketer.SelfView" },
     ],
   },
   {
@@ -132,15 +141,16 @@ export const NAV: NavGroup[] = [
     label: "گزارش‌ها",
     icon: ICONS.chart,
     items: [
-      { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl" },
-      { navType: "reports-receipts", title: "گزارش دریافتی‌ها", kind: "singleton", page: "receipts-report" },
-      { navType: "reports-expenses", title: "گزارش هزینه‌ها", kind: "singleton", page: "expenses" },
-      { navType: "reports-insurer-remittance", title: "گزارش پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance" },
-      { navType: "reports-missing-serials", title: "شماره‌های جا افتاده", kind: "singleton", page: "missing-serials" },
-      { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report" },
-      { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "collections-report" },
-      { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "collections-report" },
-      { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "collections-report" },
+      { navType: "reports-pnl", title: "سود و زیان", kind: "singleton", page: "pnl", requiresPermission: "Finance.Read" },
+      { navType: "reports-aging", title: "سنی معوقات", kind: "singleton", page: "aging-report", requiresPermission: "Finance.Read" },
+      { navType: "reports-receipts", title: "گزارش دریافتی‌ها", kind: "singleton", page: "receipts-report", requiresPermission: "Report.Read" },
+      { navType: "reports-expenses", title: "گزارش هزینه‌ها", kind: "singleton", page: "expenses", requiresPermission: "Finance.Read" },
+      { navType: "reports-insurer-remittance", title: "گزارش پرداخت به بیمه‌گر", kind: "singleton", page: "insurer-remittance", requiresPermission: "Finance.Read" },
+      { navType: "reports-missing-serials", title: "شماره‌های جا افتاده", kind: "singleton", page: "missing-serials", requiresPermission: "Policy.Read" },
+      { navType: "reports-period-collection", title: "وصولی‌های دوره", kind: "singleton", page: "collections-report", requiresPermission: "Report.Read" },
+      { navType: "reports-ontime-rate", title: "نرخ وصول به‌موقع", kind: "singleton", page: "collections-report", requiresPermission: "Report.Read" },
+      { navType: "reports-default-analysis", title: "تحلیل نکول", kind: "singleton", page: "collections-report", requiresPermission: "Report.Read" },
+      { navType: "reports-export", title: "خروجی اکسل", kind: "singleton", page: "collections-report", requiresPermission: "Report.Read" },
     ],
   },
   {
@@ -148,10 +158,10 @@ export const NAV: NavGroup[] = [
     label: "ورود اطلاعات",
     icon: ICONS.up,
     items: [
-      { navType: "import-fanavaran", title: "آپلود فایل فناوران", kind: "singleton", page: "import-fanavaran" },
-      { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "contract-templates" },
-      { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "import-history" },
-      { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "import-mismatches" },
+      { navType: "import-fanavaran", title: "آپلود فایل فناوران", kind: "singleton", page: "import-fanavaran", requiresPermission: "Import.Run" },
+      { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "contract-templates", requiresPermission: "Policy.Write" },
+      { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "import-history", requiresPermission: "Import.Run" },
+      { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "import-mismatches", requiresPermission: "Import.Run" },
     ],
   },
   {
@@ -159,16 +169,16 @@ export const NAV: NavGroup[] = [
     label: "تنظیمات",
     icon: ICONS.gear,
     items: [
-      { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "agency-settings" },
-      { navType: "settings-payment", title: "تنظیمات درگاه پرداخت", kind: "singleton", page: "agency-payment-settings" },
-      { navType: "settings-sms-panel", title: "تنظیمات پنل پیامکی", kind: "singleton", page: "agency-sms-settings" },
-      { navType: "settings-policy-number", title: "کدهای بیمه‌نامه", kind: "singleton", page: "policy-number-settings" },
-      { navType: "settings-cash-and-bank", title: "صندوق و بانک‌ها", kind: "singleton", page: "cash-and-bank-settings" },
-      { navType: "settings-agency-commission", title: "کارمزد از بیمه‌گر", kind: "singleton", page: "agency-commission-settings" },
-      { navType: "settings-expense-categories", title: "دسته‌بندی هزینه‌ها", kind: "singleton", page: "expense-category-settings" },
-      { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users" },
+      { navType: "settings-agency", title: "مشخصات نمایندگی", kind: "singleton", page: "agency-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-payment", title: "تنظیمات درگاه پرداخت", kind: "singleton", page: "agency-payment-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-sms-panel", title: "تنظیمات پنل پیامکی", kind: "singleton", page: "agency-sms-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-policy-number", title: "کدهای بیمه‌نامه", kind: "singleton", page: "policy-number-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-cash-and-bank", title: "صندوق و بانک‌ها", kind: "singleton", page: "cash-and-bank-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-agency-commission", title: "کارمزد از بیمه‌گر", kind: "singleton", page: "agency-commission-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-expense-categories", title: "دسته‌بندی هزینه‌ها", kind: "singleton", page: "expense-category-settings", requiresPermission: "Settings.Write" },
+      { navType: "settings-users", title: "کاربران و دسترسی‌ها", kind: "singleton", page: "settings-users", requiresPermission: "Settings.Write" },
       { navType: "change-password", title: "تغییر رمز عبور", kind: "singleton", page: "change-password" },
-      { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "settings-audit-log" },
+      { navType: "settings-activity-log", title: "لاگ فعالیت", kind: "singleton", page: "settings-audit-log", requiresPermission: "Settings.Write" },
       {
         navType: "agencies-management", title: "نمایندگی‌ها", kind: "singleton", page: "agencies-management",
         requiresPermission: "Platform.Owner",

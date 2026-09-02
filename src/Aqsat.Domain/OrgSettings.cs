@@ -55,5 +55,31 @@ public class OrgSettings
     /// refuses when false, regardless of anything else.</summary>
     public bool CustomerPortalEnabled { get; set; }
 
+    /// <summary>The installment-contract text the customer accepts on the portal before paying
+    /// the down payment (owner decision 2026-09-01). Null/empty = the default Persian text
+    /// (InstallmentContractDefaults.DefaultText); each agency may edit its own.</summary>
+    public string? InstallmentContractText { get; set; }
+
+    /// <summary>The agency manager's mobile — destructive operations (danger-zone data wipe)
+    /// SMS their confirmation code here, never to whoever happens to be logged in (owner decision
+    /// 2026-09-02). Null/empty = the danger-zone OTP flow refuses to start.</summary>
+    public string? DangerZoneManagerMobile { get; set; }
+
     public byte[] RowVersion { get; set; } = default!;
+}
+
+public static class InstallmentContractDefaults
+{
+    /// <summary>The fallback contract text shown on the portal when the agency has not written
+    /// its own — describes rules, installment commitment and the 3-day settlement window.</summary>
+    public const string DefaultText =
+        """
+        قرارداد فروش بیمه‌نامه به‌صورت اقساطی
+
+        ۱. با پذیرش این قرارداد، بیمه‌گذار مبلغ کل بیمه‌نامه شامل حق بیمه و کارمزد خدمات را به‌صورت پیش‌پرداخت و اقساط ماهانه تأدیه می‌کند.
+        ۲. تاریخ سررسید هر قسط، همان روز ماه صدور بیمه‌نامه است و پرداخت هر قسط در موعد آن الزامی است.
+        ۳. در صورت تأخیر در پرداخت اقساط، نمایندگی مجاز است از ادامهٔ پوشش بیمه‌ای و صدور بیمه‌نامه‌های بعدی برای بیمه‌گذار خودداری کند.
+        ۴. بیمه‌گذار تأیید می‌کند که اطلاعات ثبت‌شده در پرونده صحیح است و هرگونه تغییر را کتباً اطلاع خواهد داد.
+        ۵. این قرارداد در چارچوب مقررات بیمه مرکزی جمهوری اسلامی ایران تنظیم شده است.
+        """;
 }

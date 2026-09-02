@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
@@ -26,19 +27,24 @@ export function AuditLogPage() {
   const [rows, setRows] = useState<AuditLogRowDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const reload = () => {
+    const params = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+    api
+      .get<AuditLogRowDto[]>(`/settings/audit-log${params}`)
+      .then((data) => {
+        setRows(data);
+        setError(null);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری لاگ فعالیت"));
+  };
+
   useEffect(() => {
-    const handle = setTimeout(() => {
-      const params = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-      api
-        .get<AuditLogRowDto[]>(`/settings/audit-log${params}`)
-        .then((data) => {
-          setRows(data);
-          setError(null);
-        })
-        .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری لاگ فعالیت"));
-    }, 250);
+    const handle = setTimeout(reload, 250);
     return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  useLiveReload(reload);
 
   return (
     <div>

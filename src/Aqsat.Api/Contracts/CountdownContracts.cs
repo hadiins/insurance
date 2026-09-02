@@ -21,3 +21,12 @@ public sealed record CountdownDashboardDto(
     decimal Collected,
     decimal Shortfall,
     IReadOnlyList<CountdownRowDto> Rows);
+
+/// <summary>The header notification bell's three counters in one call (owner decision
+/// 2026-09-02): overdue installments needing action, renewal watches due for follow-up, and
+/// incomplete customer profiles. A renewal watch counts as due once its expiry is inside its
+/// own NotifyDaysBefore window (or already past).</summary>
+public sealed record TodaySummaryDto(
+    int OverdueInstallments,
+    int DueRenewals,
+    IncompleteProfileSummaryDto IncompleteProfiles);

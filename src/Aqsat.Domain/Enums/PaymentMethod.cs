@@ -16,4 +16,18 @@ public enum PaymentMethod : byte
     /// money never touches the agency's CashBox or BankAccount, so Payment.CashBoxId/BankAccountId
     /// stay null for this method. Which insurer it was is already known from the Policy.</summary>
     PosDirect = 4,
+
+    /// <summary>The customer's portal down-payment payment through the agency's PSP — recorded
+    /// automatically by PolicyVerificationService, never chosen by an operator in a receipt form.
+    /// Like PosDirect, no CashBox or BankAccount is touched.</summary>
+    Online = 5,
+}
+
+/// <summary>Well-known values of Payment.Method (the free-text display column) that code keys
+/// on — defined once in Domain so controllers and services share the exact same string.</summary>
+public static class WellKnownPaymentMethods
+{
+    /// <summary>The marker ReportsController's cash-basis P&amp;L filters on to recognize a
+    /// down-payment Payment (which carries no PaymentAllocation rows).</summary>
+    public const string DownPayment = "پیش‌پرداخت";
 }

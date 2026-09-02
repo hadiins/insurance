@@ -28,6 +28,14 @@ interface BankAccountDto {
   isActive: boolean;
 }
 
+interface InsurerLiabilityRow {
+  insurerName: string;
+  pendingCount: number;
+  pendingAmount: number;
+  oldestCollectedOn: string | null;
+  remittedTotal: number;
+}
+
 interface InsurerRemittanceLineDto {
   policyId: string;
   policyNumber: string;
@@ -54,6 +62,7 @@ const METHOD_LABEL: Record<string, string> = { Cash: "نقدی", BankTransfer: "
  * linked to specific installments so a per-policy remittance history stays queryable. */
 export function InsurerRemittancePage() {
   const [pending, setPending] = useState<PendingRemittanceRow[] | null>(null);
+  const [byInsurer, setByInsurer] = useState<InsurerLiabilityRow[] | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [past, setPast] = useState<InsurerRemittanceDto[] | null>(null);
   const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
@@ -69,6 +78,7 @@ export function InsurerRemittancePage() {
 
   function reload() {
     api.get<PendingRemittanceRow[]>("/insurer-remittances/pending").then(setPending).catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری"));
+    api.get<InsurerLiabilityRow[]>("/insurer-remittances/by-insurer").then(setByInsurer).catch(() => {});
     api.get<InsurerRemittanceDto[]>("/insurer-remittances").then(setPast).catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری"));
   }
 
@@ -142,6 +152,46 @@ export function InsurerRemittancePage() {
           {error}
         </div>
       )}
+
+      <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">بدهی به بیمه‌گران به تفکیک بیمه</div>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {["بیمه‌گر", "تعداد موارد واریزنشده", "مبلغ واریزنشده", "قدیمی‌ترین دریافتی", "جمع واریز‌شده تا امروز"].map((h) => (
+                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {byInsurer?.map((r) => (
+              <tr key={r.insurerName} className="border-t border-(--edge) first:border-t-0">
+                <td className="px-3 py-2.5 text-[13px] font-semibold">{r.insurerName}</td>
+                <td className="px-3 py-2.5 text-[12.5px] tabular-nums text-(--ice-3)">{fa(r.pendingCount)}</td>
+                <td className="px-3 py-2.5 text-[13px] font-bold text-(--ember)">{money(r.pendingAmount)}</td>
+                <td className="px-3 py-2.5 text-[12px] tabular-nums text-(--ice-3)">
+                  {r.oldestCollectedOn ? toJalaliDisplay(r.oldestCollectedOn) : "—"}
+                </td>
+                <td className="px-3 py-2.5 text-[12.5px] tabular-nums text-(--ice-2)">{money(r.remittedTotal)}</td>
+              </tr>
+            ))}
+            {byInsurer?.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
+                  بدهی واریزنشده‌ای به بیمه‌گران نیست.
+                </td>
+              </tr>
+            )}
+            {byInsurer === null && (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-[12px] text-(--ice-3)">در حال بارگذاری…</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
         <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">دریافتی‌های واریزنشده به بیمه‌گر</div>

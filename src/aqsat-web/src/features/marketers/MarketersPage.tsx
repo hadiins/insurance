@@ -14,6 +14,8 @@ interface MarketerDto {
   type: string;
   isActive: boolean;
   appUserId: string | null;
+  appUserFullName: string | null;
+  appUserMobile: string | null;
 }
 
 interface MarketerRateDto {
@@ -43,6 +45,19 @@ interface CommissionSummaryDto {
   entries: CommissionEntryDto[];
 }
 
+interface CashBoxDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+interface BankAccountDto {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  isActive: boolean;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   Pending: "در انتظار تسویه",
   Payable: "قابل پرداخت",
@@ -55,12 +70,31 @@ export function MarketersPage() {
   const [selected, setSelected] = useState<MarketerDto | null>(null);
   const [rates, setRates] = useState<MarketerRateDto[] | null>(null);
   const [commissions, setCommissions] = useState<CommissionSummaryDto | null>(null);
+  const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [payMethod, setPayMethod] = useState<"Cash" | "BankTransfer">("Cash");
+  const [payCashBoxId, setPayCashBoxId] = useState("");
+  const [payBankAccountId, setPayBankAccountId] = useState("");
 
   const [newName, setNewName] = useState("");
   const [newMobile, setNewMobile] = useState("");
   const [newRateLine, setNewRateLine] = useState("");
   const [newRatePercent, setNewRatePercent] = useState("");
+
+  const [panelMobile, setPanelMobile] = useState("");
+  const [panelName, setPanelName] = useState("");
+  const [panelPassword, setPanelPassword] = useState("");
+
+  useEffect(() => {
+    setPanelMobile(selected?.mobile ?? "");
+    setPanelName(selected?.fullName ?? "");
+    setPanelPassword("");
+    // Defaults come from the marketer record; re-defaulting on every keystroke elsewhere would
+    // wipe what the manager is typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id]);
 
   function reload() {
     api.get<MarketerDto[]>("/marketers").then(setMarketers).catch(() => {});
@@ -69,6 +103,8 @@ export function MarketersPage() {
   useEffect(() => {
     reload();
     api.get<InsuranceLineDto[]>("/insurance-lines").then(setLines).catch(() => {});
+    api.get<CashBoxDto[]>("/settings/cash-and-bank/cash-boxes").then(setCashBoxes).catch(() => {});
+    api.get<BankAccountDto[]>("/settings/cash-and-bank/bank-accounts").then(setBankAccounts).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -116,13 +152,57 @@ export function MarketersPage() {
     }
   }
 
+  async function grantPanelAccess() {
+    if (!selected || !panelMobile.trim()) {
+      setError("شمارهٔ همراه حساب پنل الزامی است.");
+      return;
+    }
+    setError(null);
+    try {
+      const updated = await api.post<MarketerDto>(`/marketers/${selected.id}/panel-access`, {
+        mobile: panelMobile.trim(),
+        password: panelPassword || null,
+        fullName: panelName.trim() || null,
+      });
+      setSelected(updated);
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ایجاد دسترسی پنل ناموفق بود.");
+    }
+  }
+
+  async function revokePanelAccess() {
+    if (!selected) return;
+    setError(null);
+    try {
+      const updated = await api.delete<MarketerDto>(`/marketers/${selected.id}/panel-access`);
+      setSelected(updated);
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "قطع دسترسی پنل ناموفق بود.");
+    }
+  }
+
   async function payCommissions() {
     if (!selected || !commissions) return;
     const payableIds = commissions.entries.filter((e) => e.status === "Payable").map((e) => e.id);
     if (payableIds.length === 0) return;
+    if (payMethod === "Cash" && !payCashBoxId) {
+      setError("برای پرداخت نقدی، انتخاب صندوق الزامی است.");
+      return;
+    }
+    if (payMethod === "BankTransfer" && !payBankAccountId) {
+      setError("برای واریز بانکی، انتخاب حساب بانکی الزامی است.");
+      return;
+    }
     setError(null);
     try {
-      await api.post(`/marketers/${selected.id}/commissions/pay`, { commissionEntryIds: payableIds });
+      await api.post(`/marketers/${selected.id}/commissions/pay`, {
+        commissionEntryIds: payableIds,
+        methodType: payMethod,
+        cashBoxId: payMethod === "Cash" ? payCashBoxId : null,
+        bankAccountId: payMethod === "BankTransfer" ? payBankAccountId : null,
+      });
       api.get<CommissionSummaryDto>(`/marketers/${selected.id}/commissions`).then(setCommissions).catch(() => {});
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "پرداخت پورسانت ناموفق بود.");
@@ -241,19 +321,112 @@ export function MarketersPage() {
                 </div>
               </div>
 
+              <div className="mb-4 rounded-[10px] border border-(--edge-2) bg-(--fld) p-3">
+                <div className="mb-2 text-[11px] tracking-wider text-(--ice-3)">دسترسی پنل بازاریاب</div>
+                {selected.appUserId ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[12.5px] text-(--ice-2)">
+                      متصل: <b className="text-(--ice)">{selected.appUserFullName}</b>{" "}
+                      <span className="tabular-nums">({fa(selected.appUserMobile ?? "")})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={revokePanelAccess}
+                      className="rounded-[8px] border border-(--ember) px-2.5 py-1.5 text-[11px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                    >
+                      قطع دسترسی
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-2 grid grid-cols-3 gap-2">
+                      <input
+                        value={panelMobile}
+                        onChange={(e) => setPanelMobile(e.target.value)}
+                        placeholder="موبایل حساب"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+                      />
+                      <input
+                        value={panelName}
+                        onChange={(e) => setPanelName(e.target.value)}
+                        placeholder="نام کاربر"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+                      />
+                      <input
+                        type="password"
+                        value={panelPassword}
+                        onChange={(e) => setPanelPassword(e.target.value)}
+                        placeholder="رمز عبور (کاربر جدید)"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-(--ice-3)">
+                        اگر این موبایل قبلاً ثبت شده باشد، فقط متصل می‌شود و رمز جدید لازم نیست.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={grantPanelAccess}
+                        className="shrink-0 rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                      >
+                        ایجاد دسترسی پنل
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[11px] tracking-wider text-(--ice-3)">پورسانت‌ها</span>
-                  {commissions && commissions.payable > 0 && (
+                </div>
+                {commissions && commissions.payable > 0 && (
+                  <div className="mb-2 rounded-[10px] border border-(--edge-2) bg-(--fld) p-3">
+                    <div className="mb-2 text-[11px] tracking-wider text-(--ice-3)">
+                      پرداخت {money(commissions.payable)} تومان از محل
+                    </div>
+                    <div className="mb-2 grid grid-cols-2 gap-2">
+                      <select
+                        value={payMethod}
+                        onChange={(e) => setPayMethod(e.target.value as "Cash" | "BankTransfer")}
+                        className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice)"
+                      >
+                        <option value="Cash">نقدی (صندوق)</option>
+                        <option value="BankTransfer">واریز بانکی</option>
+                      </select>
+                      {payMethod === "Cash" ? (
+                        <select
+                          value={payCashBoxId}
+                          onChange={(e) => setPayCashBoxId(e.target.value)}
+                          className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice)"
+                        >
+                          <option value="">صندوق…</option>
+                          {cashBoxes.filter((b) => b.isActive).map((b) => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={payBankAccountId}
+                          onChange={(e) => setPayBankAccountId(e.target.value)}
+                          className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice)"
+                        >
+                          <option value="">حساب بانکی…</option>
+                          {bankAccounts.filter((a) => a.isActive).map((a) => (
+                            <option key={a.id} value={a.id}>{a.bankName} — {a.accountNumber}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={payCommissions}
                       className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1 text-[11px] font-semibold text-(--on-mint)"
                     >
-                      پرداخت {money(commissions.payable)} تومان
+                      ثبت پرداخت پورسانت
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
                 {commissions && (
                   <div className="mb-2 grid grid-cols-3 gap-2 text-center text-[11px]">
                     <div className="rounded-[8px] border border-(--edge-2) p-2">

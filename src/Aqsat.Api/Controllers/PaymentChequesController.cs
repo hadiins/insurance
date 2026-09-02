@@ -26,7 +26,13 @@ public sealed class PaymentChequesController(
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PaymentChequeDto>>> List([FromQuery] string? status, CancellationToken ct)
     {
+        // A bounced cheque's Payment is soft-deleted by the reversal — the global soft-delete
+        // filter would drop the row through the Payment join, hiding it from this list right
+        // when its status matters most. Agency isolation stays DB-side (RLS is unaffected);
+        // the root's own soft-delete is re-applied explicitly.
         var query = dbContext.PaymentCheques.AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(c => !c.IsDeleted && c.AgencyId == currentUser.ActiveOrganizationId)
             .Include(c => c.Payment)
             .Include(c => c.Policy)
             .Include(c => c.CashBox)

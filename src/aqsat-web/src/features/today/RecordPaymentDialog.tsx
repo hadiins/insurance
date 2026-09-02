@@ -18,6 +18,12 @@ interface BankAccountDto {
   isActive: boolean;
 }
 
+interface BankDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 type MethodType = "Cash" | "BankTransfer" | "Cheque" | "PosDirect";
 
 interface AllocationLineDto {
@@ -54,6 +60,7 @@ export function RecordPaymentDialog({
   const [bankAccountId, setBankAccountId] = useState("");
   const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccountDto[]>([]);
+  const [banks, setBanks] = useState<BankDto[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PaymentResultDto | null>(null);
@@ -76,6 +83,10 @@ export function RecordPaymentDialog({
     api
       .get<BankAccountDto[]>("/settings/cash-and-bank/bank-accounts")
       .then(setBankAccounts)
+      .catch(() => {});
+    api
+      .get<BankDto[]>("/settings/cash-and-bank/banks")
+      .then(setBanks)
       .catch(() => {});
   }, []);
 
@@ -274,11 +285,18 @@ export function RecordPaymentDialog({
                     </div>
                     <div>
                       <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">بانک عامل</label>
-                      <input
+                      <select
                         value={chequeBankName}
                         onChange={(e) => setChequeBankName(e.target.value)}
                         className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
-                      />
+                      >
+                        <option value="">انتخاب کنید…</option>
+                        {banks.filter((b) => b.isActive).map((b) => (
+                          <option key={b.id} value={b.name}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>

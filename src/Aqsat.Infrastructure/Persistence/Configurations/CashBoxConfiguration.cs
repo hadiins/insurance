@@ -10,5 +10,6 @@ public sealed class CashBoxConfiguration : AqsatEntityConfiguration<CashBox>
         base.Configure(builder);
 
         builder.Property(c => c.Name).HasMaxLength(80).IsRequired();
+        builder.Property(c => c.OpeningBalance).HasPrecision(18, 0);
     }
 }

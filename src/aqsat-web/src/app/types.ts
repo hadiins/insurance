@@ -48,6 +48,9 @@ export type PageKind =
   | "agencies-management"
   | "agency-profile"
   | "change-password"
+  | "cheques-list"
+  | "cash-flow"
+  | "aging-report"
   | "blank";
 
 export interface NavItem {

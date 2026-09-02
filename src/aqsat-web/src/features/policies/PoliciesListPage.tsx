@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
+import { useDraftState } from "../shell/useDraftState";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 
@@ -55,11 +57,19 @@ export function PoliciesListPage() {
   const openTab = useTabsStore((s) => s.openTab);
   const initial = (tab?.payload as PolicyListFilterPayload | undefined) ?? {};
 
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useDraftState<{ search: string; status: string; installment: string }>(
+    "list-filters",
+    {
+      search: "",
+      status: initial.status ?? "",
+      installment: initial.isInstallment ? "true" : "",
+    },
+  );
+  const search = filters.search;
+  const status = filters.status;
+  const installmentFilter = filters.installment;
   const [items, setItems] = useState<PolicyListItemDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState(initial.status ?? "");
-  const [installmentFilter, setInstallmentFilter] = useState(initial.isInstallment ? "true" : "");
 
   function reload() {
     const params = new URLSearchParams();
@@ -80,6 +90,8 @@ export function PoliciesListPage() {
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status, installmentFilter]);
+
+  useLiveReload(reload);
 
   function openPolicy(p: PolicyListItemDto) {
     openTab({
@@ -107,21 +119,21 @@ export function PoliciesListPage() {
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">فهرست بیمه‌نامه‌ها</h2>
       <div className="mb-4.5 text-xs text-(--ice-3)">
-        جست‌وجو بر اساس شمارهٔ کامل، سریال (با یا بدون صفر)، سال، کد رشته، یا نام بیمه‌گذار
+        جست‌وجو بر اساس شمارهٔ کامل، سریال، سال، کد رشته، نام، موبایل، کد ملی یا پلاک خودرو
       </div>
 
       <div className="mb-4.5 flex max-w-sm items-center gap-1.5">
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="1110/576210/405/000248 · 248 · 1405 · نام…"
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          placeholder="شمارهٔ بیمه‌نامه، نام، موبایل، کد ملی، پلاک…"
           dir="ltr"
           className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-right text-[13px] text-(--ice) outline-none focus:border-(--mint)"
         />
         {search && (
           <button
             type="button"
-            onClick={() => setSearch("")}
+            onClick={() => setFilters({ ...filters, search: "" })}
             className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             پاک کردن
@@ -132,7 +144,7 @@ export function PoliciesListPage() {
       <div className="mb-4.5 flex flex-wrap items-center gap-2">
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
         >
           {STATUS_OPTIONS.map((o) => (
@@ -143,7 +155,7 @@ export function PoliciesListPage() {
         </select>
         <select
           value={installmentFilter}
-          onChange={(e) => setInstallmentFilter(e.target.value)}
+          onChange={(e) => setFilters({ ...filters, installment: e.target.value })}
           className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
         >
           {INSTALLMENT_OPTIONS.map((o) => (
@@ -155,10 +167,7 @@ export function PoliciesListPage() {
         {(status || installmentFilter) && (
           <button
             type="button"
-            onClick={() => {
-              setStatus("");
-              setInstallmentFilter("");
-            }}
+            onClick={() => setFilters({ ...filters, status: "", installment: "" })}
             className="text-[11.5px] text-(--ice-3) hover:text-(--ice)"
           >
             پاک کردن فیلترها

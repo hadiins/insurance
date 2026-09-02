@@ -1,6 +1,7 @@
 using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
+using Aqsat.Application.Platform;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Auth;
@@ -23,7 +24,8 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/settings/agency")]
 [Authorize(Policy = Permissions.PolicyRead)]
-public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUserContext currentUser) : ControllerBase
+public sealed class AgencySettingsController(
+    AppDbContext dbContext, ICurrentUserContext currentUser, IAgencyOtpService agencyOtpService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<AgencySettingsDto>> Get(CancellationToken ct)
@@ -54,7 +56,9 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
             (settings?.ServiceFeeMode ?? defaults.ServiceFeeMode).ToString(),
             settings?.DefaultWriteOffDays ?? defaults.DefaultWriteOffDays,
             settings?.RenewalAutoWatchLeadDays ?? defaults.RenewalAutoWatchLeadDays,
-            organization.AgencyCode, organization.AgencyCode is not null && hasAnyPolicy));
+            organization.AgencyCode, organization.AgencyCode is not null && hasAnyPolicy,
+            settings?.InstallmentContractText,
+            settings?.DangerZoneManagerMobile));
     }
 
     /// <summary>docs/TASK-24-POLICY-NUMBER.md §4.3 — "پس از اولین بیمه‌نامه قابل تغییر نیست...
@@ -138,6 +142,23 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
         settings.ServiceFeeMode = serviceFeeMode;
         settings.DefaultWriteOffDays = request.DefaultWriteOffDays;
         settings.RenewalAutoWatchLeadDays = request.RenewalAutoWatchLeadDays;
+        // Null = keep the stored contract text; empty string = clear back to the system default.
+        if (request.InstallmentContractText is not null)
+        {
+            var text = request.InstallmentContractText.Trim();
+            settings.InstallmentContractText = text.Length == 0 ? null : text;
+        }
+
+        if (request.DangerZoneManagerMobile is not null)
+        {
+            var mobile = request.DangerZoneManagerMobile.Trim();
+            if (mobile.Length > 0 && !IsValidMobile(mobile))
+            {
+                return ValidationProblem("شمارهٔ موبایل مدیر نمایندگی معتبر نیست (مثال: 09123456789).");
+            }
+
+            settings.DangerZoneManagerMobile = mobile.Length == 0 ? null : mobile;
+        }
 
         await dbContext.SaveChangesAsync(ct);
 
@@ -251,11 +272,38 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
         return await GetSmsPanel(ct);
     }
 
+    /// <summary>Sends the 6-digit danger-zone confirmation code to the agency manager's mobile
+    /// configured in settings — never to the logged-in user's own number (owner decision
+    /// 2026-09-02: the code must reach a person accountable for the agency, not whoever happens
+    /// to hold a session).</summary>
+    [HttpPost("data/request-otp")]
+    [Authorize(Policy = Permissions.SettingsWrite)]
+    public async Task<ActionResult<RequestDangerZoneOtpResponse>> RequestDangerZoneOtp(CancellationToken ct)
+    {
+        var settings = await dbContext.OrgSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
+        var mobile = settings?.DangerZoneManagerMobile?.Trim();
+
+        if (string.IsNullOrWhiteSpace(mobile))
+        {
+            return ValidationProblem("ابتدا شمارهٔ موبایل مدیر نمایندگی را در تنظیمات وارد کنید.");
+        }
+
+        var sent = await agencyOtpService.SendAsync(currentUser.ActiveOrganizationId, mobile, ct);
+        if (!sent)
+        {
+            return ValidationProblem("ارسال پیامک ناموفق بود. پنل پیامکی را بررسی کنید و دوباره تلاش کنید.");
+        }
+
+        return Ok(new RequestDangerZoneOtpResponse(true));
+    }
+
     /// <summary>Wipes every operational record for this agency — policies, installments,
     /// payments/allocations, collateral, and commission entries — via soft-delete (CLAUDE.md rule
     /// 7: no hard deletes, so this is reversible at the database level even though there is no undo
     /// UI). Customers and users are left untouched. Meant for clearing test data before real use,
-    /// not a routine action — gated behind typing the agency's own Code back.</summary>
+    /// not a routine action — gated behind typing the agency's own Code back AND a 6-digit SMS
+    /// code sent to the agency manager's mobile.</summary>
     [HttpDelete("data")]
     [Authorize(Policy = Permissions.SettingsWrite)]
     public async Task<ActionResult> ClearData(ClearAgencyDataRequest request, CancellationToken ct)
@@ -273,6 +321,12 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
         }
 
         var agencyId = currentUser.ActiveOrganizationId;
+
+        if (string.IsNullOrWhiteSpace(request.OtpCode) || !agencyOtpService.Verify(agencyId, request.OtpCode.Trim()))
+        {
+            return ValidationProblem("کد تأیید پیامکی نامعتبر یا منقضی است.");
+        }
+
         var now = DateTimeOffset.UtcNow;
 
         await dbContext.PaymentAllocations.Where(a => a.AgencyId == agencyId && !a.IsDeleted)
@@ -327,4 +381,7 @@ public sealed class AgencySettingsController(AppDbContext dbContext, ICurrentUse
         Status = StatusCodes.Status400BadRequest,
         Title = message,
     });
+
+    private static bool IsValidMobile(string mobile) =>
+        System.Text.RegularExpressions.Regex.IsMatch(mobile, @"^09\d{9}$");
 }

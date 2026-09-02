@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Aqsat.Application.ApiIr;
 using Aqsat.Domain;
 using Aqsat.Infrastructure.Persistence;
@@ -27,8 +28,17 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
     private const decimal ChequeColorCost = 1_100m;
     private const decimal CallOtpCost = 95m;
 
+    // api.ir's own price list puts both credit-inquiry services in the same bracket as ChequeColor;
+    // sandboxed calls never charge, so these only matter for the call-log cost accounting once a
+    // real key exists — re-check against the panel before production activation.
+    private const decimal UnpaidChequeCost = 1_100m;
+    private const decimal ActiveLoansCost = 1_100m;
+
     // api.ir's envelope keys are lowerCamelCase; the DTOs here are PascalCase for C# convention.
-    private static readonly JsonSerializerOptions EnvelopeJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions EnvelopeJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+    };
 
     public async Task<bool?> IsHolidayAsync(DateOnly date, Guid agencyId, CancellationToken ct = default)
     {
@@ -117,6 +127,49 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         return success;
     }
 
+    public async Task<UnpaidChequeResult?> UnpaidChequeAsync(string nationalCode, Guid agencyId, CancellationToken ct = default)
+    {
+        var (success, data) = await CallAsync<UnpaidChequeResponse>(
+            "/api/sw1/UnpaidCheque", new { nationalCode }, "UnpaidCheque", UnpaidChequeCost,
+            isPaidEndpoint: true, agencyId, ct);
+        if (!success)
+        {
+            return null;
+        }
+
+        // A sandboxed 2xx has no Data at all — report "no real answer" without failing the flow.
+        return data is null
+            ? new UnpaidChequeResult(null, null, null)
+            : new UnpaidChequeResult(data.Count, data.SumAmount, data.SumBouncedAmount);
+    }
+
+    public async Task<ActiveLoansResult?> ActiveLoansAsync(string nationalCode, Guid agencyId, CancellationToken ct = default)
+    {
+        var (success, data) = await CallAsync<ActiveLoansResponse>(
+            "/api/sw1/ActiveLoans", new { nationalCode }, "ActiveLoans", ActiveLoansCost,
+            isPaidEndpoint: true, agencyId, ct);
+        if (!success)
+        {
+            return null;
+        }
+
+        if (data is null)
+        {
+            return new ActiveLoansResult(null, null, null, null, null, null, null);
+        }
+
+        // api.ir returns `info: null` for a person with no active facilities — count is still real.
+        var info = data.Info;
+        return new ActiveLoansResult(
+            data.Count,
+            info?.TotalAmount,
+            info?.DebtTotalAmount,
+            info?.PastExpiredTotalAmount,
+            info?.DeferredTotalAmount,
+            info?.SuspiciousTotalAmount,
+            info?.Dishonored);
+    }
+
     /// <summary>
     /// `Success` means "the call was accepted" — true for a real call with `success:true` in the
     /// envelope (rule 18), and also true for a sandboxed call that got a 2xx from Sandbox/Echo (a
@@ -141,7 +194,9 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, actualEndpoint)
             {
-                Content = JsonContent.Create(body),
+                // Sandbox/Echo's EchoReq rejects any body without its required `name` field
+                // ("Name required"), so a sandboxed call echoes the original fields plus a name.
+                Content = JsonContent.Create(wasSandboxed ? WithEchoName(body) : body),
             };
             if (!string.IsNullOrEmpty(apiKey))
             {
@@ -187,6 +242,16 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         await dbContext.SaveChangesAsync(ct);
 
         return (success, data);
+    }
+
+    /// <summary>Sandbox/Echo (EchoReq) requires a `name` property next to whatever the real
+    /// endpoint's body is — this merges the original request fields with one.</summary>
+    private static Dictionary<string, object?> WithEchoName(object body)
+    {
+        var echoed = new Dictionary<string, object?> { ["name"] = "Aqsat" };
+        foreach (var prop in body.GetType().GetProperties())
+            echoed[prop.Name] = prop.GetValue(body);
+        return echoed;
     }
 
     /// <summary>
@@ -264,7 +329,7 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         }
 
         var resolved = new ResolvedSettings(
-            string.IsNullOrWhiteSpace(row?.ApiKey) ? options.Value.ApiKey : row!.ApiKey.Trim(),
+            string.IsNullOrWhiteSpace(row?.ApiKey) ? options.Value.ApiKey : NormalizeApiKey(row!.ApiKey),
             row?.AllowPaidEndpoints ?? options.Value.AllowPaidEndpoints);
         cache.Set(SettingsCacheKey, resolved, SettingsCacheTtl);
         return resolved;
@@ -303,13 +368,36 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
             logger.LogWarning(ex, "Could not read OrgSettings.SmsApiKey for agency {AgencyId} — falling back to the platform key", agencyId);
         }
 
-        var resolved = string.IsNullOrWhiteSpace(key) ? platformKey : key.Trim();
+        var resolved = NormalizeApiKey(string.IsNullOrWhiteSpace(key) ? platformKey : key);
         cache.Set(cacheKey, resolved, SettingsCacheTtl);
         return resolved;
+    }
+
+    /// <summary>Pasting the whole Authorization header ("Bearer eyJ…") instead of the bare key is
+    /// an easy panel mistake that api.ir answers with 401 — strip the scheme at every resolve so
+    /// an already-stored bad value keeps working too.</summary>
+    private static string NormalizeApiKey(string key)
+    {
+        var trimmed = key.Trim();
+        return trimmed.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? trimmed["Bearer ".Length..].Trim()
+            : trimmed;
     }
 
     private sealed record IsHolidayResponse(bool IsHoliday);
     private sealed record ShahkarLiteResponse(bool IsMatched);
     private sealed record ChequeColorResponse(string? Color);
     private sealed record SendResponse(string? MessageId);
+
+    // The OpenAPI spec types every numeric field as ["integer","string"] — api.ir may send amounts
+    // as JSON strings, so the envelope reader allows numbers to come in from strings too.
+    private sealed record UnpaidChequeResponse(int? Count, decimal? SumAmount, decimal? SumBouncedAmount);
+    private sealed record ActiveLoansResponse(int? Count, ActiveLoansDetailsResponse? Info);
+    private sealed record ActiveLoansDetailsResponse(
+        decimal? TotalAmount,
+        decimal? DebtTotalAmount,
+        decimal? PastExpiredTotalAmount,
+        decimal? DeferredTotalAmount,
+        decimal? SuspiciousTotalAmount,
+        decimal? Dishonored);
 }

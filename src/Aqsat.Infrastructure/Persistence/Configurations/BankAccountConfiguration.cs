@@ -12,5 +12,6 @@ public sealed class BankAccountConfiguration : AqsatEntityConfiguration<BankAcco
         builder.Property(b => b.BankName).HasMaxLength(80).IsRequired();
         builder.Property(b => b.AccountNumber).HasMaxLength(40).IsRequired();
         builder.Property(b => b.AccountHolderName).HasMaxLength(120);
+        builder.Property(b => b.OpeningBalance).HasPrecision(18, 0);
     }
 }

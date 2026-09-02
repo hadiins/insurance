@@ -28,6 +28,13 @@ public class Policy : AgencyOwnedEntity, IAuditableEntity
 
     public bool IsInstallment { get; set; }
 
+    /// <summary>This policy was issued through the wizard's installment flow, so its down payment
+    /// is hard-blocked (server-side) until the portal verification chain completes — fee payment,
+    /// credit inquiries, agency approval and customer contract approval (owner decision
+    /// 2026-09-01, «انسداد کامل»). False for cash issuance and for imported policies, whose down
+    /// payments never had this gate.</summary>
+    public bool RequiresVerification { get; set; }
+
     public DateOnly IssueDate { get; set; }
 
     /// <summary>Drives every due date: DueDate(n) = StartDate + n months, same day-of-month.</summary>
@@ -70,6 +77,12 @@ public class Policy : AgencyOwnedEntity, IAuditableEntity
 
     public string? PreviousInsurer { get; set; }
     public bool IsRenewal { get; set; }
+
+    /// <summary>Free text like Organization.InsurerName / RenewalWatch.CurrentInsurer (no Insurer
+    /// entity exists) — the insurer this policy was actually issued with. Multi-insurer agencies
+    /// need it to split the pending-remittance liability per insurer. Null on existing/imported
+    /// policies: consumers fall back to the agency's own Organization.InsurerName.</summary>
+    public string? InsurerName { get; set; }
 
     public PolicyStatus Status { get; set; } = PolicyStatus.Active;
 

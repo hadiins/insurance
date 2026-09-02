@@ -12,4 +12,9 @@ public enum AuditAction : byte
     /// <summary>A marketer viewed a customer/policy they introduced — docs/PHASE-1-SPEC.md §2.2:
     /// "every marketer view is audited, and the agency owner can see what their marketer looked at."</summary>
     Viewed = 7,
+
+    /// <summary>One hop of the installment-issuance verification chain (fee paid, credit report
+    /// retrieved, agency approved/rejected, customer approved the contract, down payment paid
+    /// online) — the description carries which hop and the policy number.</summary>
+    PolicyVerification = 8,
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useDraftState } from "../shell/useDraftState";
+import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
@@ -48,12 +50,20 @@ export function RenewalWatchesPage() {
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [convertPolicyId, setConvertPolicyId] = useState("");
 
-  const [prospectName, setProspectName] = useState("");
-  const [prospectMobile, setProspectMobile] = useState("");
-  const [lineId, setLineId] = useState("");
-  const [currentInsurer, setCurrentInsurer] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [notifyDaysBefore, setNotifyDaysBefore] = useState("2");
+  const [prospectForm, setProspectForm] = useDraftState("prospect-form", {
+    prospectName: "",
+    prospectMobile: "",
+    lineId: "",
+    currentInsurer: "",
+    expiryDate: "",
+    notifyDaysBefore: "2",
+  });
+  const prospectName = prospectForm.prospectName;
+  const prospectMobile = prospectForm.prospectMobile;
+  const lineId = prospectForm.lineId;
+  const currentInsurer = prospectForm.currentInsurer;
+  const expiryDate = prospectForm.expiryDate;
+  const notifyDaysBefore = prospectForm.notifyDaysBefore;
 
   function reload() {
     const query = statusFilter ? `?status=${statusFilter}` : "";
@@ -65,6 +75,8 @@ export function RenewalWatchesPage() {
     api.get<InsuranceLineDto[]>("/insurance-lines").then(setLines).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
+
+  useLiveReload(reload);
 
   async function registerProspect() {
     if (!prospectName.trim() || !prospectMobile.trim() || !lineId || !expiryDate) {
@@ -83,10 +95,13 @@ export function RenewalWatchesPage() {
         notifyDaysBefore: Number(notifyDaysBefore) || 2,
         marketerId: null,
       });
-      setProspectName("");
-      setProspectMobile("");
-      setCurrentInsurer("");
-      setExpiryDate("");
+      setProspectForm({
+        ...prospectForm,
+        prospectName: "",
+        prospectMobile: "",
+        currentInsurer: "",
+        expiryDate: "",
+      });
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت سررسید ناموفق بود.");
@@ -139,19 +154,19 @@ export function RenewalWatchesPage() {
         <div className="mb-3 grid grid-cols-5 gap-3">
           <input
             value={prospectName}
-            onChange={(e) => setProspectName(e.target.value)}
+            onChange={(e) => setProspectForm({ ...prospectForm, prospectName: e.target.value })}
             placeholder="نام مشتری احتمالی"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={prospectMobile}
-            onChange={(e) => setProspectMobile(e.target.value)}
+            onChange={(e) => setProspectForm({ ...prospectForm, prospectMobile: e.target.value })}
             placeholder="۰۹۱۲۳۴۵۶۷۸۹"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <select
             value={lineId}
-            onChange={(e) => setLineId(e.target.value)}
+            onChange={(e) => setProspectForm({ ...prospectForm, lineId: e.target.value })}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
           >
             <option value="">رشتهٔ بیمه…</option>
@@ -163,13 +178,13 @@ export function RenewalWatchesPage() {
           </select>
           <input
             value={currentInsurer}
-            onChange={(e) => setCurrentInsurer(e.target.value)}
+            onChange={(e) => setProspectForm({ ...prospectForm, currentInsurer: e.target.value })}
             placeholder="بیمه‌گر فعلی"
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <JalaliDateField
             value={expiryDate}
-            onChange={setExpiryDate}
+            onChange={(iso) => setProspectForm({ ...prospectForm, expiryDate: iso })}
             className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
           />
         </div>
@@ -177,7 +192,7 @@ export function RenewalWatchesPage() {
           <label className="text-[11.5px] text-(--ice-3)">یادآوری چند روز قبل از سررسید</label>
           <input
             value={notifyDaysBefore}
-            onChange={(e) => setNotifyDaysBefore(e.target.value)}
+            onChange={(e) => setProspectForm({ ...prospectForm, notifyDaysBefore: e.target.value })}
             className="w-16 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)"
           />
           <button

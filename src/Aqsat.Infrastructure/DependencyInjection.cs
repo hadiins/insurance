@@ -64,6 +64,9 @@ public static class DependencyInjection
         // catches at builder.Build() time. The OTP codes themselves still persist correctly across
         // requests regardless — they live in IMemoryCache, which really is a singleton.
         services.AddScoped<IPlatformOtpService, PlatformOtpService>();
+        // Scoped for the same captive-dependency reason as PlatformOtpService above; the codes
+        // themselves live in the singleton IMemoryCache.
+        services.AddScoped<IAgencyOtpService, AgencyOtpService>();
         services.AddSingleton<IMaintenanceModeService, MaintenanceModeService>();
         // docs/TASKS.md Task 23 — only actually resolved when POST /api/platform/updates/register
         // is hit, so an unset Updater:SigningPublicKeyPem (the normal state until Aqsat.Updater is
@@ -99,6 +102,7 @@ public static class DependencyInjection
         // by Provider, so later implementations just add themselves here.
         services.AddScoped<Aqsat.Application.Payments.IPaymentGateway, Aqsat.Infrastructure.Payments.MockPaymentGateway>();
         services.AddScoped<Aqsat.Infrastructure.Portal.PortalInvitationService>();
+        services.AddScoped<Aqsat.Infrastructure.Portal.PolicyVerificationService>();
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()

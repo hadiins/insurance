@@ -18,7 +18,7 @@ public sealed record PolicyFileDto(
     IReadOnlyList<TimelineEntryDto> Timeline);
 
 public sealed record PolicyInstallmentDto(
-    Guid Id, int SeqNo, DateOnly DueDate, DateOnly SettlementDeadline, decimal Amount, decimal PaidAmount, decimal Balance, string Status);
+    Guid Id, int SeqNo, DateOnly DueDate, DateOnly SettlementDeadline, decimal Amount, decimal PaidAmount, decimal Balance, string Status, bool IsManuallyEdited);
 
 public sealed record PolicyEndorsementDto(
     Guid Id, string EndorsementNo, string Type, DateOnly IssueDate, decimal PremiumDelta, decimal ServiceFeeDelta, string? Description);

@@ -2,8 +2,73 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/*
+ * Theme = palette (data-palette) x mode (data-theme). Every palette block defines ALL tokens for
+ * its mode so no rule depends on file order: the dark blocks (0,2,0 specificity) always beat the
+ * light blocks (0,1,0). Token names predate the multi-palette system: --mint is "accent", not
+ * literally green.
+ */
+
+/* نیلی — پیش‌فرض */
 :root {
-  --void: #eef2f4;
+  /* Native form controls (select popups, date pickers, scrollbars) follow the page's scheme —
+   * without this the dropdown list stays white in dark mode and the light text vanishes on it. */
+  color-scheme: light;
+  /* Soft card shadow — applied to every bg-(--pane) surface via the base-layer rule below;
+   * surfaces with their own shadow-* utility (modals, popovers) keep the bigger shadow. */
+  --card-sh: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 16px rgba(24, 24, 27, 0.06);
+  --void: #e8ebf4;
+  --slate: #fff;
+  --slate-2: #fff;
+  --edge: rgba(30, 41, 82, 0.1);
+  --edge-2: rgba(30, 41, 82, 0.19);
+  --mint: #4f46e5;
+  --mint-dim: #818cf8;
+  --amber: #b45309;
+  --ember: #dc2626;
+  --ice: #131730;
+  --ice-2: #454f6e;
+  --ice-3: #737d9c;
+  --hov: rgba(30, 41, 82, 0.03);
+  --btn-bg: #fff;
+  --btn-hov: rgba(30, 41, 82, 0.05);
+  --pane: #f8f9fd;
+  --tabbar: #e3e6ee;
+  --fld: rgba(30, 41, 82, 0.03);
+  --on-mint: #fff;
+  --gl-mint: 0 2px 10px rgba(79, 70, 229, 0.22);
+  --sh: 0 10px 30px rgba(30, 41, 82, 0.18);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --card-sh: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --void: #0d1017;
+  --slate: #151a24;
+  --slate-2: #1d2432;
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-2: rgba(255, 255, 255, 0.14);
+  --mint: #8b9dff;
+  --mint-dim: #4f5ed6;
+  --amber: #f5a524;
+  --ember: #ff6b5e;
+  --ice: #e9edf7;
+  --ice-2: #aab4cf;
+  --ice-3: #6c7794;
+  --hov: rgba(255, 255, 255, 0.028);
+  --btn-bg: rgba(255, 255, 255, 0.04);
+  --btn-hov: rgba(255, 255, 255, 0.09);
+  --pane: linear-gradient(160deg, rgba(31, 38, 56, 0.9), rgba(17, 21, 32, 0.85));
+  --tabbar: #10141d;
+  --fld: rgba(255, 255, 255, 0.04);
+  --on-mint: #101a4d;
+  --gl-mint: 0 0 24px rgba(139, 157, 255, 0.25);
+  --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* نعنایی — پالت اصلی محصول تا قبل از تم چندگانه، عیناً حفظ شده */
+[data-palette="mint"] {
+  --void: #eaf0ee;
   --slate: #fff;
   --slate-2: #fff;
   --edge: rgba(18, 40, 48, 0.1);
@@ -18,7 +83,7 @@
   --hov: rgba(18, 40, 48, 0.028);
   --btn-bg: #fff;
   --btn-hov: rgba(18, 40, 48, 0.05);
-  --pane: #fff;
+  --pane: #f7faf9;
   --tabbar: #e3e9ec;
   --fld: rgba(18, 40, 48, 0.03);
   --on-mint: #fff;
@@ -26,7 +91,7 @@
   --sh: 0 10px 30px rgba(18, 40, 48, 0.18);
 }
 
-[data-theme="dark"] {
+[data-palette="mint"][data-theme="dark"] {
   --void: #0a1114;
   --slate: #141f24;
   --slate-2: #1c2c33;
@@ -50,6 +115,104 @@
   --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
 }
 
+/* فیروزه‌ای */
+[data-palette="teal"] {
+  --void: #e7f1f0;
+  --slate: #fff;
+  --slate-2: #fff;
+  --edge: rgba(15, 55, 55, 0.1);
+  --edge-2: rgba(15, 55, 55, 0.19);
+  --mint: #0f766e;
+  --mint-dim: #14b8a6;
+  --amber: #b45309;
+  --ember: #dc2626;
+  --ice: #102a28;
+  --ice-2: #3f5a57;
+  --ice-3: #6f8a87;
+  --hov: rgba(15, 55, 55, 0.03);
+  --btn-bg: #fff;
+  --btn-hov: rgba(15, 55, 55, 0.05);
+  --pane: #f5fafa;
+  --tabbar: #dfeceb;
+  --fld: rgba(15, 55, 55, 0.03);
+  --on-mint: #fff;
+  --gl-mint: 0 2px 10px rgba(15, 118, 110, 0.22);
+  --sh: 0 10px 30px rgba(15, 55, 55, 0.18);
+}
+
+[data-palette="teal"][data-theme="dark"] {
+  --void: #081414;
+  --slate: #122020;
+  --slate-2: #1a2e2d;
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-2: rgba(255, 255, 255, 0.14);
+  --mint: #2dd4bf;
+  --mint-dim: #0f766e;
+  --amber: #f5a524;
+  --ember: #ff6b5e;
+  --ice: #e5f4f2;
+  --ice-2: #a3c2bf;
+  --ice-3: #658480;
+  --hov: rgba(255, 255, 255, 0.028);
+  --btn-bg: rgba(255, 255, 255, 0.04);
+  --btn-hov: rgba(255, 255, 255, 0.09);
+  --pane: linear-gradient(160deg, rgba(26, 46, 45, 0.9), rgba(13, 24, 23, 0.85));
+  --tabbar: #0c1817;
+  --fld: rgba(255, 255, 255, 0.04);
+  --on-mint: #05302b;
+  --gl-mint: 0 0 24px rgba(45, 212, 191, 0.25);
+  --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* خاکستری — خنثی خالص با یک تاکید آبی */
+[data-palette="zinc"] {
+  --void: #ececee;
+  --slate: #fff;
+  --slate-2: #fff;
+  --edge: rgba(24, 24, 27, 0.1);
+  --edge-2: rgba(24, 24, 27, 0.19);
+  --mint: #2563eb;
+  --mint-dim: #60a5fa;
+  --amber: #b45309;
+  --ember: #dc2626;
+  --ice: #18181b;
+  --ice-2: #52525b;
+  --ice-3: #71717a;
+  --hov: rgba(24, 24, 27, 0.03);
+  --btn-bg: #fff;
+  --btn-hov: rgba(24, 24, 27, 0.05);
+  --pane: #fafafa;
+  --tabbar: #e8e8ea;
+  --fld: rgba(24, 24, 27, 0.03);
+  --on-mint: #fff;
+  --gl-mint: 0 2px 10px rgba(37, 99, 235, 0.22);
+  --sh: 0 10px 30px rgba(24, 24, 27, 0.18);
+}
+
+[data-palette="zinc"][data-theme="dark"] {
+  --void: #0b0b0d;
+  --slate: #161618;
+  --slate-2: #1f1f23;
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-2: rgba(255, 255, 255, 0.14);
+  --mint: #93b4ff;
+  --mint-dim: #3b6fd4;
+  --amber: #f5a524;
+  --ember: #ff6b5e;
+  --ice: #ececef;
+  --ice-2: #b0b0ba;
+  --ice-3: #6e6e78;
+  --hov: rgba(255, 255, 255, 0.028);
+  --btn-bg: rgba(255, 255, 255, 0.04);
+  --btn-hov: rgba(255, 255, 255, 0.09);
+  --pane: linear-gradient(160deg, rgba(33, 33, 38, 0.9), rgba(18, 18, 21, 0.85));
+  --tabbar: #101013;
+  --fld: rgba(255, 255, 255, 0.04);
+  --on-mint: #0a1830;
+  --gl-mint: 0 0 24px rgba(147, 180, 255, 0.25);
+  --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+
 body {
   margin: 0;
   font-family: "Vazirmatn", Tahoma, sans-serif;
@@ -57,6 +220,22 @@ body {
   color: var(--ice);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+}
+
+/* color-scheme covers modern browsers; this keeps <option> rows readable even where the popup
+ * itself ignores it. --slate (solid) rather than --pane (gradient in dark). */
+select option {
+  background-color: var(--slate);
+  color: var(--ice);
+}
+
+/* Every pane surface (cards, tab panels) gets the soft card shadow. Base layer on purpose:
+ * surfaces that declare their own shadow-* utility (modals, popovers, the logo glow) keep
+ * the bigger shadow — utilities always beat base. */
+@layer base {
+  [class*="bg-(--pane)"] {
+    box-shadow: var(--card-sh);
+  }
 }
 
 #root {

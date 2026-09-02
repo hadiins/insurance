@@ -20,6 +20,8 @@ import { ExpensesPage } from "../reports/ExpensesPage";
 import { ExpenseCategorySettingsPage } from "../settings/ExpenseCategorySettingsPage";
 import { RecordReceiptPage } from "../policies/RecordReceiptPage";
 import { InsurerRemittancePage } from "../reports/InsurerRemittancePage";
+import { AgingReportPage } from "../reports/AgingReportPage";
+import { CashFlowPage } from "../cashflow/CashFlowPage";
 import { PlatformUpdatesPage } from "../platform/PlatformUpdatesPage";
 import { ApiIrSettingsPage } from "../platform/ApiIrSettingsPage";
 import { PaymentSettingsPage } from "../platform/PaymentSettingsPage";
@@ -34,6 +36,7 @@ import { SchedulePolicyPage } from "../policies/SchedulePolicyPage";
 import { DeskFeedPage } from "../desk/DeskFeedPage";
 import { PoliciesListPage } from "../policies/PoliciesListPage";
 import { InstallmentsWorklistPage } from "../installments/InstallmentsWorklistPage";
+import { ChequesListPage } from "../cheques/ChequesListPage";
 import { CustomerLookupPage } from "../customers/CustomerLookupPage";
 import { ImportHistoryPage } from "../imports/ImportHistoryPage";
 import { ImportMismatchesPage } from "../imports/ImportMismatchesPage";
@@ -92,6 +95,10 @@ function renderPage(tab: OpenTab) {
       return <RecordReceiptPage />;
     case "insurer-remittance":
       return <InsurerRemittancePage />;
+    case "aging-report":
+      return <AgingReportPage />;
+    case "cash-flow":
+      return <CashFlowPage />;
     case "platform-updates":
       return <PlatformUpdatesPage />;
     case "apiir-settings":
@@ -120,6 +127,8 @@ function renderPage(tab: OpenTab) {
       return <PoliciesListPage />;
     case "installment-worklist":
       return <InstallmentsWorklistPage />;
+    case "cheques-list":
+      return <ChequesListPage />;
     case "customer-lookup":
       return <CustomerLookupPage />;
     case "import-history":
@@ -175,7 +184,9 @@ export function Stage() {
           hidden={tab.key !== activeKey}
           className="absolute inset-0 overflow-auto px-6 pt-5.5 pb-10"
         >
-          <TabKeyProvider tabKey={tab.key}>{renderPage(tab)}</TabKeyProvider>
+          <TabKeyProvider tabKey={tab.key} active={tab.key === activeKey}>
+            {renderPage(tab)}
+          </TabKeyProvider>
         </div>
       ))}
     </div>

@@ -96,7 +96,7 @@ export function CustomerLookupPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
-          placeholder="نام یا شمارهٔ همراه مشتری"
+          placeholder="نام، کد ملی، موبایل یا پلاک خودرو…"
           className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
         />
         <button
