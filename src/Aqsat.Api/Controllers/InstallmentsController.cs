@@ -31,7 +31,7 @@ public sealed class InstallmentsController(AppDbContext dbContext, IHolidayCheck
     [HttpGet]
     [Authorize(Policy = Permissions.PolicyRead)]
     public async Task<ActionResult<IReadOnlyList<InstallmentWorklistRowDto>>> List(
-        [FromQuery] bool? overdueOnly, [FromQuery] string? status,
+        [FromQuery] bool? overdueOnly, [FromQuery] string? status, [FromQuery] string? urgency,
         [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] string? search,
         CancellationToken ct)
     {
@@ -75,18 +75,60 @@ public sealed class InstallmentsController(AppDbContext dbContext, IHolidayCheck
             .Include(i => i.Policy).ThenInclude(p => p.Customer)
             .Include(i => i.Policy).ThenInclude(p => p.Vehicle)
             .OrderBy(i => i.DueDate).ThenBy(i => i.SeqNo)
-            .Take(300)
             .ToListAsync(ct);
 
-        var dtos = rows
-            .Select(i => new InstallmentWorklistRowDto(
-                i.Id, i.PolicyId, i.Policy.PolicyNumber, i.Policy.Customer.FullName, i.Policy.Customer.Mobile,
-                i.SeqNo, i.DueDate, i.SettlementDeadline,
-                i.Amount, i.PaidAmount, i.Balance, i.Status.ToString(),
-                CountdownUrgencyClassifier.Classify(today, i.DueDate, i.SettlementDeadline).ToString()))
+        // Urgency is classified in memory (it is date arithmetic, not a column), so it filters
+        // after the fetch — hence the unbounded query above and the Take moving down here.
+        var classified = rows
+            .Select(i => new
+            {
+                Row = i,
+                Urgency = CountdownUrgencyClassifier.Classify(today, i.DueDate, i.SettlementDeadline),
+            })
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(urgency)
+            && Enum.TryParse<CountdownUrgency>(urgency, ignoreCase: true, out var parsedUrgency))
+        {
+            classified = classified.Where(c => c.Urgency == parsedUrgency).ToList();
+        }
+
+        var dtos = classified
+            .Take(300)
+            .Select(c => new InstallmentWorklistRowDto(
+                c.Row.Id, c.Row.PolicyId, c.Row.Policy.PolicyNumber, c.Row.Policy.Customer.FullName, c.Row.Policy.Customer.Mobile,
+                c.Row.SeqNo, c.Row.DueDate, c.Row.SettlementDeadline,
+                c.Row.Amount, c.Row.PaidAmount, c.Row.Balance, c.Row.Status.ToString(),
+                c.Urgency.ToString()))
             .ToList();
 
         return Ok(dtos);
+    }
+
+    /// <summary>Counts and open balance per urgency bucket over every unsettled installment —
+    /// backs the worklist's filter chips (with live counters) and its overdue banner.</summary>
+    [HttpGet("counts")]
+    [Authorize(Policy = Permissions.PolicyRead)]
+    public async Task<ActionResult<InstallmentCountsDto>> Counts(CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+
+        var rows = await dbContext.Installments.AsNoTracking()
+            .Where(i => i.Status != InstallmentStatus.Settled)
+            .Select(i => new { i.DueDate, i.SettlementDeadline, i.Amount, i.PaidAmount })
+            .ToListAsync(ct);
+
+        var buckets = rows
+            .GroupBy(i => CountdownUrgencyClassifier.Classify(today, i.DueDate, i.SettlementDeadline))
+            .Select(g => new InstallmentUrgencyCountDto(
+                g.Key.ToString(), g.Count(), g.Sum(i => i.Amount - i.PaidAmount)))
+            .OrderBy(b => Array.IndexOf(Enum.GetValues<CountdownUrgency>(), Enum.Parse<CountdownUrgency>(b.Urgency)))
+            .ToList();
+
+        return Ok(new InstallmentCountsDto(
+            rows.Count,
+            rows.Sum(i => i.Amount - i.PaidAmount),
+            buckets));
     }
 
     [HttpPut("{id:guid}")]

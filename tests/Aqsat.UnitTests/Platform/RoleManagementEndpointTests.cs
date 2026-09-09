@@ -99,4 +99,23 @@ public class RoleManagementEndpointTests : IClassFixture<WebApplicationFactory<P
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    /// <summary>The catalog is hand-maintained next to a growing Permissions.All — a permission
+    /// added to All but not to the catalog becomes ungrantable by ANYONE (the platform owner
+    /// included), which is exactly how Risk.NetworkRead shipped unusable on 2026-09-07. Only
+    /// Platform.Owner is allowed to be missing from the catalog.</summary>
+    [Fact]
+    public async Task Every_permission_except_platform_owner_is_assignable_through_the_catalog()
+    {
+        var (client, _, _) = await CreateOwnerClientAsync();
+
+        var catalog = await client.GetFromJsonAsync<List<PermissionCatalogItemDto>>("/api/platform/roles/permissions-catalog");
+        var catalogKeys = catalog!.Select(c => c.Key).ToHashSet();
+
+        var missing = Permissions.All
+            .Where(p => p != Permissions.PlatformOwner && !catalogKeys.Contains(p))
+            .ToList();
+        Assert.True(missing.Count == 0,
+            $"Permissions missing from the assignable catalog (ungrantable even for the platform owner): {string.Join(", ", missing)}");
+    }
 }

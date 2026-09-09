@@ -5,6 +5,7 @@ using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Common;
 using Aqsat.Domain.Enums;
+using Aqsat.Domain.Monitoring;
 using Aqsat.Infrastructure.Auth;
 using Aqsat.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerPortalInvitation> CustomerPortalInvitations => Set<CustomerPortalInvitation>();
     public DbSet<PortalInvitationTokenIndex> PortalInvitationTokenIndex => Set<PortalInvitationTokenIndex>();
+    public DbSet<CustomerPaymentLink> CustomerPaymentLinks => Set<CustomerPaymentLink>();
+    // RLS-exempt by design, same as PortalInvitationTokenIndex above: the anonymous /pay/{token}
+    // entry point resolves its agency here before any scoped read.
+    public DbSet<PaymentLinkTokenIndex> PaymentLinkTokenIndex => Set<PaymentLinkTokenIndex>();
     public DbSet<CreditReport> CreditReports => Set<CreditReport>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<PropertySubject> PropertySubjects => Set<PropertySubject>();
@@ -59,6 +64,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<AgencyCommissionEntry> AgencyCommissionEntries => Set<AgencyCommissionEntry>();
     public DbSet<RenewalWatch> RenewalWatches => Set<RenewalWatch>();
 
+    // Credit & risk management (docs Phase 2A) — RiskSettings is OrganizationId-keyed like
+    // OrgSettings; the other four are agency-scoped and RLS-filtered.
+    public DbSet<RiskSettings> RiskSettings => Set<RiskSettings>();
+    public DbSet<RiskAssessment> RiskAssessments => Set<RiskAssessment>();
+    public DbSet<RiskWarning> RiskWarnings => Set<RiskWarning>();
+    public DbSet<ManualReview> ManualReviews => Set<ManualReview>();
+    public DbSet<CustomerCreditLimit> CustomerCreditLimits => Set<CustomerCreditLimit>();
+
+    // Cross-agency risk sharing (Phase 2B-1) — status-only, derived, keyed by the cross-agency
+    // NationalIdHash. All three are deliberately OUTSIDE the RLS security policy (same exemption
+    // as AgencyStatsDaily below): cross-agency reads are the feature, gated by the platform
+    // owner's RiskNetworkSettings switch and the Risk.NetworkRead permission instead.
+    public DbSet<NetworkRiskProfile> NetworkRiskProfiles => Set<NetworkRiskProfile>();
+    public DbSet<NetworkRiskPlateIndex> NetworkRiskPlateIndex => Set<NetworkRiskPlateIndex>();
+    public DbSet<RiskNetworkSettings> RiskNetworkSettings => Set<RiskNetworkSettings>();
+
+
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
     public DbSet<ApiIrCallLog> ApiIrCallLogs => Set<ApiIrCallLog>();
     public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
@@ -80,6 +102,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UpdateStageLog> UpdateStageLogs => Set<UpdateStageLog>();
     public DbSet<ApiIrSettings> ApiIrSettings => Set<ApiIrSettings>();
     public DbSet<PlatformPaymentSettings> PlatformPaymentSettings => Set<PlatformPaymentSettings>();
+    public DbSet<PlatformSignupSettings> PlatformSignupSettings => Set<PlatformSignupSettings>();
+
+    // Platform-owner monitoring & security dashboard — same exemption as ApiIrSettings above:
+    // cross-agency telemetry and security events must never be filtered by an agency scope
+    // (rule 17 — a silently-empty security feed is worse than no feed at all).
+    public DbSet<MetricSample> MetricSamples => Set<MetricSample>();
+    public DbSet<EndpointStat> EndpointStats => Set<EndpointStat>();
+    public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+    public DbSet<AlertRule> AlertRules => Set<AlertRule>();
+    public DbSet<AlertOccurrence> AlertOccurrences => Set<AlertOccurrence>();
 
     private static readonly ConcurrentDictionary<Type, string[]> SensitivePropertyCache = new();
 
@@ -91,6 +123,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     /// instance; only after that is EntityId/PolicyId available to build the AuditEntry for a newly
     /// created row. If anything in either phase throws, the whole transaction rolls back: neither
     /// the change nor its audit row persists.
+    /// When the CALLER already owns a transaction (e.g. PoliciesController.Create wrapping
+    /// vehicle + property + policy in one unit), this enlists in it instead of beginning a second
+    /// one — SQL Server refuses nested BeginTransaction — and leaves commit/rollback to the caller,
+    /// so the audit rows simply join the caller's unit of work.
     /// </summary>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -113,7 +149,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         var actor = CurrentUserContext.Current;
         var ipAddress = CurrentRequestContext.IpAddress;
 
-        await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = Database.CurrentTransaction is null;
+        var transaction = ownsTransaction
+            ? await Database.BeginTransactionAsync(cancellationToken)
+            : null;
         try
         {
             var affected = await base.SaveChangesAsync(cancellationToken);
@@ -146,13 +185,26 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             }
 
             affected += await base.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+            {
+                await transaction!.CommitAsync(cancellationToken);
+            }
             return affected;
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+            {
+                await transaction!.RollbackAsync(cancellationToken);
+            }
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction)
+            {
+                await transaction!.DisposeAsync();
+            }
         }
     }
 

@@ -30,14 +30,14 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="grid h-full place-items-center bg-(--void) px-6 text-center">
           <div>
-            <div className="mb-2 text-lg font-extrabold text-(--ice)">خطایی پیش‌بینی‌نشده رخ داد</div>
-            <div className="mb-5 text-[13px] text-(--ice-3)">
+            <div className="mb-2 text-xl font-extrabold text-(--ice)">خطایی پیش‌بینی‌نشده رخ داد</div>
+            <div className="mb-5 text-[13.5px] text-(--ice-3)">
               اتصال به سرور یا پایگاه‌داده ممکن است قطع شده باشد. اطلاعات واردشدهٔ شما حفظ مانده است.
             </div>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+              className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
             >
               تلاش دوباره
             </button>

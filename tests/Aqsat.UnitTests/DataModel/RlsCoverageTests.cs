@@ -13,15 +13,23 @@ namespace Aqsat.UnitTests.DataModel;
 /// documented RLS exemptions, not oversights:
 /// - PortalInvitationTokenIndex — the public portal's token→agency resolver (anonymous visitors
 ///   hold no session context); it carries no tenant data beyond AgencyId itself.
+/// - PaymentLinkTokenIndex — same model for the installment-payment link's /pay/{token} page:
+///   the anonymous resolver resolves token→agency→link; no tenant data beyond AgencyId itself.
 /// - AgencyStatsDaily — the owner-platform's pre-aggregated reporting rollup. It is populated by
 ///   the nightly AgencyStatsRollupJob (which enters each agency's scope to compute it) and read
 ///   only by Platform.Owner-gated controllers; agency users never query it.
+/// - NetworkRiskProfiles / NetworkRiskPlateIndex — the cross-agency risk-sharing tables (Phase
+///   2B-1): cross-agency reads are the feature itself. They are gated by the Platform.Owner
+///   RiskNetworkSettings switch plus the Risk.NetworkRead permission instead, and hold status-only
+///   rows keyed by the keyed HMAC NationalIdHash (no amounts, no identity) written in every
+///   assessment's own transaction.
 /// </summary>
 public class RlsCoverageTests
 {
     /// <summary>Deliberately NOT under the RLS policy — see the class summary. Adding a table
     /// here requires an explicit security justification, not an oversight.</summary>
-    private static readonly string[] RlsExemptTables = ["PortalInvitationTokenIndex", "AgencyStatsDaily"];
+    private static readonly string[] RlsExemptTables =
+        ["PortalInvitationTokenIndex", "PaymentLinkTokenIndex", "AgencyStatsDaily", "NetworkRiskProfiles", "NetworkRiskPlateIndex"];
 
     [Fact]
     public async Task Every_entity_with_an_AgencyId_property_is_covered_by_the_RLS_policy()

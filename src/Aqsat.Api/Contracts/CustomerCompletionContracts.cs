@@ -1,9 +1,12 @@
 namespace Aqsat.Api.Contracts;
 
-/// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the dashboard widget's two counts, since a
-/// customer missing only mobile (SMS won't work) and one missing only national ID (Shahkar won't
-/// work) call for different fixes.</summary>
-public sealed record IncompleteProfileSummaryDto(int Total, int WithoutMobile, int WithoutNationalId);
+/// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the completion widget's counts. The original two
+/// (mobile/national ID) explain which feature breaks; the three added 2026-09-07 after a
+/// production incident (a national ID stored as lastName) cover every remaining required field, so
+/// a "1 incomplete, 0 and 0" widget never hides what is actually missing.</summary>
+public sealed record IncompleteProfileSummaryDto(
+    int Total, int WithoutMobile, int WithoutNationalId,
+    int WithoutAddress, int WithoutPostalCode, int WithoutName);
 
 /// <summary>National ID is masked here (CLAUDE.md rule 12) — the completion grid lets an agent
 /// fill in a MISSING value, not read an existing one back.</summary>
@@ -29,3 +32,11 @@ public sealed record CustomerLookupProfileDto(
 /// registration); PolicyCount lets the UI surface "این مشتری N بیمهنامه دارد" before issuing
 /// another one.</summary>
 public sealed record CustomerLookupResultDto(bool Found, CustomerLookupProfileDto? Customer, int PolicyCount);
+
+/// <summary>POST /api/customers — registering a brand-new customer BEFORE any policy exists, so a
+/// pre-issuance credit-check portal link can be sent on the very first visit (owner decision
+/// 2026-09-03). NationalId and Mobile are required here — unlike the issuance form's inline
+/// registration, this endpoint exists specifically to buy inquiries and send an SMS.</summary>
+public sealed record CreateCustomerRequest(
+    string? FirstName, string? LastName, string? NationalId, string? Mobile,
+    string? EmergencyMobile, string? PostalCode, string? Address);

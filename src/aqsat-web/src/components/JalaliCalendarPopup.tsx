@@ -40,13 +40,13 @@ export function JalaliCalendarPopup({ viewYear, viewMonth, selected, onNavigate,
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div className="absolute top-full z-50 mt-1.5 w-64 rounded-[12px] border border-(--edge) bg-(--pane) p-3 shadow-xl">
         <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={goPrevMonth} className="rounded-[6px] px-2 py-1 text-[13px] text-(--ice-2) hover:bg-(--hov)">
+          <button type="button" onClick={goPrevMonth} className="rounded-[6px] px-2 py-1 text-[13.5px] text-(--ice-2) hover:bg-(--hov)">
             ›
           </button>
           <div className="text-[12.5px] font-semibold text-(--ice)">
             {MONTH_NAMES[viewMonth - 1]} {fa(viewYear)}
           </div>
-          <button type="button" onClick={goNextMonth} className="rounded-[6px] px-2 py-1 text-[13px] text-(--ice-2) hover:bg-(--hov)">
+          <button type="button" onClick={goNextMonth} className="rounded-[6px] px-2 py-1 text-[13.5px] text-(--ice-2) hover:bg-(--hov)">
             ‹
           </button>
         </div>
@@ -67,7 +67,7 @@ export function JalaliCalendarPopup({ viewYear, viewMonth, selected, onNavigate,
                 key={day}
                 type="button"
                 onClick={() => onSelect(jalaliPartsToIso(viewYear, viewMonth, day))}
-                className={`rounded-[6px] py-1.5 text-[12px] tabular-nums transition-colors ${
+                className={`rounded-[6px] py-1.5 text-[12.5px] tabular-nums transition-colors ${
                   isSelected
                     ? "bg-(--mint) font-bold text-(--on-mint)"
                     : isToday

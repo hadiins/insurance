@@ -26,7 +26,9 @@ public class FanavaranImportServiceTests
         "تاریخ صدور", "تاریخ شروع", "حق بیمه با عوارض", "نام قرارداد",
     ];
 
-    private static byte[] BuildFanavaranWorkbook(IReadOnlyList<(string PolicyNumber, string ExternalCode, string ContractName)> rows)
+    private static byte[] BuildFanavaranWorkbook(
+        IReadOnlyList<(string PolicyNumber, string ExternalCode, string ContractName)> rows,
+        IReadOnlyList<string>? plates = null)
     {
         using var workbook = new XLWorkbook();
         var sheet = workbook.Worksheets.Add(FanavaranImportFields.SheetName);
@@ -41,7 +43,7 @@ public class FanavaranImportServiceTests
         {
             sheet.Cell(rowNumber, 1).Value = row.PolicyNumber;
             sheet.Cell(rowNumber, 2).Value = $"مشتری آزمایشی کد {row.ExternalCode}";
-            sheet.Cell(rowNumber, 3).Value = "11الف111";
+            sheet.Cell(rowNumber, 3).Value = plates is null ? "11الف111" : plates[rowNumber - 2];
             sheet.Cell(rowNumber, 4).Value = "1404/05/01";
             sheet.Cell(rowNumber, 5).Value = "1404/05/01";
             sheet.Cell(rowNumber, 6).Value = "90000000"; // rials; /10 -> 9,000,000 toman
@@ -158,5 +160,53 @@ public class FanavaranImportServiceTests
         Assert.Equal("تجارت آفرینان تسنیم", policy.ContractName);
         Assert.True(policy.IsInstallment);
         Assert.Equal(9_000_000m, policy.NetPremium);
+    }
+
+    /// <summary>
+    /// The import deep review's fix: imported vehicles must carry the same structured plate columns
+    /// manual issuance sets. The nightly plate-index sync (the network's plate lookup key) only
+    /// reads PlateNormalized — before this fix, every imported policy was silently invisible to the
+    /// cross-agency plate search, and import is the main data path.
+    /// </summary>
+    [Fact]
+    public async Task Imported_plates_are_parsed_into_structured_columns_so_the_network_plate_index_sees_them()
+    {
+        await using var context = TestDbContextFactory.Create();
+        var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
+        AgencyContext.Current = agencyA.AgencyId;
+
+        context.ContractTemplates.Add(new ContractTemplate
+        {
+            AgencyId = agencyA.AgencyId,
+            ContractNamePattern = "نقدی",
+            IsInstallment = false,
+            DefaultInstallmentCount = 0,
+        });
+        await context.SaveChangesAsync();
+
+        var suffix = Guid.NewGuid().ToString("N")[..6];
+        var fileBytes = BuildFanavaranWorkbook(
+            [($"POL-{suffix}-1", $"{suffix}-1", "نقدی"), ($"POL-{suffix}-2", $"{suffix}-2", "نقدی")],
+            plates: ["12ب345-67", "پلاک نامشخص"]);
+
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        await service.SaveMappingAsync(FanavaranImportFields.ImportType, agencyA.AgencyId, BuildMapping(), CancellationToken.None);
+
+        var report = await service.CommitFanavaranPolicyReportAsync(
+            fileBytes, "policy-report.xlsx", agencyA.AgencyId, CancellationToken.None);
+
+        // TASK-25 §5.4 — an unparseable plate never rejects the row; it just stays unindexed.
+        Assert.Equal(2, report.NewCount);
+        Assert.Equal(0, report.FailedCount);
+
+        var parsed = await context.Vehicles.AsNoTracking().SingleAsync(v => v.Plate == "12ب345-67");
+        Assert.Equal("12ب345-67", parsed.PlateNormalized);
+        Assert.Equal("12", parsed.PlateTwoDigit);
+        Assert.Equal("ب", parsed.PlateLetter);
+        Assert.Equal("345", parsed.PlateThreeDigit);
+        Assert.Equal("67", parsed.PlateIranCode);
+
+        var unparsed = await context.Vehicles.AsNoTracking().SingleAsync(v => v.Plate == "پلاک نامشخص");
+        Assert.Null(unparsed.PlateNormalized);
     }
 }

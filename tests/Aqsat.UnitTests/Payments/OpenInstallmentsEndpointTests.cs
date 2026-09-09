@@ -57,10 +57,12 @@ public class OpenInstallmentsEndpointTests : IClassFixture<WebApplicationFactory
         var installmentIds = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId).OrderBy(i => i.SeqNo).Select(i => i.Id).ToListAsync();
 
-        // Settle the first installment in full — it must disappear from the open list.
+        // Settle the first installment in full — it must disappear from the open list. PaidOn is
+        // today (an early payment): the installment's own due date is a month out, and the
+        // payment-date guard correctly refuses future PaidOn values.
         var due = schedule!.Installments.OrderBy(i => i.SeqNo).ToList();
         var payResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentIds[0], due[0].Amount, due[0].DueDate, "Cash", null));
+            installmentIds[0], due[0].Amount, today, "Cash", null));
         payResponse.EnsureSuccessStatusCode();
 
         var custResponse = await client.GetAsync($"/api/customers?search={Uri.EscapeDataString("مشتری پرداخت مستقل")}");

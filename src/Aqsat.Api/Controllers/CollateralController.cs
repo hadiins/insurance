@@ -113,6 +113,15 @@ public sealed class CollateralController(AppDbContext dbContext, IApiIrClient ap
             return NotFound();
         }
 
+        // Cleared and Bounced are terminal — a cashed or returned guarantee cheque is a historical
+        // fact; "un-cashing" one would falsify the collateral history (the same terminal rule the
+        // payment-cheque view enforces). Held ↔ AtBank stays free: a deposit can legitimately be
+        // postponed, and a branch may record Held → Cleared/Bounced without the bank stage.
+        if (collateral.Status is CollateralStatus.Cleared or CollateralStatus.Bounced)
+        {
+            return ValidationProblem("چک تسویه‌شده یا برگشتی پایانی است و وضعیت آن قابل تغییر نیست.");
+        }
+
         collateral.Status = status;
         await dbContext.SaveChangesAsync(ct);
 
@@ -139,7 +148,25 @@ public sealed class CollateralController(AppDbContext dbContext, IApiIrClient ap
             return ValidationProblem("استعلام رنگ چک فقط برای چک صیادی با شناسهٔ معتبر ممکن است.");
         }
 
-        var color = await apiIrClient.ChequeColorAsync(collateral.SayadId, collateral.AgencyId, ct);
+        // A paid api.ir call (150 toman) — a network failure must come back as a Persian reason,
+        // not a raw 500 (rule 15); the agent decides whether to retry and pay again.
+        string? color;
+        try
+        {
+            color = await apiIrClient.ChequeColorAsync(collateral.SayadId, collateral.AgencyId, ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or TimeoutException)
+        {
+            return Problem(
+                title: "استعلام رنگ چک از سرویس api.ir در دسترس نیست؛ لطفاً بعداً دوباره تلاش کنید.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        if (color is null)
+        {
+            return ValidationProblem("سرویس api.ir برای این شناسهٔ صیادی پاسخی برنگرداند؛ اعتبار حساب api.ir را بررسی کنید.");
+        }
+
         collateral.ColorCode = color;
         collateral.CheckedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(ct);

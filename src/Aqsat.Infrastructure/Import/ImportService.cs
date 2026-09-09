@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Aqsat.Application.Common;
 using Aqsat.Application.Import;
+using Aqsat.Application.Numbering;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -62,12 +63,28 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
                 ImportType = importType,
                 MappingJson = json,
             });
-        }
-        else
-        {
-            existing.MappingJson = json;
+
+            try
+            {
+                await dbContext.SaveChangesAsync(ct);
+                return;
+            }
+            catch (DbUpdateException)
+            {
+                // Two open tabs saved this agency's mapping at once — the unique index
+                // (AgencyId, ImportType) turned the read-then-insert race into this violation.
+                // Last save wins, which is exactly what two tabs expect; only a re-read that
+                // still finds nothing is a real failure (rule 15 — never swallow it).
+                dbContext.ChangeTracker.Clear();
+                existing = await dbContext.ImportColumnMappings.FirstOrDefaultAsync(m => m.ImportType == importType, ct);
+                if (existing is null)
+                {
+                    throw;
+                }
+            }
         }
 
+        existing.MappingJson = json;
         await dbContext.SaveChangesAsync(ct);
     }
 
@@ -87,6 +104,7 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
     {
         using var stream = new MemoryStream(fileBytes);
         var sheet = workbookReader.ReadFirstSheet(stream);
+        EnsureRequiredFieldsMapped(mapping, ImportTargetFields.All);
         var columnIndex = BuildColumnIndex(sheet.Headers, mapping);
 
         return await RunCommitAsync(
@@ -113,6 +131,7 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
 
         using var stream = new MemoryStream(fileBytes);
         var sheet = workbookReader.ReadSheet(stream, FanavaranImportFields.SheetName);
+        EnsureRequiredFieldsMapped(mapping, FanavaranImportFields.All);
         var columnIndex = BuildColumnIndex(sheet.Headers, mapping);
 
         return await RunCommitAsync(
@@ -122,6 +141,28 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
             sheet.Rows,
             row => ParseFanavaranRow(row, columnIndex),
             ct);
+    }
+
+    /// <summary>
+    /// The import review's I6: an unmapped required target field used to surface as the same
+    /// «... خالی است» failure on every single row — 500 failed rows instead of one clear Persian
+    /// error before anything is read. Thrown as InvalidOperationException so the import
+    /// controller's existing mapping turns it into a 400.
+    /// </summary>
+    private static void EnsureRequiredFieldsMapped(
+        IReadOnlyDictionary<string, string> mapping, IReadOnlyList<ImportTargetField> fields)
+    {
+        var missing = fields
+            .Where(f => f.Required
+                && (!mapping.TryGetValue(f.Key, out var column) || string.IsNullOrWhiteSpace(column)))
+            .Select(f => f.Label)
+            .ToList();
+
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"نگاشت ستون‌های الزامی انجام نشده است: {string.Join("، ", missing)}");
+        }
     }
 
     private async Task<ImportCommitReport> RunCommitAsync(
@@ -233,6 +274,7 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
             dbContext.Customers.Add(customer);
         }
 
+        var plateParts = PlateParser.Parse(row.VehiclePlate);
         var vehicle = new Vehicle
         {
             AgencyId = agencyId,
@@ -242,7 +284,14 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
             Make = row.VehicleMake,
             Model = row.VehicleModel,
             Year = row.VehicleYear,
+            PlateTwoDigit = plateParts.IsParsed ? plateParts.TwoDigit : null,
+            PlateLetter = plateParts.IsParsed ? plateParts.Letter : null,
+            PlateThreeDigit = plateParts.IsParsed ? plateParts.ThreeDigit : null,
+            PlateIranCode = plateParts.IsParsed ? plateParts.IranCode : null,
         };
+        // TASK-25 §5.4 — an unparseable plate never rejects the row; it just stays unindexed
+        // (the nightly plate-index sync only reads PlateNormalized, same as manual issuance).
+        vehicle.PlateNormalized = plateParts.IsParsed ? plateParts.Normalized : null;
         dbContext.Vehicles.Add(vehicle);
 
         // The 80% problem (CLAUDE.md, PHASE-1-SPEC §2): resolved via agency-configured

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api, ApiError, getToken, getActiveOrgId } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
+import { MetricCard } from "../../components/MetricCard";
+import { EmptyState } from "../../components/EmptyState";
+import { Td, Th, Tr } from "../../components/Table";
 
 interface AgingReportRow {
   customerId: string;
@@ -75,7 +78,7 @@ export function AgingReportPage() {
           </button>
         )}
       </div>
-      <div className="mb-4.5 text-xs text-(--ice-3)">اقساط باز مشتریان به تفکیک روزهای تأخیر — بر پایهٔ ماندهٔ هر قسط</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">اقساط باز مشتریان به تفکیک روزهای تأخیر — بر پایهٔ ماندهٔ هر قسط</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -84,76 +87,60 @@ export function AgingReportPage() {
       )}
 
       {report && (
-        <div className="mb-4.5 grid grid-cols-5 gap-3 text-center text-[11px]">
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-3">
-            <div className="text-(--ice-3)">جاری</div>
-            <div className="mt-1 text-[15px] font-extrabold tabular-nums text-(--ice)">{money(report.totalCurrentAmount)}</div>
-          </div>
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-3">
-            <div className="text-(--ice-3)">۱ تا ۳۰ روز</div>
-            <div className="mt-1 text-[15px] font-extrabold tabular-nums text-(--amber)">{money(report.totalOverdue1To30)}</div>
-          </div>
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-3">
-            <div className="text-(--ice-3)">۳۱ تا ۶۰ روز</div>
-            <div className="mt-1 text-[15px] font-extrabold tabular-nums text-(--ember)">{money(report.totalOverdue31To60)}</div>
-          </div>
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-3">
-            <div className="text-(--ice-3)">بیش از ۶۰ روز</div>
-            <div className="mt-1 text-[15px] font-extrabold tabular-nums text-(--ember)">{money(report.totalOverdue60Plus)}</div>
-          </div>
-          <div className="rounded-2xl border border-(--mint)/30 bg-(--mint)/6 p-3">
-            <div className="text-(--ice-3)">جمع بدهی باز</div>
-            <div className="mt-1 text-[15px] font-extrabold tabular-nums text-(--ice)">{money(report.totalOpen)}</div>
-          </div>
+        <div className="mb-4.5 grid grid-cols-5 gap-3">
+          <MetricCard icon="🟢" label="جاری" value={report.totalCurrentAmount} />
+          <MetricCard icon="🕐" label="۱ تا ۳۰ روز" value={report.totalOverdue1To30} tone="amber" />
+          <MetricCard icon="⏰" label="۳۱ تا ۶۰ روز" value={report.totalOverdue31To60} tone="ember" />
+          <MetricCard icon="🚨" label="بیش از ۶۰ روز" value={report.totalOverdue60Plus} tone="ember" />
+          <MetricCard icon="💼" label="جمع بدهی باز" value={report.totalOpen} tone="mint" />
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
-          به تفکیک مشتری
-          {report && <span className="ms-2 text-[11px] font-normal text-(--ice-3)">{fa(report.rows.length)} مشتری</span>}
-        </div>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["مشتری", "موبایل", "تعداد قسط باز", "جاری", "۱ تا ۳۰ روز", "۳۱ تا ۶۰ روز", "بیش از ۶۰ روز", "جمع بدهی", "قدیمی‌ترین قسط سررسیدشده"].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
+      {report !== null && report.rows.length === 0 ? (
+        <EmptyState
+          icon="✅"
+          title="هیچ قسط بازی وجود ندارد"
+          description="در حال حاضر هیچ مشتری‌ای قسط باز ندارد؛ همهٔ اقساط تسویه شده‌اند."
+        />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+          <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
+            به تفکیک مشتری
+            {report && <span className="ms-2 text-[11.5px] font-normal text-(--ice-3)">{fa(report.rows.length)} مشتری</span>}
+          </div>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                {["مشتری", "موبایل", "تعداد قسط باز", "جاری", "۱ تا ۳۰ روز", "۳۱ تا ۶۰ روز", "بیش از ۶۰ روز", "جمع بدهی", "قدیمی‌ترین قسط سررسیدشده"].map((h) => (
+                  <Th key={h}>{h}</Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {report?.rows.map((r) => (
+                <Tr key={r.customerId}>
+                  <Td className="py-2.5 font-semibold">{r.customerFullName}</Td>
+                  <Td className="py-2.5 !text-[12.5px] tabular-nums text-(--ice-3)" ltr>{r.customerMobile ?? "—"}</Td>
+                  <Td className="py-2.5 !text-[12.5px] tabular-nums text-(--ice-3)">{fa(r.openCount)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] font-bold tabular-nums text-(--ice-2)">{money(r.currentAmount)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] font-bold tabular-nums text-(--amber)">{money(r.overdue1To30)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] font-bold tabular-nums text-(--ember)">{money(r.overdue31To60)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] font-bold tabular-nums text-(--ember)">{money(r.overdue60Plus)}</Td>
+                  <Td className="py-2.5 font-extrabold tabular-nums">{money(r.totalOpen)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] tabular-nums text-(--ice-3)">
+                    {r.oldestOverdueDueDate ? toJalaliDisplay(r.oldestOverdueDueDate) : "—"}
+                  </Td>
+                </Tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {report?.rows.map((r) => (
-              <tr key={r.customerId} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2.5 text-[13px] font-semibold">{r.customerFullName}</td>
-                <td className="px-3 py-2.5 text-[12px] tabular-nums text-(--ice-3)" dir="ltr">{r.customerMobile ?? "—"}</td>
-                <td className="px-3 py-2.5 text-[12.5px] tabular-nums text-(--ice-3)">{fa(r.openCount)}</td>
-                <td className="px-3 py-2.5 text-[12.5px] font-bold tabular-nums text-(--ice-2)">{money(r.currentAmount)}</td>
-                <td className="px-3 py-2.5 text-[12.5px] font-bold tabular-nums text-(--amber)">{money(r.overdue1To30)}</td>
-                <td className="px-3 py-2.5 text-[12.5px] font-bold tabular-nums text-(--ember)">{money(r.overdue31To60)}</td>
-                <td className="px-3 py-2.5 text-[12.5px] font-bold tabular-nums text-(--ember)">{money(r.overdue60Plus)}</td>
-                <td className="px-3 py-2.5 text-[13px] font-extrabold tabular-nums">{money(r.totalOpen)}</td>
-                <td className="px-3 py-2.5 text-[12px] tabular-nums text-(--ice-3)">
-                  {r.oldestOverdueDueDate ? toJalaliDisplay(r.oldestOverdueDueDate) : "—"}
-                </td>
-              </tr>
-            ))}
-            {report?.rows.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  هیچ قسط بازی وجود ندارد.
-                </td>
-              </tr>
-            )}
-            {report === null && !error && (
-              <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-[12px] text-(--ice-3)">در حال بارگذاری…</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              {report === null && !error && (
+                <tr>
+                  <td colSpan={9} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">در حال بارگذاری…</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

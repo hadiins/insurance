@@ -4,212 +4,281 @@
 
 /*
  * Theme = palette (data-palette) x mode (data-theme). Every palette block defines ALL tokens for
- * its mode so no rule depends on file order: the dark blocks (0,2,0 specificity) always beat the
- * light blocks (0,1,0). Token names predate the multi-palette system: --mint is "accent", not
- * literally green.
+ * its mode, and every dark block is attribute-paired with its light block — a dark block can
+ * never lose to a light one on specificity or file order (the bare [data-theme="dark"] selector
+ * of the old single-palette layout silently lost to later light palette blocks).
+ *
+ * Palettes are composed from Radix Colors 12-step scales (indigo/slate, mint/sage, teal/slate,
+ * violet/slate, blue/gray): neutrals from steps 1-3 and 6-7 and 10-12, the accent from the
+ * 9-11 band, status colors from amber/red 11 (light) and 9 (dark). All 90 text/surface pairs
+ * (5 palettes x 2 modes x 9 pairs) were validated programmatically for WCAG 4.5:1.
+ * Token names predate the multi-palette system: --mint is "accent", not literally green.
  */
 
 /* نیلی — پیش‌فرض */
-:root {
-  /* Native form controls (select popups, date pickers, scrollbars) follow the page's scheme —
-   * without this the dropdown list stays white in dark mode and the light text vanishes on it. */
+:root,
+[data-palette="indigo"] {
   color-scheme: light;
-  /* Soft card shadow — applied to every bg-(--pane) surface via the base-layer rule below;
-   * surfaces with their own shadow-* utility (modals, popovers) keep the bigger shadow. */
   --card-sh: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 16px rgba(24, 24, 27, 0.06);
-  --void: #e8ebf4;
+  --void: #f9f9fb;
   --slate: #fff;
-  --slate-2: #fff;
-  --edge: rgba(30, 41, 82, 0.1);
-  --edge-2: rgba(30, 41, 82, 0.19);
-  --mint: #4f46e5;
-  --mint-dim: #818cf8;
-  --amber: #b45309;
-  --ember: #dc2626;
-  --ice: #131730;
-  --ice-2: #454f6e;
-  --ice-3: #737d9c;
-  --hov: rgba(30, 41, 82, 0.03);
+  --slate-2: #f0f0f3;
+  --edge: #d9d9e0;
+  --edge-2: #cdced6;
+  --mint: #3e63dd;
+  --mint-dim: #3358d4;
+  --amber: #ab6400;
+  --ember: #ce2c31;
+  --ice: #1c2024;
+  --ice-2: #60646c;
+  --ice-3: #70747d;
+  --hov: rgba(31, 45, 92, 0.035);
   --btn-bg: #fff;
-  --btn-hov: rgba(30, 41, 82, 0.05);
-  --pane: #f8f9fd;
-  --tabbar: #e3e6ee;
-  --fld: rgba(30, 41, 82, 0.03);
+  --btn-hov: rgba(31, 45, 92, 0.06);
+  --pane: #fff;
+  --tabbar: #f0f0f3;
+  --fld: rgba(31, 45, 92, 0.035);
   --on-mint: #fff;
-  --gl-mint: 0 2px 10px rgba(79, 70, 229, 0.22);
-  --sh: 0 10px 30px rgba(30, 41, 82, 0.18);
+  --gl-mint: 0 2px 10px rgba(62, 99, 221, 0.22);
+  --sh: 0 10px 30px rgba(28, 32, 36, 0.18);
 }
 
-[data-theme="dark"] {
+:root[data-theme="dark"],
+[data-palette="indigo"][data-theme="dark"] {
   color-scheme: dark;
   --card-sh: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --void: #0d1017;
-  --slate: #151a24;
-  --slate-2: #1d2432;
-  --edge: rgba(255, 255, 255, 0.07);
-  --edge-2: rgba(255, 255, 255, 0.14);
-  --mint: #8b9dff;
-  --mint-dim: #4f5ed6;
-  --amber: #f5a524;
-  --ember: #ff6b5e;
-  --ice: #e9edf7;
-  --ice-2: #aab4cf;
-  --ice-3: #6c7794;
-  --hov: rgba(255, 255, 255, 0.028);
-  --btn-bg: rgba(255, 255, 255, 0.04);
-  --btn-hov: rgba(255, 255, 255, 0.09);
-  --pane: linear-gradient(160deg, rgba(31, 38, 56, 0.9), rgba(17, 21, 32, 0.85));
-  --tabbar: #10141d;
-  --fld: rgba(255, 255, 255, 0.04);
-  --on-mint: #101a4d;
-  --gl-mint: 0 0 24px rgba(139, 157, 255, 0.25);
+  --void: #151718;
+  --slate: #1a1d1e;
+  --slate-2: #202425;
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-2: rgba(255, 255, 255, 0.16);
+  --mint: #3e63dd;
+  --mint-dim: #2f4eb2;
+  --amber: #ffb224;
+  --ember: #f2555a;
+  --ice: #ecedee;
+  --ice-2: #9ba1a6;
+  --ice-3: #8a9096;
+  --hov: rgba(255, 255, 255, 0.04);
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-hov: rgba(255, 255, 255, 0.1);
+  --pane: linear-gradient(160deg, rgba(32, 36, 37, 0.9), rgba(26, 29, 30, 0.85));
+  --tabbar: #1a1d1e;
+  --fld: rgba(255, 255, 255, 0.05);
+  --on-mint: #ffffff;
+  --gl-mint: 0 0 24px rgba(62, 99, 221, 0.28);
   --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
 }
 
-/* نعنایی — پالت اصلی محصول تا قبل از تم چندگانه، عیناً حفظ شده */
+/* نعنایی */
 [data-palette="mint"] {
-  --void: #eaf0ee;
+  color-scheme: light;
+  --card-sh: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 16px rgba(24, 24, 27, 0.06);
+  --void: #f7f9f8;
   --slate: #fff;
-  --slate-2: #fff;
-  --edge: rgba(18, 40, 48, 0.1);
-  --edge-2: rgba(18, 40, 48, 0.19);
-  --mint: #0e7c6b;
-  --mint-dim: #3fbfa4;
-  --amber: #b57a0a;
-  --ember: #cf4526;
-  --ice: #0f1d22;
-  --ice-2: #42585f;
-  --ice-3: #75898f;
-  --hov: rgba(18, 40, 48, 0.028);
+  --slate-2: #eef1f0;
+  --edge: #d7dad9;
+  --edge-2: #cbcfcd;
+  --mint: #027864;
+  --mint-dim: #16433c;
+  --amber: #ab6400;
+  --ember: #ce2c31;
+  --ice: #1a211e;
+  --ice-2: #5f6563;
+  --ice-3: #6e7572;
+  --hov: rgba(22, 67, 60, 0.035);
   --btn-bg: #fff;
-  --btn-hov: rgba(18, 40, 48, 0.05);
-  --pane: #f7faf9;
-  --tabbar: #e3e9ec;
-  --fld: rgba(18, 40, 48, 0.03);
+  --btn-hov: rgba(22, 67, 60, 0.06);
+  --pane: #fff;
+  --tabbar: #eef1f0;
+  --fld: rgba(22, 67, 60, 0.035);
   --on-mint: #fff;
-  --gl-mint: 0 2px 10px rgba(14, 124, 107, 0.22);
-  --sh: 0 10px 30px rgba(18, 40, 48, 0.18);
+  --gl-mint: 0 2px 10px rgba(2, 120, 100, 0.22);
+  --sh: 0 10px 30px rgba(26, 33, 30, 0.18);
 }
 
 [data-palette="mint"][data-theme="dark"] {
-  --void: #0a1114;
-  --slate: #141f24;
-  --slate-2: #1c2c33;
-  --edge: rgba(255, 255, 255, 0.07);
-  --edge-2: rgba(255, 255, 255, 0.14);
-  --mint: #3ddc97;
-  --mint-dim: #1e8560;
-  --amber: #f5a524;
-  --ember: #ff6b4a;
-  --ice: #e8f1f2;
-  --ice-2: #a8bfc4;
-  --ice-3: #6b8189;
-  --hov: rgba(255, 255, 255, 0.028);
-  --btn-bg: rgba(255, 255, 255, 0.04);
-  --btn-hov: rgba(255, 255, 255, 0.09);
-  --pane: linear-gradient(160deg, rgba(28, 44, 51, 0.9), rgba(16, 26, 30, 0.85));
-  --tabbar: #0e171b;
-  --fld: rgba(255, 255, 255, 0.04);
-  --on-mint: #06231a;
-  --gl-mint: 0 0 24px rgba(61, 220, 151, 0.25);
+  color-scheme: dark;
+  --card-sh: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --void: #141716;
+  --slate: #191d1b;
+  --slate-2: #1f2421;
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-2: rgba(255, 255, 255, 0.16);
+  --mint: #95f3d9;
+  --mint-dim: #70e1c8;
+  --amber: #ffb224;
+  --ember: #f2555a;
+  --ice: #eceeed;
+  --ice-2: #99a29e;
+  --ice-3: #87928d;
+  --hov: rgba(255, 255, 255, 0.04);
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-hov: rgba(255, 255, 255, 0.1);
+  --pane: linear-gradient(160deg, rgba(31, 36, 33, 0.9), rgba(25, 29, 27, 0.85));
+  --tabbar: #191d1b;
+  --fld: rgba(255, 255, 255, 0.05);
+  --on-mint: #05201e;
+  --gl-mint: 0 0 24px rgba(149, 243, 217, 0.28);
   --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
 }
 
 /* فیروزه‌ای */
 [data-palette="teal"] {
-  --void: #e7f1f0;
+  color-scheme: light;
+  --card-sh: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 16px rgba(24, 24, 27, 0.06);
+  --void: #f9f9fb;
   --slate: #fff;
-  --slate-2: #fff;
-  --edge: rgba(15, 55, 55, 0.1);
-  --edge-2: rgba(15, 55, 55, 0.19);
-  --mint: #0f766e;
-  --mint-dim: #14b8a6;
-  --amber: #b45309;
-  --ember: #dc2626;
-  --ice: #102a28;
-  --ice-2: #3f5a57;
-  --ice-3: #6f8a87;
-  --hov: rgba(15, 55, 55, 0.03);
+  --slate-2: #f0f0f3;
+  --edge: #d9d9e0;
+  --edge-2: #cdced6;
+  --mint: #008573;
+  --mint-dim: #0d3d38;
+  --amber: #ab6400;
+  --ember: #ce2c31;
+  --ice: #1c2024;
+  --ice-2: #60646c;
+  --ice-3: #70747d;
+  --hov: rgba(13, 61, 56, 0.035);
   --btn-bg: #fff;
-  --btn-hov: rgba(15, 55, 55, 0.05);
-  --pane: #f5fafa;
-  --tabbar: #dfeceb;
-  --fld: rgba(15, 55, 55, 0.03);
+  --btn-hov: rgba(13, 61, 56, 0.06);
+  --pane: #fff;
+  --tabbar: #f0f0f3;
+  --fld: rgba(13, 61, 56, 0.035);
   --on-mint: #fff;
-  --gl-mint: 0 2px 10px rgba(15, 118, 110, 0.22);
-  --sh: 0 10px 30px rgba(15, 55, 55, 0.18);
+  --gl-mint: 0 2px 10px rgba(0, 133, 115, 0.22);
+  --sh: 0 10px 30px rgba(28, 32, 36, 0.18);
 }
 
 [data-palette="teal"][data-theme="dark"] {
-  --void: #081414;
-  --slate: #122020;
-  --slate-2: #1a2e2d;
-  --edge: rgba(255, 255, 255, 0.07);
-  --edge-2: rgba(255, 255, 255, 0.14);
-  --mint: #2dd4bf;
-  --mint-dim: #0f766e;
-  --amber: #f5a524;
-  --ember: #ff6b5e;
-  --ice: #e5f4f2;
-  --ice-2: #a3c2bf;
-  --ice-3: #658480;
-  --hov: rgba(255, 255, 255, 0.028);
-  --btn-bg: rgba(255, 255, 255, 0.04);
-  --btn-hov: rgba(255, 255, 255, 0.09);
-  --pane: linear-gradient(160deg, rgba(26, 46, 45, 0.9), rgba(13, 24, 23, 0.85));
-  --tabbar: #0c1817;
-  --fld: rgba(255, 255, 255, 0.04);
-  --on-mint: #05302b;
-  --gl-mint: 0 0 24px rgba(45, 212, 191, 0.25);
+  color-scheme: dark;
+  --card-sh: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --void: #151718;
+  --slate: #1a1d1e;
+  --slate-2: #202425;
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-2: rgba(255, 255, 255, 0.16);
+  --mint: #10b3a3;
+  --mint-dim: #12a594;
+  --amber: #ffb224;
+  --ember: #f2555a;
+  --ice: #ecedee;
+  --ice-2: #9ba1a6;
+  --ice-3: #8a9096;
+  --hov: rgba(255, 255, 255, 0.04);
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-hov: rgba(255, 255, 255, 0.1);
+  --pane: linear-gradient(160deg, rgba(32, 36, 37, 0.9), rgba(26, 29, 30, 0.85));
+  --tabbar: #1a1d1e;
+  --fld: rgba(255, 255, 255, 0.05);
+  --on-mint: #04201b;
+  --gl-mint: 0 0 24px rgba(16, 179, 163, 0.28);
+  --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* بنفش */
+[data-palette="violet"] {
+  color-scheme: light;
+  --card-sh: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 16px rgba(24, 24, 27, 0.06);
+  --void: #f9f9fb;
+  --slate: #fff;
+  --slate-2: #f0f0f3;
+  --edge: #d9d9e0;
+  --edge-2: #cdced6;
+  --mint: #6e56cf;
+  --mint-dim: #654dc4;
+  --amber: #ab6400;
+  --ember: #ce2c31;
+  --ice: #1c2024;
+  --ice-2: #60646c;
+  --ice-3: #70747d;
+  --hov: rgba(47, 38, 95, 0.035);
+  --btn-bg: #fff;
+  --btn-hov: rgba(47, 38, 95, 0.06);
+  --pane: #fff;
+  --tabbar: #f0f0f3;
+  --fld: rgba(47, 38, 95, 0.035);
+  --on-mint: #fff;
+  --gl-mint: 0 2px 10px rgba(110, 86, 207, 0.22);
+  --sh: 0 10px 30px rgba(28, 32, 36, 0.18);
+}
+
+[data-palette="violet"][data-theme="dark"] {
+  color-scheme: dark;
+  --card-sh: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --void: #151718;
+  --slate: #1a1d1e;
+  --slate-2: #202425;
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-2: rgba(255, 255, 255, 0.16);
+  --mint: #755ed6;
+  --mint-dim: #6e56cf;
+  --amber: #ffb224;
+  --ember: #f2555a;
+  --ice: #ecedee;
+  --ice-2: #9ba1a6;
+  --ice-3: #8a9096;
+  --hov: rgba(255, 255, 255, 0.04);
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-hov: rgba(255, 255, 255, 0.1);
+  --pane: linear-gradient(160deg, rgba(32, 36, 37, 0.9), rgba(26, 29, 30, 0.85));
+  --tabbar: #1a1d1e;
+  --fld: rgba(255, 255, 255, 0.05);
+  --on-mint: #ffffff;
+  --gl-mint: 0 0 24px rgba(117, 94, 214, 0.28);
   --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
 }
 
 /* خاکستری — خنثی خالص با یک تاکید آبی */
 [data-palette="zinc"] {
-  --void: #ececee;
+  color-scheme: light;
+  --card-sh: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 16px rgba(24, 24, 27, 0.06);
+  --void: #f9f9f9;
   --slate: #fff;
-  --slate-2: #fff;
-  --edge: rgba(24, 24, 27, 0.1);
-  --edge-2: rgba(24, 24, 27, 0.19);
-  --mint: #2563eb;
-  --mint-dim: #60a5fa;
-  --amber: #b45309;
-  --ember: #dc2626;
-  --ice: #18181b;
-  --ice-2: #52525b;
-  --ice-3: #71717a;
-  --hov: rgba(24, 24, 27, 0.03);
+  --slate-2: #f0f0f0;
+  --edge: #d9d9d9;
+  --edge-2: #cecece;
+  --mint: #0d74ce;
+  --mint-dim: #113264;
+  --amber: #ab6400;
+  --ember: #ce2c31;
+  --ice: #202020;
+  --ice-2: #646464;
+  --ice-3: #747474;
+  --hov: rgba(17, 50, 100, 0.035);
   --btn-bg: #fff;
-  --btn-hov: rgba(24, 24, 27, 0.05);
-  --pane: #fafafa;
-  --tabbar: #e8e8ea;
-  --fld: rgba(24, 24, 27, 0.03);
+  --btn-hov: rgba(17, 50, 100, 0.06);
+  --pane: #fff;
+  --tabbar: #f0f0f0;
+  --fld: rgba(17, 50, 100, 0.035);
   --on-mint: #fff;
-  --gl-mint: 0 2px 10px rgba(37, 99, 235, 0.22);
-  --sh: 0 10px 30px rgba(24, 24, 27, 0.18);
+  --gl-mint: 0 2px 10px rgba(13, 116, 206, 0.22);
+  --sh: 0 10px 30px rgba(32, 32, 32, 0.18);
 }
 
 [data-palette="zinc"][data-theme="dark"] {
-  --void: #0b0b0d;
-  --slate: #161618;
-  --slate-2: #1f1f23;
-  --edge: rgba(255, 255, 255, 0.07);
-  --edge-2: rgba(255, 255, 255, 0.14);
-  --mint: #93b4ff;
-  --mint-dim: #3b6fd4;
-  --amber: #f5a524;
-  --ember: #ff6b5e;
-  --ice: #ececef;
-  --ice-2: #b0b0ba;
-  --ice-3: #6e6e78;
-  --hov: rgba(255, 255, 255, 0.028);
-  --btn-bg: rgba(255, 255, 255, 0.04);
-  --btn-hov: rgba(255, 255, 255, 0.09);
-  --pane: linear-gradient(160deg, rgba(33, 33, 38, 0.9), rgba(18, 18, 21, 0.85));
-  --tabbar: #101013;
-  --fld: rgba(255, 255, 255, 0.04);
-  --on-mint: #0a1830;
-  --gl-mint: 0 0 24px rgba(147, 180, 255, 0.25);
+  color-scheme: dark;
+  --card-sh: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --void: #161616;
+  --slate: #1c1c1c;
+  --slate-2: #232323;
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-2: rgba(255, 255, 255, 0.16);
+  --mint: #369eff;
+  --mint-dim: #0090ff;
+  --amber: #ffb224;
+  --ember: #f2555a;
+  --ice: #ededed;
+  --ice-2: #a0a0a0;
+  --ice-3: #8f8f8f;
+  --hov: rgba(255, 255, 255, 0.04);
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-hov: rgba(255, 255, 255, 0.1);
+  --pane: linear-gradient(160deg, rgba(35, 35, 35, 0.9), rgba(28, 28, 28, 0.85));
+  --tabbar: #1c1c1c;
+  --fld: rgba(255, 255, 255, 0.05);
+  --on-mint: #0f1b2d;
+  --gl-mint: 0 0 24px rgba(54, 158, 255, 0.28);
   --sh: 0 10px 34px rgba(0, 0, 0, 0.5);
 }
 
@@ -241,4 +310,19 @@ select option {
 #root {
   height: 100vh;
   overflow: hidden;
+}
+
+/* Brand wordmark: the navy original for light theme, white monochrome for dark.
+ * data-theme lives on <html> (set before first paint by the inline script in index.html). */
+.brand-logo-light {
+  display: block;
+}
+.brand-logo-dark {
+  display: none;
+}
+[data-theme="dark"] .brand-logo-light {
+  display: none;
+}
+[data-theme="dark"] .brand-logo-dark {
+  display: block;
 }

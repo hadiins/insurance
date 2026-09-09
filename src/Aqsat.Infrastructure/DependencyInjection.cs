@@ -44,7 +44,17 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>((sp, options) => options
             .UseSqlServer(configuration.GetConnectionString("Default"))
-            .AddInterceptors(sp.GetRequiredService<AgencySessionContextInterceptor>()));
+            .AddInterceptors(
+                sp.GetRequiredService<AgencySessionContextInterceptor>(),
+                sp.GetRequiredService<EfCommandDurationInterceptor>()));
+
+        // Platform-owner monitoring pipeline: the aggregator and EF command stats are process-wide
+        // singletons (they outlive any request); the security event writer is scoped because it
+        // resolves a scoped AppDbContext per write.
+        services.AddSingleton<Monitoring.RequestMetricsAggregator>();
+        services.AddSingleton<Monitoring.EfCommandDurationStats>();
+        services.AddSingleton<EfCommandDurationInterceptor>();
+        services.AddScoped<SecurityEventWriter>();
 
         // docs/TASKS.md Task 14 — real api.ir-backed IHolidayChecker, replacing the Friday-only stub
         // (which ApiIrHolidayChecker still falls back to). Scoped, not singleton, because it now
@@ -67,6 +77,8 @@ public static class DependencyInjection
         // Scoped for the same captive-dependency reason as PlatformOtpService above; the codes
         // themselves live in the singleton IMemoryCache.
         services.AddScoped<IAgencyOtpService, AgencyOtpService>();
+        // Scoped for the same captive-dependency reason; codes live in the singleton IMemoryCache.
+        services.AddScoped<ISignupOtpService, SignupOtpService>();
         services.AddSingleton<IMaintenanceModeService, MaintenanceModeService>();
         // docs/TASKS.md Task 23 — only actually resolved when POST /api/platform/updates/register
         // is hit, so an unset Updater:SigningPublicKeyPem (the normal state until Aqsat.Updater is
@@ -93,9 +105,12 @@ public static class DependencyInjection
         services.AddScoped<RenewalWatchJob>();
         services.AddScoped<DatabaseBackupJob>();
         services.AddScoped<AgencyStatsRollupJob>();
+        services.AddScoped<RiskAssessmentJob>();
         services.AddScoped<Aqsat.Infrastructure.Stats.AgencyStatsService>();
         services.AddScoped<AgencyCommissionBackfillJob>();
         services.AddScoped<NationalIdHashBackfillJob>();
+        services.AddScoped<Monitoring.AlertEvaluationService>();
+        services.AddScoped<Monitoring.MetricsSamplerJob>();
         services.AddScoped<Aqsat.Infrastructure.Payments.PaymentReversalService>();
         // The portal's gateway abstraction — Mock is the only implementation for now; ZarinPal is a
         // separate future task (no new packages without asking). Registered open: the service picks
@@ -103,6 +118,13 @@ public static class DependencyInjection
         services.AddScoped<Aqsat.Application.Payments.IPaymentGateway, Aqsat.Infrastructure.Payments.MockPaymentGateway>();
         services.AddScoped<Aqsat.Infrastructure.Portal.PortalInvitationService>();
         services.AddScoped<Aqsat.Infrastructure.Portal.PolicyVerificationService>();
+        services.AddScoped<Aqsat.Infrastructure.Portal.InstallmentPaymentLinkService>();
+        services.AddScoped<Aqsat.Infrastructure.Customers.CustomerCreationService>();
+        services.AddScoped<Aqsat.Infrastructure.Risk.RiskFeatureCalculator>();
+        services.AddScoped<Aqsat.Infrastructure.Risk.RiskAssessmentService>();
+        services.AddScoped<Aqsat.Infrastructure.Risk.RiskQueryService>();
+        services.AddScoped<Aqsat.Infrastructure.Risk.NetworkRiskQueryService>();
+        services.AddScoped<Aqsat.Infrastructure.Risk.RiskReviewService>();
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()

@@ -3,6 +3,8 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 interface ReceiptRow {
   paymentId: string;
@@ -76,7 +78,7 @@ export function ReceiptsReportPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         گزارش <em className="font-extralight not-italic text-(--ice-2)">دریافتی‌ها</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">دریافتی‌های صندوق، بانک و چک در بازهٔ زمانی</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">دریافتی‌های صندوق، بانک و چک در بازهٔ زمانی</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -87,12 +89,12 @@ export function ReceiptsReportPage() {
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تا تاریخ</label>
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
         </div>
         <button
@@ -109,100 +111,99 @@ export function ReceiptsReportPage() {
         <>
           <div className="mb-4.5 grid grid-cols-2 gap-3">
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-              <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">جمع دریافتی</div>
-              <div className="text-[17px] font-extrabold tracking-tight text-(--mint)">{money(report.totalAmount)}</div>
+              <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">جمع دریافتی</div>
+              <div className="text-[20px] font-extrabold tracking-tight text-(--mint)">{money(report.totalAmount)}</div>
             </div>
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-              <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">تعداد رسید</div>
-              <div className="text-[17px] font-extrabold tracking-tight text-(--ice)">{fa(report.count)}</div>
+              <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">تعداد رسید</div>
+              <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(report.count)}</div>
             </div>
           </div>
 
           <div className="mb-4.5 grid grid-cols-2 gap-4">
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-              <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">به‌تفکیک روش دریافت</div>
-              <table className="w-full border-collapse">
-                <tbody>
-                  {report.byMethod.map((m) => (
-                    <tr key={m.methodType} className="border-t border-(--edge) first:border-t-0">
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{METHOD_LABEL[m.methodType] ?? m.methodType}</td>
-                      <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{fa(m.count)} رسید</td>
-                      <td className="px-3 py-2.5 text-end text-[13px] font-bold text-(--ice)">{money(m.amount)}</td>
-                    </tr>
-                  ))}
-                  {report.byMethod.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                        دریافتی‌ای در این بازه نیست.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {report.byMethod.length === 0 ? (
+              <EmptyState
+                icon="💵"
+                title="دریافتی‌ای در این بازه نیست"
+                description="در بازهٔ انتخابی دریافتی‌ای ثبت نشده است؛ بازهٔ زمانی را تغییر دهید."
+              />
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+                <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">به‌تفکیک روش دریافت</div>
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {report.byMethod.map((m) => (
+                      <Tr key={m.methodType}>
+                        <Td className="py-2.5 text-(--ice-3)">{METHOD_LABEL[m.methodType] ?? m.methodType}</Td>
+                        <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{fa(m.count)} رسید</Td>
+                        <Td className="py-2.5 text-end font-bold text-(--ice)">{money(m.amount)}</Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-              <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">به‌تفکیک وضعیت چک</div>
-              <table className="w-full border-collapse">
-                <tbody>
-                  {report.byChequeStatus.map((c) => (
-                    <tr key={c.status} className="border-t border-(--edge) first:border-t-0">
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{CHEQUE_STATUS_LABEL[c.status] ?? c.status}</td>
-                      <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{fa(c.count)} چک</td>
-                      <td className="px-3 py-2.5 text-end text-[13px] font-bold text-(--ice)">{money(c.amount)}</td>
-                    </tr>
-                  ))}
-                  {report.byChequeStatus.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                        چکی در این بازه نیست.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {report.byChequeStatus.length === 0 ? (
+              <EmptyState
+                icon="🧾"
+                title="چکی در این بازه نیست"
+                description="در بازهٔ انتخابی چکی ثبت نشده است."
+              />
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+                <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">به‌تفکیک وضعیت چک</div>
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {report.byChequeStatus.map((c) => (
+                      <Tr key={c.status}>
+                        <Td className="py-2.5 text-(--ice-3)">{CHEQUE_STATUS_LABEL[c.status] ?? c.status}</Td>
+                        <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{fa(c.count)} چک</Td>
+                        <Td className="py-2.5 text-end font-bold text-(--ice)">{money(c.amount)}</Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-            <table className="w-full border-collapse">
+          {report.rows.length === 0 ? (
+            <EmptyState
+              icon="🧾"
+              title="دریافتی‌ای در این بازه نیست"
+              description="در بازهٔ انتخابی دریافتی‌ای ثبت نشده است؛ بازهٔ زمانی را تغییر دهید."
+            />
+          ) : (
+            <Table>
               <thead>
                 <tr>
                   {["تاریخ", "بیمه‌نامه", "بیمه‌گذار", "مبلغ", "روش", "محل دریافت", "مرجع/چک"].map((h) => (
-                    <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      {h}
-                    </th>
+                    <Th key={h}>{h}</Th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {report.rows.map((r) => (
-                  <tr key={r.paymentId} className="border-t border-(--edge) first:border-t-0">
-                    <td className="px-3 py-2.5 text-[13px] tabular-nums">{toJalaliDisplay(r.paidOn)}</td>
-                    <td className="px-3 py-2.5 text-[13px] font-semibold">{fa(r.policyNumber)}</td>
-                    <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.customerFullName}</td>
-                    <td className="px-3 py-2.5 text-[13px] font-bold">{money(r.amount)}</td>
-                    <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{METHOD_LABEL[r.methodType] ?? r.methodType}</td>
-                    <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">
+                  <Tr key={r.paymentId}>
+                    <Td className="py-2.5 tabular-nums">{toJalaliDisplay(r.paidOn)}</Td>
+                    <Td className="py-2.5 font-semibold">{fa(r.policyNumber)}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{r.customerFullName}</Td>
+                    <Td className="py-2.5 font-bold">{money(r.amount)}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{METHOD_LABEL[r.methodType] ?? r.methodType}</Td>
+                    <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">
                       {r.cashBoxName ?? r.bankAccountLabel ?? (r.methodType === "PosDirect" ? "حساب بیمه‌گر" : "—")}
-                    </td>
-                    <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">
+                    </Td>
+                    <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">
                       {r.chequeNumber
                         ? `${r.chequeNumber} (${CHEQUE_STATUS_LABEL[r.chequeStatus ?? ""] ?? r.chequeStatus})`
                         : (r.referenceNo ?? "—")}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-                {report.rows.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                      دریافتی‌ای در این بازه نیست.
-                    </td>
-                  </tr>
-                )}
               </tbody>
-            </table>
-          </div>
+            </Table>
+          )}
         </>
       )}
     </div>

@@ -8,6 +8,9 @@ interface IncompleteProfileSummaryDto {
   total: number;
   withoutMobile: number;
   withoutNationalId: number;
+  withoutAddress: number;
+  withoutPostalCode: number;
+  withoutName: number;
 }
 
 interface TodaySummaryDto {
@@ -72,7 +75,7 @@ export function NotificationBell() {
       >
         🔔
         {total > 0 && (
-          <span className="absolute -end-1 -top-1 grid min-w-4.5 place-items-center rounded-full bg-(--ember) px-1 text-[10px] font-bold leading-4.5 text-(--on-mint)">
+          <span className="absolute -end-1 -top-1 grid min-w-4.5 place-items-center rounded-full bg-(--ember) px-1 text-[10.5px] font-bold leading-4.5 text-(--on-mint)">
             {fa(total)}
           </span>
         )}

@@ -96,9 +96,10 @@ public sealed class PolicyVerificationController(
             i?.Id, i?.Token, i?.Stage.ToString(), i?.Status.ToString(), i?.ExpiresAtUtc,
             i?.InquiryFeeToman, i?.DownPaymentAmountToman,
             i?.AgencyDecisionAtUtc, i?.CustomerApprovedAtUtc, i?.DownPaymentPaidAtUtc,
-            report is null ? null : ToDto(report), smsSent);
+            report is null ? null : ToReportDto(report), smsSent);
 
-    private static CreditReportDto ToDto(CreditReport r) =>
+    /// <summary>Shared with PortalInvitationsController's customer-report endpoints.</summary>
+    public static CreditReportDto ToReportDto(CreditReport r) =>
         new(
             r.ChequeCount, r.ChequeSumAmountToman, r.ChequeSumBouncedAmountToman,
             r.ActiveLoansCount, r.LoanTotalAmountToman, r.LoanDebtTotalAmountToman,

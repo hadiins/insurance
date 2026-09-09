@@ -8,6 +8,9 @@ import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { MoneyInput } from "../../components/MoneyInput";
+import { StatusBadge } from "../../components/StatusBadge";
+import { Table, Td, Th, Tr } from "../../components/Table";
+import { EmptyState } from "../../components/EmptyState";
 
 interface CollateralFilterPayload {
   type?: string;
@@ -49,11 +52,11 @@ const STATUS_LABEL: Record<CollateralDto["status"], string> = {
   Bounced: "برگشتی",
 };
 
-const STATUS_PILL_CLASS: Record<CollateralDto["status"], string> = {
-  Held: "bg-(--mint)/12 text-(--mint)",
-  AtBank: "bg-(--amber)/13 text-(--amber)",
-  Cleared: "bg-(--mint)/12 text-(--mint)",
-  Bounced: "bg-(--ember)/13 text-(--ember)",
+const STATUS_TONE: Record<CollateralDto["status"], "mint" | "amber" | "ember"> = {
+  Held: "mint",
+  AtBank: "amber",
+  Cleared: "mint",
+  Bounced: "ember",
 };
 
 export function CollateralPage() {
@@ -156,7 +159,7 @@ export function CollateralPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         چک <em className="font-extralight not-italic text-(--ice-2)">و سفته</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">وثیقهٔ اقساط — چک صیادی و سفته</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">وثیقهٔ اقساط — چک صیادی و سفته</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -226,7 +229,7 @@ export function CollateralPage() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice)"
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice)"
         >
           <option value="">همهٔ انواع</option>
           <option value="ChequeSayadi">چک صیادی</option>
@@ -235,7 +238,7 @@ export function CollateralPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice)"
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice)"
         >
           <option value="">همهٔ وضعیت‌ها</option>
           {(["Held", "AtBank", "Cleared", "Bounced"] as const).map((s) => (
@@ -268,84 +271,98 @@ export function CollateralPage() {
         )}
       </div>
 
-      {items !== null && <div className="mb-2 text-[11px] text-(--ice-3)">{fa(items.length)} مورد</div>}
+      {items !== null && <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(items.length)} مورد</div>}
 
       {items === null ? (
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">موردی یافت نشد.</div>
+        <EmptyState
+          icon="🧾"
+          title="موردی یافت نشد"
+          description={
+            typeFilter || statusFilter || upcomingOnly
+              ? "هیچ وثیقه‌ای با این فیلترها مطابقت ندارد. فیلترها را پاک کنید یا بازه را تغییر دهید."
+              : "هنوز وثیقه‌ای — چک صیادی یا سفته — برای بیمه‌نامه‌ها ثبت نشده است."
+          }
+          action={
+            typeFilter || statusFilter || upcomingOnly
+              ? {
+                  label: "پاک کردن فیلترها",
+                  onClick: () => {
+                    setTypeFilter("");
+                    setStatusFilter("");
+                    setUpcomingOnly(false);
+                  },
+                }
+              : undefined
+          }
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {["بیمه‌نامه", "بیمه‌گذار", "نوع", "بانک", "مبلغ", "سررسید", "رنگ چک", "وضعیت", ""].map((h) => (
-                  <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((c) => (
-                <tr key={c.id} className="border-t border-(--edge) first:border-t-0">
-                  <td className="px-3 py-2.5 text-[13px] font-semibold">{fa(c.policyNumber)}</td>
-                  <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{c.customerFullName}</td>
-                  <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{TYPE_LABEL[c.type]}</td>
-                  <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{c.bankName ?? "—"}</td>
-                  <td className="px-3 py-2.5 text-[13px] font-bold">{money(c.amount)}</td>
-                  <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(c.dueDate)}</td>
-                  <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{c.colorCode ?? "—"}</td>
-                  <td className="px-3 py-2.5 text-[13px]">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL_CLASS[c.status]}`}>
-                      {STATUS_LABEL[c.status]}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-[13px]">
-                    <div className="flex gap-1.5">
-                      {c.status === "Held" && (
-                        <button
-                          type="button"
-                          onClick={() => setStatus(c.id, "AtBank")}
-                          className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
-                        >
-                          نزد بانک
-                        </button>
-                      )}
-                      {(c.status === "Held" || c.status === "AtBank") && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setStatus(c.id, "Cleared")}
-                            className="rounded-[8px] border border-(--mint) px-2 py-1 text-[10.5px] text-(--mint) transition-colors hover:bg-(--mint)/10"
-                          >
-                            پاس‌شد
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setStatus(c.id, "Bounced")}
-                            className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
-                          >
-                            برگشت خورد
-                          </button>
-                        </>
-                      )}
-                      {c.type === "ChequeSayadi" && (
-                        <button
-                          type="button"
-                          onClick={() => checkColor(c.id)}
-                          className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
-                        >
-                          استعلام رنگ
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+        <Table>
+          <thead>
+            <tr>
+              {["بیمه‌نامه", "بیمه‌گذار", "نوع", "بانک", "مبلغ", "سررسید", "رنگ چک", "وضعیت", ""].map((h) => (
+                <Th key={h}>{h}</Th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((c) => (
+              <Tr key={c.id}>
+                <Td className="py-2.5 font-semibold">{fa(c.policyNumber)}</Td>
+                <Td className="py-2.5 text-(--ice-3)">{c.customerFullName}</Td>
+                <Td className="py-2.5 text-(--ice-3)">{TYPE_LABEL[c.type]}</Td>
+                <Td className="py-2.5 text-(--ice-3)">{c.bankName ?? "—"}</Td>
+                <Td className="py-2.5 font-bold">{money(c.amount)}</Td>
+                <Td className="py-2.5">{toJalaliDisplay(c.dueDate)}</Td>
+                <Td className="py-2.5 text-(--ice-3)">{c.colorCode ?? "—"}</Td>
+                <Td className="py-2.5">
+                  <StatusBadge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</StatusBadge>
+                </Td>
+                <Td className="py-2.5">
+                  <div className="flex gap-1.5">
+                    {c.status === "Held" && (
+                      <button
+                        type="button"
+                        onClick={() => setStatus(c.id, "AtBank")}
+                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                      >
+                        نزد بانک
+                      </button>
+                    )}
+                    {(c.status === "Held" || c.status === "AtBank") && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setStatus(c.id, "Cleared")}
+                          className="rounded-[8px] border border-(--mint) px-2 py-1 text-[10.5px] text-(--mint) transition-colors hover:bg-(--mint)/10"
+                        >
+                          پاس‌شد
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStatus(c.id, "Bounced")}
+                          className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                        >
+                          برگشت خورد
+                        </button>
+                      </>
+                    )}
+                    {c.type === "ChequeSayadi" && (
+                      <button
+                        type="button"
+                        onClick={() => checkColor(c.id)}
+                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                      >
+                        استعلام رنگ
+                      </button>
+                    )}
+                  </div>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

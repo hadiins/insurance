@@ -41,7 +41,7 @@ public class PackageRegistrationEndpointTests : IClassFixture<WebApplicationFact
     public async Task A_validly_signed_package_registers_and_appears_in_the_catalog()
     {
         var client = await AuthenticatedClientAsync();
-        var version = $"1.{Random.Shared.Next(1000, 9999)}.0";
+        var version = $"1.{Random.Shared.Next(1000, 9999)}.{Random.Shared.Next(100_000, 999_999)}";
 
         var registerResponse = await client.PostAsJsonAsync("/api/platform/updates/register", Sign(new RegisterPackageRequest(
             version, "registry.example.ir/aqsat-api:" + version, "sha256:" + new string('a', 64), "",
@@ -58,7 +58,7 @@ public class PackageRegistrationEndpointTests : IClassFixture<WebApplicationFact
     {
         var client = await AuthenticatedClientAsync();
         using var attackerKey = RSA.Create(2048);
-        var version = $"1.{Random.Shared.Next(1000, 9999)}.0";
+        var version = $"1.{Random.Shared.Next(1000, 9999)}.{Random.Shared.Next(100_000, 999_999)}";
 
         var request = new RegisterPackageRequest(
             version, "registry.example.ir/aqsat-api:" + version, "sha256:" + new string('a', 64), "",
@@ -76,7 +76,7 @@ public class PackageRegistrationEndpointTests : IClassFixture<WebApplicationFact
     public async Task Registering_the_same_version_twice_is_rejected()
     {
         var client = await AuthenticatedClientAsync();
-        var version = $"1.{Random.Shared.Next(1000, 9999)}.0";
+        var version = $"1.{Random.Shared.Next(1000, 9999)}.{Random.Shared.Next(100_000, 999_999)}";
         var request = new RegisterPackageRequest(
             version, "registry.example.ir/aqsat-api:" + version, "sha256:" + new string('a', 64), "",
             "نسخهٔ اول", null, false, false);
@@ -92,7 +92,7 @@ public class PackageRegistrationEndpointTests : IClassFixture<WebApplicationFact
     public async Task Yanking_a_package_removes_it_from_the_active_catalog_without_deleting_it()
     {
         var client = await AuthenticatedClientAsync();
-        var version = $"1.{Random.Shared.Next(1000, 9999)}.0";
+        var version = $"1.{Random.Shared.Next(1000, 9999)}.{Random.Shared.Next(100_000, 999_999)}";
         var registerResponse = await client.PostAsJsonAsync("/api/platform/updates/register", Sign(new RegisterPackageRequest(
             version, "registry.example.ir/aqsat-api:" + version, "sha256:" + new string('a', 64), "",
             "نسخه‌ای که بعداً معیوب شناخته شد", null, false, false)));

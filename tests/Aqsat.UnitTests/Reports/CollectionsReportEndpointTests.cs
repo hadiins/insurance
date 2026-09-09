@@ -42,13 +42,18 @@ public class CollectionsReportEndpointTests : IClassFixture<WebApplicationFactor
         // The write-off check inside the summary compares against the REAL wall clock
         // (TimeProvider.System — no fake clock is wired through HTTP), so installment due dates
         // must be anchored to actual "now", not an arbitrary past/future literal, or an unsettled
-        // installment could spuriously land in "written off" instead of "open".
+        // installment could spuriously land in "written off" instead of "open". The policy starts
+        // 3 months back so the schedule's due dates are in the PAST — the "late settlement" leg
+        // needs a PaidOn beyond an already-passed deadline, and the payment-date guard (review B5)
+        // refuses future PaidOn values. The last installment is still well inside the write-off
+        // horizon, so it counts as open.
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var start = today.AddMonths(-3);
 
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-COLL-{Guid.NewGuid():N}"[..16], salisLineId, null, "بیمه‌گذار وصولی", null, null,
             Vehicle: new VehicleInput("۸۸ز۸۸۸", null, null, null, null, null), Property: null,
-            today, today, today.AddYears(1), 12_000_000m, 0m, null, null, false));
+            today, start, start.AddYears(1), 12_000_000m, 0m, null, null, false));
         policyResponse.EnsureSuccessStatusCode();
         var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
 

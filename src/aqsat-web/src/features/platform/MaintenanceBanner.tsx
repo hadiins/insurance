@@ -40,8 +40,8 @@ export function MaintenanceBanner() {
     return (
       <div className="fixed inset-0 z-100 grid place-items-center bg-(--void)/95 px-6 text-center backdrop-blur-sm">
         <div>
-          <div className="mb-2 text-lg font-extrabold text-(--ice)">سامانه در حال به‌روزرسانی است</div>
-          <div className="text-[13px] text-(--ice-3)">لطفاً چند دقیقهٔ دیگر دوباره تلاش کنید. اطلاعات شما حفظ مانده است.</div>
+          <div className="mb-2 text-xl font-extrabold text-(--ice)">سامانه در حال به‌روزرسانی است</div>
+          <div className="text-[13.5px] text-(--ice-3)">لطفاً چند دقیقهٔ دیگر دوباره تلاش کنید. اطلاعات شما حفظ مانده است.</div>
         </div>
       </div>
     );

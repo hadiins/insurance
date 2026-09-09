@@ -109,13 +109,17 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
 
         Aqsat.Infrastructure.Persistence.AgencyContext.Current = agencyA.AgencyId;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // The rollup buckets calls and payments by Iran-local day (UTC+3:30) — between 20:30 and
+        // 24:00 UTC that is tomorrow's UTC date, so seeding and asserting on the UTC date flips
+        // the buckets. Everything here runs on the Iran-local clock instead.
+        var iranNow = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromMinutes(210));
+        var today = DateOnly.FromDateTime(iranNow.DateTime);
         context.ApiIrCallLogs.AddRange(
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SendSms", Success = true, CostToman = 115m, CalledAt = DateTimeOffset.UtcNow.AddHours(-2) },
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SendSms", Success = true, CostToman = 115m, CalledAt = DateTimeOffset.UtcNow.AddHours(-1) },
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SmsOTP", Success = true, CostToman = 115m, CalledAt = DateTimeOffset.UtcNow.AddHours(-1) },
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ShahkarLite", Success = true, CostToman = 550m, CalledAt = DateTimeOffset.UtcNow.AddHours(-1) },
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ChequeColor", Success = true, CostToman = 1100m, CalledAt = DateTimeOffset.UtcNow });
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SendSms", Success = true, CostToman = 115m, CalledAt = iranNow },
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SendSms", Success = true, CostToman = 115m, CalledAt = iranNow },
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SmsOTP", Success = true, CostToman = 115m, CalledAt = iranNow },
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ShahkarLite", Success = true, CostToman = 550m, CalledAt = iranNow },
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ChequeColor", Success = true, CostToman = 1100m, CalledAt = iranNow });
         context.CustomerPortalInvitations.Add(new CustomerPortalInvitation
         {
             AgencyId = agencyA.AgencyId,
@@ -126,9 +130,27 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
             CreatedAtUtc = DateTimeOffset.UtcNow.AddDays(-1),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(2),
             Status = PortalInvitationStatus.Paid,
-            PaidAtUtc = DateTimeOffset.UtcNow,
+            PaidAtUtc = iranNow,
             PaidAmountToman = 25_000m,
         });
+        context.Policies.Add(new Policy
+        {
+            AgencyId = agencyA.AgencyId,
+            PolicyNumber = $"POL-STATS-{Guid.NewGuid():N}"[..20],
+            InsuranceLineId = await context.InsuranceLines.Select(l => l.Id).FirstAsync(),
+            CustomerId = agencyA.CustomerId,
+            ContractName = "قرارداد آماری",
+            IssueDate = today,
+            StartDate = today,
+            EndDate = today.AddYears(1),
+            NetPremium = 1,
+            ServiceFee = 0,
+            DownPayment = 0,
+            InstallmentCount = 1,
+            Status = PolicyStatus.Active,
+        });
+        // A second policy so the rollup test's PoliciesIssued >= 2 assertion stands on this
+        // fixture alone, not on whatever dates other seeders happened to use.
         context.Policies.Add(new Policy
         {
             AgencyId = agencyA.AgencyId,
@@ -274,7 +296,7 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
         await job.RunAsync().WaitAsync(TimeSpan.FromMinutes(5));
 
         await using var verify = TestDbContextFactory.Create();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromMinutes(210)).DateTime);
         var todayRow = await verify.AgencyStatsDaily.AsNoTracking()
             .SingleOrDefaultAsync(s => s.AgencyId == agencyId && s.StatDate == today);
 

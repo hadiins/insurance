@@ -214,7 +214,7 @@ export function MarketersPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         بازاریاب‌ها <em className="font-extralight not-italic text-(--ice-2)">و پورسانت</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">هر بازاریاب برای هر رشتهٔ بیمه یک نرخ پورسانت جداگانه دارد</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">هر بازاریاب برای هر رشتهٔ بیمه یک نرخ پورسانت جداگانه دارد</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -249,9 +249,9 @@ export function MarketersPage() {
           </button>
 
           {marketers === null ? (
-            <div className="text-[12px] text-(--ice-3)">در حال بارگذاری…</div>
+            <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
           ) : marketers.length === 0 ? (
-            <div className="text-[12px] text-(--ice-3)">هیچ بازاریابی ثبت نشده.</div>
+            <div className="text-[12.5px] text-(--ice-3)">هیچ بازاریابی ثبت نشده.</div>
           ) : (
             <div className="space-y-1.5">
               {marketers.map((m) => (
@@ -280,11 +280,11 @@ export function MarketersPage() {
               <b className="mb-3 block text-[13.5px] text-(--ice)">{selected.fullName}</b>
 
               <div className="mb-4">
-                <div className="mb-2 text-[11px] tracking-wider text-(--ice-3)">نرخ‌های پورسانت</div>
+                <div className="mb-2 text-[11.5px] tracking-wider text-(--ice-3)">نرخ‌های پورسانت</div>
                 {rates?.map((r) => (
                   <div
                     key={r.id}
-                    className="mb-1.5 flex items-center justify-between rounded-[8px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px]"
+                    className="mb-1.5 flex items-center justify-between rounded-[8px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px]"
                   >
                     <span>{r.insuranceLineName}</span>
                     <span className="font-bold text-(--ice)">
@@ -296,7 +296,7 @@ export function MarketersPage() {
                   <select
                     value={newRateLine}
                     onChange={(e) => setNewRateLine(e.target.value)}
-                    className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)"
+                    className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
                   >
                     <option value="">رشته…</option>
                     {lines?.map((l) => (
@@ -309,12 +309,12 @@ export function MarketersPage() {
                     value={newRatePercent}
                     onChange={(e) => setNewRatePercent(e.target.value)}
                     placeholder="درصد"
-                    className="w-20 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)"
+                    className="w-20 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
                   />
                   <button
                     type="button"
                     onClick={addRate}
-                    className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12px] font-semibold text-(--on-mint)"
+                    className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12.5px] font-semibold text-(--on-mint)"
                   >
                     ثبت نرخ
                   </button>
@@ -322,7 +322,7 @@ export function MarketersPage() {
               </div>
 
               <div className="mb-4 rounded-[10px] border border-(--edge-2) bg-(--fld) p-3">
-                <div className="mb-2 text-[11px] tracking-wider text-(--ice-3)">دسترسی پنل بازاریاب</div>
+                <div className="mb-2 text-[11.5px] tracking-wider text-(--ice-3)">دسترسی پنل بازاریاب</div>
                 {selected.appUserId ? (
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-[12.5px] text-(--ice-2)">
@@ -332,7 +332,7 @@ export function MarketersPage() {
                     <button
                       type="button"
                       onClick={revokePanelAccess}
-                      className="rounded-[8px] border border-(--ember) px-2.5 py-1.5 text-[11px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                      className="rounded-[8px] border border-(--ember) px-2.5 py-1.5 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
                     >
                       قطع دسترسی
                     </button>
@@ -344,24 +344,24 @@ export function MarketersPage() {
                         value={panelMobile}
                         onChange={(e) => setPanelMobile(e.target.value)}
                         placeholder="موبایل حساب"
-                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
                       />
                       <input
                         value={panelName}
                         onChange={(e) => setPanelName(e.target.value)}
                         placeholder="نام کاربر"
-                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
                       />
                       <input
                         type="password"
                         value={panelPassword}
                         onChange={(e) => setPanelPassword(e.target.value)}
                         placeholder="رمز عبور (کاربر جدید)"
-                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
                       />
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-(--ice-3)">
+                      <span className="text-[11.5px] text-(--ice-3)">
                         اگر این موبایل قبلاً ثبت شده باشد، فقط متصل می‌شود و رمز جدید لازم نیست.
                       </span>
                       <button
@@ -378,18 +378,18 @@ export function MarketersPage() {
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] tracking-wider text-(--ice-3)">پورسانت‌ها</span>
+                  <span className="text-[11.5px] tracking-wider text-(--ice-3)">پورسانت‌ها</span>
                 </div>
                 {commissions && commissions.payable > 0 && (
                   <div className="mb-2 rounded-[10px] border border-(--edge-2) bg-(--fld) p-3">
-                    <div className="mb-2 text-[11px] tracking-wider text-(--ice-3)">
+                    <div className="mb-2 text-[11.5px] tracking-wider text-(--ice-3)">
                       پرداخت {money(commissions.payable)} تومان از محل
                     </div>
                     <div className="mb-2 grid grid-cols-2 gap-2">
                       <select
                         value={payMethod}
                         onChange={(e) => setPayMethod(e.target.value as "Cash" | "BankTransfer")}
-                        className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice)"
+                        className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12.5px] text-(--ice)"
                       >
                         <option value="Cash">نقدی (صندوق)</option>
                         <option value="BankTransfer">واریز بانکی</option>
@@ -398,7 +398,7 @@ export function MarketersPage() {
                         <select
                           value={payCashBoxId}
                           onChange={(e) => setPayCashBoxId(e.target.value)}
-                          className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice)"
+                          className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12.5px] text-(--ice)"
                         >
                           <option value="">صندوق…</option>
                           {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -409,7 +409,7 @@ export function MarketersPage() {
                         <select
                           value={payBankAccountId}
                           onChange={(e) => setPayBankAccountId(e.target.value)}
-                          className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12px] text-(--ice)"
+                          className="rounded-[8px] border border-(--edge-2) bg-(--pane) px-2 py-1.5 text-[12.5px] text-(--ice)"
                         >
                           <option value="">حساب بانکی…</option>
                           {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -421,14 +421,14 @@ export function MarketersPage() {
                     <button
                       type="button"
                       onClick={payCommissions}
-                      className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1 text-[11px] font-semibold text-(--on-mint)"
+                      className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1 text-[11.5px] font-semibold text-(--on-mint)"
                     >
                       ثبت پرداخت پورسانت
                     </button>
                   </div>
                 )}
                 {commissions && (
-                  <div className="mb-2 grid grid-cols-3 gap-2 text-center text-[11px]">
+                  <div className="mb-2 grid grid-cols-3 gap-2 text-center text-[11.5px]">
                     <div className="rounded-[8px] border border-(--edge-2) p-2">
                       <div className="text-(--ice-3)">در انتظار</div>
                       <div className="font-bold text-(--ice)">{money(commissions.pending)}</div>

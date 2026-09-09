@@ -2,7 +2,9 @@ using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Domain;
+using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +22,8 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/platform/apiir")]
 [Authorize(Policy = Permissions.PlatformOwner)]
-public sealed class ApiIrSettingsController(AppDbContext dbContext, ICurrentUserContext currentUser) : ControllerBase
+public sealed class ApiIrSettingsController(
+    AppDbContext dbContext, ICurrentUserContext currentUser, SecurityEventWriter securityEvents) : ControllerBase
 {
     [HttpGet("settings")]
     public async Task<ActionResult<ApiIrSettingsDto>> GetSettings(CancellationToken ct)
@@ -50,6 +53,14 @@ public sealed class ApiIrSettingsController(AppDbContext dbContext, ICurrentUser
         settings.UpdatedAt = DateTimeOffset.UtcNow;
         settings.UpdatedByUserId = currentUser.UserId;
         await dbContext.SaveChangesAsync(ct);
+
+        // Platform-wide vendor account settings — no AuditEntry row exists for this table (it has
+        // no AgencyId to hang one on), so the security feed is the only trail. Values deliberately
+        // not logged: the API key is a secret, "changed" is all anyone needs (rule 30's spirit).
+        await securityEvents.WriteAsync(
+            SecurityEventType.SensitiveSettingChanged, SecuritySeverity.Warning,
+            $"تنظیمات اتصال api.ir تغییر کرد (اجازهٔ سرویس‌های پولی: {(request.AllowPaidEndpoints ? "فعال" : "غیرفعال")})",
+            cancellationToken: ct);
 
         return Ok(new ApiIrSettingsDto(
             settings.AllowPaidEndpoints ?? false,

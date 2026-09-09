@@ -29,13 +29,12 @@ export function LoginPage() {
         className="w-[340px] rounded-2xl border border-(--edge) bg-(--pane) p-6 shadow-(--sh)"
       >
         <div className="mb-5 flex items-center gap-3">
-          <div className="grid h-[34px] w-[34px] flex-none place-items-center rounded-[10px] bg-linear-to-br from-(--mint) to-(--mint-dim) text-[15px] font-black text-(--on-mint) shadow-(--gl-mint)">
-            ق
-          </div>
-          <b className="text-[15px] font-bold text-(--ice)">ورود به دفتر اقساط</b>
+          <img src="/credix-logo.png" alt="Credix" className="brand-logo-light h-[28px] w-auto" />
+          <img src="/credix-logo-light.png" alt="Credix" className="brand-logo-dark h-[28px] w-auto" />
+          <b className="text-[15px] font-bold text-(--ice)">ورود به Credix</b>
         </div>
 
-        <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ همراه</label>
+        <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ همراه</label>
         <input
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
@@ -45,7 +44,7 @@ export function LoginPage() {
           className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
         />
 
-        <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">رمز عبور</label>
+        <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">رمز عبور</label>
         <input
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -56,7 +55,7 @@ export function LoginPage() {
         />
 
         {error && (
-          <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12px] text-(--ember)">
+          <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
             {error}
           </div>
         )}
@@ -64,10 +63,17 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={submitting || !mobile.trim() || !password}
-          className="w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13px] font-semibold text-(--on-mint) shadow-(--gl-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-(--gl-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "در حال ورود…" : "ورود"}
         </button>
+
+        <a
+          href="/signup"
+          className="mt-3 block text-center text-[12px] text-(--ice-3) underline-offset-4 hover:text-(--ice-2) hover:underline"
+        >
+          ثبت‌نام نمایندگی جدید
+        </a>
       </form>
     </div>
   );

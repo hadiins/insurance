@@ -104,7 +104,9 @@ public class PolicyNumberEndpointTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             "OLD-FORMAT/000042", salisLineId, null, "مشتری قدیمی", null, null,
             Vehicle: new VehicleInput("۱۱الف۱۱۱", null, null, null, null, null), Property: null,
-            new DateOnly(2024, 1, 1), new DateOnly(2024, 1, 1), new DateOnly(2025, 1, 1),
+            // Dates must stay inside the issuance guard's [today-1y, today+2y] window — the
+            // "old" here is the legacy number format, not the issue date.
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1),
             9_000_000m, 500_000m, null, null, false, PnManualEntry: true));
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<CreatePolicyResultDto>();

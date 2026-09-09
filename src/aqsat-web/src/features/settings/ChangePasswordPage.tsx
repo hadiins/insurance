@@ -39,7 +39,7 @@ export function ChangePasswordPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">تغییر رمز عبور</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">رمز عبور حساب خودتان را عوض کنید</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">رمز عبور حساب خودتان را عوض کنید</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -59,21 +59,21 @@ export function ChangePasswordPage() {
             onChange={(e) => setCurrentPassword(e.target.value)}
             type="password"
             placeholder="رمز عبور فعلی"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             type="password"
             placeholder="رمز عبور جدید"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             type="password"
             placeholder="تکرار رمز عبور جدید"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
         </div>
         <button

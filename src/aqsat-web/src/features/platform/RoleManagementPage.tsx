@@ -97,7 +97,7 @@ export function RoleManagementPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">مدیریت نقش‌ها</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
         نقش‌ها بین تمام نمایندگی‌ها مشترک‌اند — تغییر اینجا روی هر کاربری که آن نقش را دارد بلافاصله اثر می‌گذارد
       </div>
 
@@ -114,7 +114,7 @@ export function RoleManagementPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="نام نقش"
-            className="mb-3 w-full max-w-sm rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="mb-3 w-full max-w-sm rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <div className="mb-3 grid grid-cols-2 gap-2">
             {catalog?.map((p) => (
@@ -160,13 +160,13 @@ export function RoleManagementPage() {
             <div key={r.id} className="flex items-center justify-between rounded-2xl border border-(--edge) bg-(--pane) p-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <b className="text-[13px] text-(--ice)">{r.name}</b>
+                  <b className="text-[13.5px] text-(--ice)">{r.name}</b>
                   {r.isSystemRole && (
                     <span className="rounded-full bg-(--amber)/13 px-2 py-0.5 text-[10.5px] font-semibold text-(--amber)">سامانه‌ای</span>
                   )}
-                  <span className="text-[11px] text-(--ice-3)">{fa(r.memberCount)} کاربر</span>
+                  <span className="text-[11.5px] text-(--ice-3)">{fa(r.memberCount)} کاربر</span>
                 </div>
-                <div className="mt-1 text-[11px] text-(--ice-3)">
+                <div className="mt-1 text-[11.5px] text-(--ice-3)">
                   {r.permissions.length === 0 ? "بدون مجوز" : r.permissions.map((p) => catalog?.find((c) => c.key === p)?.label ?? p).join(" · ")}
                 </div>
               </div>
@@ -175,14 +175,14 @@ export function RoleManagementPage() {
                   <button
                     type="button"
                     onClick={() => startEdit(r)}
-                    className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                    className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                   >
                     ویرایش
                   </button>
                   <button
                     type="button"
                     onClick={() => remove(r)}
-                    className="rounded-[8px] border border-(--ember) px-2.5 py-1 text-[11px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                    className="rounded-[8px] border border-(--ember) px-2.5 py-1 text-[11.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
                   >
                     حذف
                   </button>

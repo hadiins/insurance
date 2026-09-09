@@ -17,7 +17,10 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/customers")]
 [Authorize(Policy = Permissions.PolicyRead)]
-public sealed class CustomersController(AppDbContext dbContext, TimeProvider timeProvider, IFieldEncryptor fieldEncryptor) : ControllerBase
+public sealed class CustomersController(
+    AppDbContext dbContext, TimeProvider timeProvider, IFieldEncryptor fieldEncryptor,
+    Aqsat.Infrastructure.Customers.CustomerCreationService customerCreationService,
+    ICurrentUserContext currentUser) : ControllerBase
 {
     /// <summary>The issuance wizard's step-1 entry point (owner decision 2026-08-28): everything
     /// starts with the national ID. Persian/Latin digits are normalized, the checksum is validated,
@@ -57,15 +60,79 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
         return Ok(new CustomerLookupResultDto(true, customer, policyCount));
     }
 
-    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the dashboard widget's two counts.</summary>
+    /// <summary>Registers a brand-new customer BEFORE any policy exists, so a pre-issuance
+    /// credit-check portal link can be sent on the very first visit (owner decision 2026-09-03).
+    /// Returns the same shape as the wizard's step-1 lookup so the UI can slot the new customer
+    /// straight into the existing-customer path.</summary>
+    [HttpPost]
+    [Authorize(Policy = Permissions.PolicyWrite)]
+    public async Task<ActionResult<CustomerLookupResultDto>> Create(CreateCustomerRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
+        {
+            return ValidationProblem("نام و نام خانوادگی الزامی است.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NationalId))
+        {
+            return ValidationProblem("کد ملی الزامی است.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Mobile))
+        {
+            return ValidationProblem("شمارهٔ همراه الزامی است.");
+        }
+
+        Domain.Customer customer;
+        try
+        {
+            customer = await customerCreationService.CreateAsync(
+                currentUser.ActiveOrganizationId,
+                new Aqsat.Infrastructure.Customers.CreateCustomerInput(
+                    $"{request.FirstName.Trim()} {request.LastName.Trim()}",
+                    request.FirstName, request.LastName, request.NationalId, request.Mobile,
+                    request.EmergencyMobile, request.PostalCode, request.Address),
+                ct);
+        }
+        catch (Aqsat.Infrastructure.Customers.CustomerCreationException ex)
+        {
+            return ValidationProblem(ex.Message);
+        }
+
+        var profile = await dbContext.Customers.AsNoTracking()
+            .Where(c => c.Id == customer.Id)
+            .Select(c => new CustomerLookupProfileDto(
+                c.Id, c.FullName, c.FirstName, c.LastName, c.NationalId,
+                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete))
+            .FirstAsync(ct);
+
+        return Ok(new CustomerLookupResultDto(true, profile, 0));
+    }
+
+    /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the completion widget's counts, one per
+    /// required field (extended 2026-09-07: the old two-count shape could show total=1 with both
+    /// counts at 0, hiding what was actually missing).</summary>
     [HttpGet("incomplete-summary")]
     public async Task<ActionResult<IncompleteProfileSummaryDto>> IncompleteSummary(CancellationToken ct)
     {
-        var total = await dbContext.Customers.AsNoTracking().CountAsync(c => !c.IsProfileComplete, ct);
-        var withoutMobile = await dbContext.Customers.AsNoTracking().CountAsync(c => c.Mobile == null, ct);
-        var withoutNationalId = await dbContext.Customers.AsNoTracking().CountAsync(c => c.NationalId == null, ct);
+        var counts = await dbContext.Customers.AsNoTracking()
+            .Where(c => !c.IsProfileComplete)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                WithoutMobile = g.Count(c => c.Mobile == null),
+                WithoutNationalId = g.Count(c => c.NationalId == null),
+                WithoutAddress = g.Count(c => c.Address == null),
+                WithoutPostalCode = g.Count(c => c.PostalCode == null),
+                WithoutName = g.Count(c => c.FirstName == null || c.LastName == null),
+            })
+            .FirstOrDefaultAsync(ct)
+            ?? new { Total = 0, WithoutMobile = 0, WithoutNationalId = 0, WithoutAddress = 0, WithoutPostalCode = 0, WithoutName = 0 };
 
-        return Ok(new IncompleteProfileSummaryDto(total, withoutMobile, withoutNationalId));
+        return Ok(new IncompleteProfileSummaryDto(
+            counts.Total, counts.WithoutMobile, counts.WithoutNationalId,
+            counts.WithoutAddress, counts.WithoutPostalCode, counts.WithoutName));
     }
 
     /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — "شبیه اکسل، نه ۱۳۷ فرم": one paginated grid,
@@ -80,6 +147,9 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
         {
             "no-mobile" => query.Where(c => c.Mobile == null),
             "no-national-id" => query.Where(c => c.NationalId == null),
+            "no-address" => query.Where(c => c.Address == null),
+            "no-postal-code" => query.Where(c => c.PostalCode == null),
+            "no-name" => query.Where(c => c.FirstName == null || c.LastName == null),
             _ => query,
         };
 
@@ -174,11 +244,21 @@ public sealed class CustomersController(AppDbContext dbContext, TimeProvider tim
 
         if (request.FirstName is not null)
         {
+            if (PersonNameValidator.IsDigitsOnly(request.FirstName))
+            {
+                return ValidationProblem("نام نمی‌تواند عدد باشد — کد ملی در فیلد جداگانهٔ خودش وارد می‌شود.");
+            }
+
             customer.FirstName = request.FirstName.Trim();
         }
 
         if (request.LastName is not null)
         {
+            if (PersonNameValidator.IsDigitsOnly(request.LastName))
+            {
+                return ValidationProblem("نام خانوادگی نمی‌تواند عدد باشد — کد ملی در فیلد جداگانهٔ خودش وارد می‌شود.");
+            }
+
             customer.LastName = request.LastName.Trim();
         }
 

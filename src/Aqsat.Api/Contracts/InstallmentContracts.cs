@@ -16,3 +16,10 @@ public sealed record InstallmentWorklistRowDto(
     Guid InstallmentId, Guid PolicyId, string PolicyNumber, string CustomerFullName, string? CustomerMobile,
     int SeqNo, DateOnly DueDate, DateOnly SettlementDeadline, decimal Amount, decimal PaidAmount, decimal Balance,
     string Status, string Urgency);
+
+/// <summary>One call behind the worklist's filter chips and overdue banner — counts and open
+/// balance per urgency bucket over every unsettled installment, so the chips can show live
+/// counters (FinSync's reminders pattern) without the page fetching the unfiltered row set.</summary>
+public sealed record InstallmentUrgencyCountDto(string Urgency, int Count, decimal Balance);
+
+public sealed record InstallmentCountsDto(int Total, decimal TotalBalance, IReadOnlyList<InstallmentUrgencyCountDto> Buckets);

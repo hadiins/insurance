@@ -4,6 +4,7 @@ using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,8 @@ namespace Aqsat.Api.Controllers;
 [ApiController]
 [Route("api/platform/payment")]
 [Authorize(Policy = Permissions.PlatformOwner)]
-public sealed class PlatformPaymentController(AppDbContext dbContext, ICurrentUserContext currentUser) : ControllerBase
+public sealed class PlatformPaymentController(
+    AppDbContext dbContext, ICurrentUserContext currentUser, SecurityEventWriter securityEvents) : ControllerBase
 {
     [HttpGet("settings")]
     public async Task<ActionResult<PlatformPaymentSettingsDto>> GetSettings(CancellationToken ct)
@@ -74,6 +76,14 @@ public sealed class PlatformPaymentController(AppDbContext dbContext, ICurrentUs
         settings.UpdatedAt = DateTimeOffset.UtcNow;
         settings.UpdatedByUserId = currentUser.UserId;
         await dbContext.SaveChangesAsync(ct);
+
+        // Money moves through this configuration — the security feed is its only trail (the table
+        // has no AgencyId, so no AuditEntry applies). Provider/enabled state only; the merchant ID
+        // is a secret, "changed" suffices.
+        await securityEvents.WriteAsync(
+            SecurityEventType.SensitiveSettingChanged, SecuritySeverity.Warning,
+            $"تنظیمات درگاه پرداخت مالک تغییر کرد (درگاه {provider}، وضعیت {(request.Enabled ? "فعال" : "غیرفعال")})",
+            cancellationToken: ct);
 
         return Ok(ToDto(settings));
     }

@@ -3,6 +3,8 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { EmptyState } from "../../components/EmptyState";
+import { Td, Th, Tr } from "../../components/Table";
 
 interface PendingRemittanceRow {
   policyId: string;
@@ -145,7 +147,7 @@ export function InsurerRemittancePage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         پرداخت به <em className="font-extralight not-italic text-(--ice-2)">بیمه‌گر</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">واریز اقساط و حق بیمهٔ جمع‌آوری‌شده به حساب بیمه‌گر</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">واریز اقساط و حق بیمهٔ جمع‌آوری‌شده به حساب بیمه‌گر</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -153,121 +155,123 @@ export function InsurerRemittancePage() {
         </div>
       )}
 
-      <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">بدهی به بیمه‌گران به تفکیک بیمه</div>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["بیمه‌گر", "تعداد موارد واریزنشده", "مبلغ واریزنشده", "قدیمی‌ترین دریافتی", "جمع واریز‌شده تا امروز"].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
+      {byInsurer !== null && byInsurer.length === 0 ? (
+        <div className="mb-4.5">
+          <EmptyState
+            icon="🏦"
+            title="بدهی واریزنشده‌ای به بیمه‌گران نیست"
+            description="همهٔ دریافتی‌های جمع‌آوری‌شده به بیمه‌گران واریز شده است."
+          />
+        </div>
+      ) : (
+        <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+          <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">بدهی به بیمه‌گران به تفکیک بیمه</div>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                {["بیمه‌گر", "تعداد موارد واریزنشده", "مبلغ واریزنشده", "قدیمی‌ترین دریافتی", "جمع واریز‌شده تا امروز"].map((h) => (
+                  <Th key={h}>{h}</Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {byInsurer?.map((r) => (
+                <Tr key={r.insurerName}>
+                  <Td className="py-2.5 font-semibold">{r.insurerName}</Td>
+                  <Td className="py-2.5 !text-[12.5px] tabular-nums text-(--ice-3)">{fa(r.pendingCount)}</Td>
+                  <Td className="py-2.5 font-bold text-(--ember)">{money(r.pendingAmount)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] tabular-nums text-(--ice-3)">
+                    {r.oldestCollectedOn ? toJalaliDisplay(r.oldestCollectedOn) : "—"}
+                  </Td>
+                  <Td className="py-2.5 !text-[12.5px] tabular-nums text-(--ice-2)">{money(r.remittedTotal)}</Td>
+                </Tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {byInsurer?.map((r) => (
-              <tr key={r.insurerName} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2.5 text-[13px] font-semibold">{r.insurerName}</td>
-                <td className="px-3 py-2.5 text-[12.5px] tabular-nums text-(--ice-3)">{fa(r.pendingCount)}</td>
-                <td className="px-3 py-2.5 text-[13px] font-bold text-(--ember)">{money(r.pendingAmount)}</td>
-                <td className="px-3 py-2.5 text-[12px] tabular-nums text-(--ice-3)">
-                  {r.oldestCollectedOn ? toJalaliDisplay(r.oldestCollectedOn) : "—"}
-                </td>
-                <td className="px-3 py-2.5 text-[12.5px] tabular-nums text-(--ice-2)">{money(r.remittedTotal)}</td>
-              </tr>
-            ))}
-            {byInsurer?.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  بدهی واریزنشده‌ای به بیمه‌گران نیست.
-                </td>
-              </tr>
-            )}
-            {byInsurer === null && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[12px] text-(--ice-3)">در حال بارگذاری…</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              {byInsurer === null && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">در حال بارگذاری…</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">دریافتی‌های واریزنشده به بیمه‌گر</div>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["", "بیمه‌نامه", "بیمه‌گذار", "رشته", "قسط", "تاریخ دریافت", "مبلغ"].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pending?.map((r) => (
-              <tr key={rowKey(r)} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2">
-                  <input type="checkbox" checked={selectedKeys.has(rowKey(r))} onChange={() => toggle(r)} />
-                </td>
-                <td className="px-3 py-2 text-[13px] font-semibold">{r.policyNumber}</td>
-                <td className="px-3 py-2 text-[13px] text-(--ice-3)">{r.customerFullName}</td>
-                <td className="px-3 py-2 text-[12px] text-(--ice-3)">{r.insuranceLineNameFa}</td>
-                <td className="px-3 py-2 text-[12px] text-(--ice-3)">{r.seqNo ? `قسط ${fa(r.seqNo)}` : "پیش‌پرداخت/کامل"}</td>
-                <td className="px-3 py-2 text-[12px] tabular-nums">{toJalaliDisplay(r.collectedOn)}</td>
-                <td className="px-3 py-2 text-[13px] font-bold">{money(r.amount)}</td>
-              </tr>
-            ))}
-            {pending?.length === 0 && (
+      {pending !== null && pending.length === 0 ? (
+        <div className="mb-4.5">
+          <EmptyState
+            icon="✅"
+            title="همه چیز به بیمه‌گر واریز شده است"
+            description="دریافتی واریزنشده‌ای برای انتخاب و ثبت پرداخت وجود ندارد."
+          />
+        </div>
+      ) : (
+        <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+          <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">دریافتی‌های واریزنشده به بیمه‌گر</div>
+          <table className="w-full border-collapse">
+            <thead>
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  همه چیز به بیمه‌گر واریز شده است.
-                </td>
+                {["", "بیمه‌نامه", "بیمه‌گذار", "رشته", "قسط", "تاریخ دریافت", "مبلغ"].map((h) => (
+                  <Th key={h}>{h}</Th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {pending?.map((r) => (
+                <Tr key={rowKey(r)}>
+                  <Td>
+                    <input type="checkbox" checked={selectedKeys.has(rowKey(r))} onChange={() => toggle(r)} />
+                  </Td>
+                  <Td className="font-semibold">{r.policyNumber}</Td>
+                  <Td className="text-(--ice-3)">{r.customerFullName}</Td>
+                  <Td className="!text-[12.5px] text-(--ice-3)">{r.insuranceLineNameFa}</Td>
+                  <Td className="!text-[12.5px] text-(--ice-3)">{r.seqNo ? `قسط ${fa(r.seqNo)}` : "پیش‌پرداخت/کامل"}</Td>
+                  <Td className="!text-[12.5px] tabular-nums">{toJalaliDisplay(r.collectedOn)}</Td>
+                  <Td className="font-bold">{money(r.amount)}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selectedRows.length > 0 && (
         <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-3.5 text-[13px] font-semibold text-(--ice)">
+          <div className="mb-3.5 text-[13.5px] font-semibold text-(--ice)">
             ثبت پرداخت — {fa(selectedRows.length)} مورد — جمع {money(selectedTotal)} تومان
           </div>
           <div className="mb-3 grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تاریخ پرداخت</label>
-              <JalaliDateField value={date} onChange={setDate} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ پرداخت</label>
+              <JalaliDateField value={date} onChange={setDate} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">روش پرداخت</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">روش پرداخت</label>
               <select
                 value={methodType}
                 onChange={(e) => setMethodType(e.target.value as MethodType)}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="BankTransfer">واریز بانکی</option>
                 <option value="Cash">نقدی</option>
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ پیگیری (اختیاری)</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ پیگیری (اختیاری)</label>
               <input
                 value={referenceNo}
                 onChange={(e) => setReferenceNo(e.target.value)}
                 dir="ltr"
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               />
             </div>
           </div>
           {methodType === "Cash" ? (
             <div className="mb-3">
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">صندوق</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">صندوق</label>
               <select
                 value={cashBoxId}
                 onChange={(e) => setCashBoxId(e.target.value)}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="">انتخاب کنید…</option>
                 {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -279,11 +283,11 @@ export function InsurerRemittancePage() {
             </div>
           ) : (
             <div className="mb-3">
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حساب بانکی</label>
               <select
                 value={bankAccountId}
                 onChange={(e) => setBankAccountId(e.target.value)}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="">انتخاب کنید…</option>
                 {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -305,39 +309,38 @@ export function InsurerRemittancePage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">تاریخچهٔ پرداخت‌ها</div>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["تاریخ", "مبلغ", "روش", "محل پرداخت", "شمارهٔ پیگیری", "تعداد ردیف"].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {past?.map((r) => (
-              <tr key={r.id} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2.5 text-[13px] tabular-nums">{toJalaliDisplay(r.date)}</td>
-                <td className="px-3 py-2.5 text-[13px] font-bold">{money(r.amount)}</td>
-                <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{METHOD_LABEL[r.methodType] ?? r.methodType}</td>
-                <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{r.cashBoxName ?? r.bankAccountLabel ?? "—"}</td>
-                <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{r.referenceNo ?? "—"}</td>
-                <td className="px-3 py-2.5 text-[12px] text-(--ice-3)">{fa(r.lines.length)}</td>
-              </tr>
-            ))}
-            {past?.length === 0 && (
+      {past !== null && past.length === 0 ? (
+        <EmptyState
+          icon="🧾"
+          title="هنوز پرداختی ثبت نشده است"
+          description="پس از ثبت نخستین پرداخت به بیمه‌گر، تاریخچهٔ آن در این بخش نمایش داده می‌شود."
+        />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+          <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">تاریخچهٔ پرداخت‌ها</div>
+          <table className="w-full border-collapse">
+            <thead>
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  هنوز پرداختی ثبت نشده است.
-                </td>
+                {["تاریخ", "مبلغ", "روش", "محل پرداخت", "شمارهٔ پیگیری", "تعداد ردیف"].map((h) => (
+                  <Th key={h}>{h}</Th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {past?.map((r) => (
+                <Tr key={r.id}>
+                  <Td className="py-2.5 tabular-nums">{toJalaliDisplay(r.date)}</Td>
+                  <Td className="py-2.5 font-bold">{money(r.amount)}</Td>
+                  <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{METHOD_LABEL[r.methodType] ?? r.methodType}</Td>
+                  <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{r.cashBoxName ?? r.bankAccountLabel ?? "—"}</Td>
+                  <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{r.referenceNo ?? "—"}</Td>
+                  <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{fa(r.lines.length)}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

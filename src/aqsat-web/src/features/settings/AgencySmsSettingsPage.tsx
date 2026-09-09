@@ -62,7 +62,7 @@ export function AgencySmsSettingsPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         تنظیمات <em className="font-extralight not-italic text-(--ice-2)">پنل پیامکی</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">{fa(form.name)} — کد {fa(form.code)}</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{fa(form.name)} — کد {fa(form.code)}</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
@@ -83,7 +83,7 @@ export function AgencySmsSettingsPage() {
         </div>
         {form.hasSmsApiKey ? (
           <div className="space-y-1.5">
-            <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[13px] text-(--ice-3)" dir="ltr">
+            <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[13.5px] text-(--ice-3)" dir="ltr">
               {form.smsApiKeyMasked ?? "—"}
             </div>
             <input
@@ -109,7 +109,7 @@ export function AgencySmsSettingsPage() {
         type="button"
         disabled={busy}
         onClick={save}
-        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
       </button>
@@ -118,4 +118,4 @@ export function AgencySmsSettingsPage() {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";

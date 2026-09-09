@@ -4,6 +4,10 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { useLiveReload } from "../shell/useLiveReload";
+import { EmptyState } from "../../components/EmptyState";
+import { ProgressBar } from "../../components/ProgressBar";
+import { StatusBadge } from "../../components/StatusBadge";
+import { Table, Td, Th, Tr } from "../../components/Table";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 
 interface CountdownRowDto {
@@ -36,12 +40,12 @@ const URGENCY_LABEL: Record<CountdownRowDto["urgency"], string> = {
   Future: "آینده",
 };
 
-const URGENCY_PILL_CLASS: Record<CountdownRowDto["urgency"], string> = {
-  Overdue: "bg-(--ember)/13 text-(--ember)",
-  Critical: "bg-(--ember)/13 text-(--ember)",
-  Warning: "bg-(--amber)/13 text-(--amber)",
-  Upcoming: "bg-(--mint)/12 text-(--mint)",
-  Future: "bg-(--mint)/12 text-(--mint)",
+const URGENCY_TONE: Record<CountdownRowDto["urgency"], "mint" | "ember" | "amber" | "neutral"> = {
+  Overdue: "ember",
+  Critical: "ember",
+  Warning: "amber",
+  Upcoming: "mint",
+  Future: "mint",
 };
 
 function daysLabel(row: CountdownRowDto): string {
@@ -65,6 +69,9 @@ interface IncompleteProfileSummaryDto {
   total: number;
   withoutMobile: number;
   withoutNationalId: number;
+  withoutAddress: number;
+  withoutPostalCode: number;
+  withoutName: number;
 }
 
 interface RenewalWatchDto {
@@ -138,7 +145,7 @@ export function TodayPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         شمارش‌معکوس <em className="font-extralight not-italic text-(--ice-2)">تسویه</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">اقساطی که باید ظرف مهلت مقرر به بیمه‌گر تسویه شوند</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">اقساطی که باید ظرف مهلت مقرر به بیمه‌گر تسویه شوند</div>
 
       <div className="mb-4.5 rounded-xl border border-(--mint)/22 bg-(--mint)/7 p-4 text-[12.5px] text-(--ice-2)">
         این تب <b className="font-bold text-(--mint)">سنجاق</b> شده و بسته نمی‌شود. روی هر ردیف کلیک کنید تا در تب
@@ -159,12 +166,12 @@ export function TodayPage() {
           className="mb-4.5 flex cursor-pointer items-center justify-between rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 transition-colors hover:bg-(--hov)"
         >
           <div>
-            <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">سود و زیان این ماه (تعهدی)</div>
-            <div className={`text-[19px] font-extrabold ${pnl.netProfit >= 0 ? "text-(--mint)" : "text-(--ember)"}`}>
+            <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">سود و زیان این ماه (تعهدی)</div>
+            <div className={`text-[20px] font-extrabold ${pnl.netProfit >= 0 ? "text-(--mint)" : "text-(--ember)"}`}>
               {money(pnl.netProfit)}
             </div>
           </div>
-          <div className="text-[11px] text-(--ice-3)">مشاهدهٔ گزارش کامل ←</div>
+          <div className="text-[11.5px] text-(--ice-3)">مشاهدهٔ گزارش کامل ←</div>
         </div>
       )}
 
@@ -176,15 +183,24 @@ export function TodayPage() {
           className="mb-4.5 cursor-pointer rounded-[14px] border border-(--amber)/25 bg-(--amber)/6 p-3.5 transition-colors hover:bg-(--amber)/10"
         >
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-[13px] font-bold text-(--amber)">⚠ {fa(incompleteProfiles.total)} مشتری اطلاعات ناقص دارند</div>
-            <div className="text-[11px] text-(--ice-3)">تکمیل پرونده‌ها ←</div>
+            <div className="text-[13.5px] font-bold text-(--amber)">⚠ {fa(incompleteProfiles.total)} مشتری اطلاعات ناقص دارند</div>
+            <div className="text-[11.5px] text-(--ice-3)">تکمیل پرونده‌ها ←</div>
           </div>
-          <div className="flex gap-5 text-[11.5px] text-(--ice-3)">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-(--ice-3)">
             <span>
               بدون شمارهٔ موبایل: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutMobile)}</b> ← یادآوری پیامکی کار نمی‌کند
             </span>
             <span>
               بدون کد ملی: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutNationalId)}</b> ← اعتبارسنجی ممکن نیست
+            </span>
+            <span>
+              بدون آدرس: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutAddress)}</b>
+            </span>
+            <span>
+              بدون کد پستی: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutPostalCode)}</b>
+            </span>
+            <span>
+              بدون نام/نام خانوادگی: <b className="text-(--ice-2)">{fa(incompleteProfiles.withoutName)}</b>
             </span>
           </div>
         </div>
@@ -193,7 +209,7 @@ export function TodayPage() {
       {dueRenewals !== null && dueRenewals.length > 0 && (
         <div className="mb-4.5 rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-[13px] font-bold text-(--ice)">
+            <div className="text-[13.5px] font-bold text-(--ice)">
               🔁 سررسیدهای تمدید نزدیک — {fa(dueRenewals.length)} مورد
             </div>
             <button
@@ -206,54 +222,41 @@ export function TodayPage() {
                   title: "سررسید تمدید",
                 })
               }
-              className="text-[11px] text-(--ice-3) transition-colors hover:text-(--ice)"
+              className="text-[11.5px] text-(--ice-3) transition-colors hover:text-(--ice)"
             >
               مشاهدهٔ همه ←
             </button>
           </div>
-          <div className="overflow-hidden rounded-[10px] border border-(--edge)">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    بیمه‌گذار
-                  </th>
-                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    رشته
-                  </th>
-                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    بیمه‌گر فعلی
-                  </th>
-                  <th className="border-b border-(--edge) px-3 py-2 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    تاریخ انقضا
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {dueRenewals.map((w) => (
-                  <tr
-                    key={w.id}
-                    onClick={() =>
-                      openTab({
-                        navType: "renewal-watches",
-                        page: "renewal-watches",
-                        kind: "singleton",
-                        title: "سررسید تمدید",
-                      })
-                    }
-                    className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
-                  >
-                    <td className="px-3 py-2 text-[13px] font-semibold">
-                      {w.customerFullName ?? w.prospectName ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-[12.5px] text-(--ice-3)">{w.insuranceLineName}</td>
-                    <td className="px-3 py-2 text-[12.5px] text-(--ice-3)">{w.currentInsurer ?? "—"}</td>
-                    <td className="px-3 py-2 text-[12.5px] font-bold">{toJalaliDisplay(w.currentExpiryDate)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="!rounded-[10px]">
+            <thead>
+              <tr>
+                <Th>بیمه‌گذار</Th>
+                <Th>رشته</Th>
+                <Th>بیمه‌گر فعلی</Th>
+                <Th>تاریخ انقضا</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {dueRenewals.map((w) => (
+                <Tr
+                  key={w.id}
+                  onClick={() =>
+                    openTab({
+                      navType: "renewal-watches",
+                      page: "renewal-watches",
+                      kind: "singleton",
+                      title: "سررسید تمدید",
+                    })
+                  }
+                >
+                  <Td className="font-semibold">{w.customerFullName ?? w.prospectName ?? "—"}</Td>
+                  <Td className="!text-[12.5px] text-(--ice-3)">{w.insuranceLineName}</Td>
+                  <Td className="!text-[12.5px] text-(--ice-3)">{w.currentInsurer ?? "—"}</Td>
+                  <Td className="!text-[12.5px] font-bold">{toJalaliDisplay(w.currentExpiryDate)}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
         </div>
       )}
 
@@ -273,71 +276,68 @@ export function TodayPage() {
             <Fig label="معوق/بحرانی" value={fa(overdueOrCriticalCount)} caption="نیازمند اقدام فوری" tone="ember" />
           </div>
 
+          <div className="mb-4">
+            <ProgressBar
+              label="وصول مطالبات پنجرهٔ فعال"
+              value={data.collected}
+              target={data.owed}
+            />
+          </div>
+
           {data.rows.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">
-              هیچ قسطی در بازهٔ فعال تسویه نیست.
-            </div>
+            <EmptyState
+              icon="✅"
+              title="هیچ قسطی در بازهٔ فعال تسویه نیست"
+              description="در ۳۰ روز گذشته تا ۷ روز آینده قسط سررسیدشده‌ای وجود ندارد. شمارش‌معکوس آرام است."
+            />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      بیمه‌گذار
-                    </th>
-                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      وضعیت
-                    </th>
-                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      قسط
-                    </th>
-                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      مبلغ
-                    </th>
-                    <th className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.rows.map((r) => (
-                    <tr
-                      key={r.installmentId}
-                      onClick={() =>
-                        openTab({
-                          navType: "policy-file",
-                          page: "policy-file",
-                          kind: "multi-record",
-                          recordId: r.policyId,
-                          title: r.policyNumber,
-                          payload: { policyId: r.policyId },
-                        })
-                      }
-                      className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
-                    >
-                      <td className="px-3 py-2.75 text-[13px] font-semibold">{r.customerFullName}</td>
-                      <td className="px-3 py-2.75 text-[13px]">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${URGENCY_PILL_CLASS[r.urgency]}`}>
-                          {URGENCY_LABEL[r.urgency]}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{daysLabel(r)}</td>
-                      <td className="px-3 py-2.75 text-[13px] font-bold">{money(r.balance)}</td>
-                      <td className="px-3 py-2.75 text-[13px]">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPayingRow(r);
-                          }}
-                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
-                        >
-                          ثبت پرداخت
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>بیمه‌گذار</Th>
+                  <Th>وضعیت</Th>
+                  <Th>قسط</Th>
+                  <Th>مبلغ</Th>
+                  <Th />
+                </tr>
+              </thead>
+              <tbody>
+                {data.rows.map((r) => (
+                  <Tr
+                    key={r.installmentId}
+                    onClick={() =>
+                      openTab({
+                        navType: "policy-file",
+                        page: "policy-file",
+                        kind: "multi-record",
+                        recordId: r.policyId,
+                        title: r.policyNumber,
+                        payload: { policyId: r.policyId },
+                      })
+                    }
+                  >
+                    <Td className="py-2.75 font-semibold">{r.customerFullName}</Td>
+                    <Td className="py-2.75">
+                      <StatusBadge tone={URGENCY_TONE[r.urgency]}>{URGENCY_LABEL[r.urgency]}</StatusBadge>
+                    </Td>
+                    <Td className="py-2.75 text-(--ice-3)">{daysLabel(r)}</Td>
+                    <Td className="py-2.75 font-bold">{money(r.balance)}</Td>
+                    <Td className="py-2.75">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPayingRow(r);
+                        }}
+                        className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                      >
+                        ثبت پرداخت
+                      </button>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
           )}
         </>
       )}
@@ -371,9 +371,9 @@ function Fig({
   return (
     <div className="relative overflow-hidden rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
       <span className={`absolute start-0 top-0 h-0.5 w-7.5 ${barColor}`} />
-      <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">{label}</div>
-      <div className={`text-[23px] font-extrabold tracking-tight ${valueColor}`}>{value}</div>
-      <div className="text-[11px] text-(--ice-3)">{caption}</div>
+      <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
+      <div className={`text-[20px] font-extrabold tracking-tight ${valueColor}`}>{value}</div>
+      <div className="text-[11.5px] text-(--ice-3)">{caption}</div>
     </div>
   );
 }

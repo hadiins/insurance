@@ -63,22 +63,36 @@ public sealed class PaymentChequesController(
             return ValidationProblem("وضعیت نامعتبر است.");
         }
 
+        // Same visibility rule as List: a bounced cheque's Payment is soft-deleted by the
+        // reversal, and the filtered query path drops the cheque row through the (required)
+        // Payment join — the user would get a misleading 404 exactly when the terminal-Bounced
+        // message below matters. Agency isolation is re-applied explicitly (RLS still guards).
         var cheque = await dbContext.PaymentCheques
+            .IgnoreQueryFilters()
             .Include(c => c.Payment).ThenInclude(p => p.Customer)
             .Include(c => c.Policy)
             .Include(c => c.CashBox)
+            .Where(c => !c.IsDeleted && c.AgencyId == currentUser.ActiveOrganizationId)
             .FirstOrDefaultAsync(c => c.Id == id, ct);
         if (cheque is null)
         {
             return NotFound();
         }
 
-        var wasBounced = cheque.Status == CollateralStatus.Bounced;
+        // A bounced cheque already unwound its payment (soft-deleted, installments re-opened,
+        // commission back to Pending). Any later status change here would show a healthy cheque
+        // on top of a reversed ledger with no path to un-reverse it — Bounced is terminal, and
+        // the money comes back as a replacement payment instead.
+        if (cheque.Status == CollateralStatus.Bounced)
+        {
+            return ValidationProblem("چک برگشتی پایانی است؛ برای این قسط پرداخت جایگزین ثبت کنید.");
+        }
+
         cheque.Status = status;
 
         // Bouncing must undo whatever the cheque's receipt made payable — same path a manual
         // reversal takes, never a second copy of the unwind logic.
-        if (status == CollateralStatus.Bounced && !wasBounced)
+        if (status == CollateralStatus.Bounced)
         {
             await reversalService.ReverseAsync(cheque.PaymentId, currentUser.UserId, currentUser.DisplayName, ct);
         }

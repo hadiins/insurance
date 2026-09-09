@@ -15,7 +15,7 @@ export function ConfirmCloseDialog() {
             <Dialog.Title className="mb-1.5 text-[15px] font-bold text-(--ice)">
               کار ذخیره‌نشده دارید
             </Dialog.Title>
-            <Dialog.Description className="mb-4.5 text-[13px] text-(--ice-2)">
+            <Dialog.Description className="mb-4.5 text-[13.5px] text-(--ice-2)">
               این تب تغییرات ذخیره‌نشده دارد. اگر ببندید، اطلاعات از دست می‌رود.
             </Dialog.Description>
             <div className="flex gap-2">

@@ -114,7 +114,7 @@ export function AgencySettingsPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         مشخصات <em className="font-extralight not-italic text-(--ice-2)">نمایندگی</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">کد نمایندگی: {fa(form.code)}</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">کد نمایندگی: {fa(form.code)}</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -155,7 +155,7 @@ export function AgencySettingsPage() {
             {form.agencyCodeLocked ? (
               <div className="flex items-center gap-2">
                 <div className={`${inputClass} bg-(--fld)/50 text-(--ice-3)`}>{fa(form.agencyCode ?? "")}</div>
-                <span className="shrink-0 text-[11px] text-(--ice-3)">🔒 پس از اولین بیمه‌نامه قفل شده</span>
+                <span className="shrink-0 text-[11.5px] text-(--ice-3)">🔒 پس از اولین بیمه‌نامه قفل شده</span>
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -169,13 +169,13 @@ export function AgencySettingsPage() {
                   type="button"
                   disabled={agencyCodeBusy || !agencyCodeInput.trim()}
                   onClick={saveAgencyCode}
-                  className="shrink-0 rounded-[10px] border border-(--mint) bg-(--mint) px-3 py-2 text-[12px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="shrink-0 rounded-[10px] border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   ذخیره
                 </button>
               </div>
             )}
-            {agencyCodeError && <div className="mt-1.5 text-[11px] text-(--ember)">{agencyCodeError}</div>}
+            {agencyCodeError && <div className="mt-1.5 text-[11.5px] text-(--ember)">{agencyCodeError}</div>}
           </Field>
         </div>
       </div>
@@ -271,7 +271,7 @@ export function AgencySettingsPage() {
         type="button"
         disabled={busy}
         onClick={save}
-        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
       </button>
@@ -372,12 +372,12 @@ function DangerZone({ code }: { code: string }) {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
       {children}
     </div>
   );

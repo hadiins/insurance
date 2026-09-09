@@ -7,6 +7,7 @@ using Aqsat.Application.Schedule;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Portal;
 using Aqsat.Infrastructure.Seed;
 using Aqsat.UnitTests.DataModel;
 using Microsoft.AspNetCore.Hosting;
@@ -407,6 +408,152 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         Assert.Contains("لینک", await response.Content.ReadAsStringAsync());
     }
 
+    /// <summary>Seeds a credit report directly — the state a standalone (customer-file portal
+    /// link) inquiry leaves behind when PolicyId is null, or a previous policy's report when the
+    /// id is passed. Both are reuse candidates (owner decision 2026-09-03).</summary>
+    private static async Task SeedReportAsync(
+        Guid agencyId, Guid customerId, Guid? policyId, bool rawSuccess, DateTimeOffset retrievedAtUtc,
+        int chequeCount = 5)
+    {
+        await using var context = TestDbContextFactory.Create();
+        AgencyContext.Current = agencyId;
+        context.CreditReports.Add(new CreditReport
+        {
+            AgencyId = agencyId,
+            CustomerId = customerId,
+            PolicyId = policyId,
+            ChequeCount = chequeCount,
+            ChequeSumAmountToman = 3_000_000m,
+            RawSuccess = rawSuccess,
+            RetrievedAtUtc = retrievedAtUtc,
+        });
+        await context.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task A_fresh_standalone_report_is_reused_by_the_wizard_without_fee_or_new_inquiry()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+        await SeedReportAsync(h.Fixture.AgencyAId, h.CustomerId, policyId: null, rawSuccess: true,
+            DateTimeOffset.UtcNow.AddHours(-2));
+
+        var dto = await StartChainAsync(h);
+        Assert.Equal("ReportReady", dto.Stage);
+        Assert.Equal(0m, dto.InquiryFeeToman);
+
+        // No api.ir call and no report of this policy's own — the seeded row was copied onto it.
+        Assert.Equal(0, _apiIr.CreditCalls);
+        var status = await h.Client.GetFromJsonAsync<PolicyVerificationDto>(
+            $"/api/policies/{h.PolicyId}/verification");
+        Assert.NotNull(status!.CreditReport);
+        Assert.Equal(5, status.CreditReport.ChequeCount);
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = h.Fixture.AgencyAId;
+        var copied = await verify.CreditReports.AsNoTracking().SingleAsync(r => r.PolicyId == h.PolicyId);
+        Assert.Equal(h.CustomerId, copied.CustomerId);
+        // The copy keeps the original retrieval time — an honest snapshot, not a fake "new" one.
+        Assert.True(copied.RetrievedAtUtc <= DateTimeOffset.UtcNow.AddHours(-1));
+        var standalone = await verify.CreditReports.AsNoTracking().SingleAsync(r => r.PolicyId == null && r.CustomerId == h.CustomerId);
+        Assert.NotNull(standalone);
+    }
+
+    [Fact]
+    public async Task A_reused_chain_still_gates_the_down_payment_and_completes_end_to_end()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+        await SeedReportAsync(h.Fixture.AgencyAId, h.CustomerId, policyId: null, rawSuccess: true,
+            DateTimeOffset.UtcNow.AddHours(-1));
+
+        var dto = await StartChainAsync(h);
+        Assert.Equal("ReportReady", dto.Stage);
+
+        var blocked = await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/receive-down-payment",
+            new ReceiveDownPaymentRequest(new DateOnly(2026, 3, 2), null));
+        Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+
+        var approved = await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/verification/decision", new AgencyVerificationDecisionRequest(true));
+        approved.EnsureSuccessStatusCode();
+
+        var publicClient = _factory.CreateClient();
+        var accept = await publicClient.PostAsync($"/api/portal/{dto.Token}/approve-contract", null);
+        accept.EnsureSuccessStatusCode();
+
+        var downPayment = await publicClient.PostAsync($"/api/portal/{dto.Token}/pay-down-payment", null);
+        downPayment.EnsureSuccessStatusCode();
+
+        var final = await h.Client.GetFromJsonAsync<PolicyVerificationDto>(
+            $"/api/policies/{h.PolicyId}/verification");
+        Assert.Equal("Completed", final!.Stage);
+    }
+
+    [Fact]
+    public async Task A_report_older_than_30_days_is_not_reused()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+        await SeedReportAsync(h.Fixture.AgencyAId, h.CustomerId, policyId: null, rawSuccess: true,
+            DateTimeOffset.UtcNow - PolicyVerificationService.ReportReuseWindow - TimeSpan.FromDays(1));
+
+        var dto = await StartChainAsync(h);
+        Assert.Equal("FeePending", dto.Stage);
+        Assert.Equal(Fee, dto.InquiryFeeToman);
+    }
+
+    [Fact]
+    public async Task A_sandboxed_report_is_never_reused()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+        await SeedReportAsync(h.Fixture.AgencyAId, h.CustomerId, policyId: null, rawSuccess: false,
+            DateTimeOffset.UtcNow.AddMinutes(-5));
+
+        var dto = await StartChainAsync(h);
+        Assert.Equal("FeePending", dto.Stage);
+    }
+
+    [Fact]
+    public async Task A_fresh_report_from_a_previous_policy_is_also_reused()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+
+        // A real prior policy row — CreditReports.PolicyId is a hard FK (rule 4).
+        Guid previousPolicyId;
+        await using (var seed = TestDbContextFactory.Create())
+        {
+            AgencyContext.Current = h.Fixture.AgencyAId;
+            var thirdPartyLineId = await seed.InsuranceLines
+                .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
+            var previous = new Policy
+            {
+                AgencyId = h.Fixture.AgencyAId,
+                PolicyNumber = $"POL-{Guid.NewGuid():N}"[..16],
+                InsuranceLineId = thirdPartyLineId,
+                CustomerId = h.CustomerId,
+                ContractName = "صدور دستی",
+                IsInstallment = true,
+                RequiresVerification = true,
+                IssueDate = new DateOnly(2026, 2, 1),
+                StartDate = new DateOnly(2026, 2, 1),
+                EndDate = new DateOnly(2027, 2, 1),
+                NetPremium = 10_000_000m,
+                ServiceFee = 1_000_000m,
+                DownPayment = 0,
+                InstallmentCount = 0,
+            };
+            seed.Policies.Add(previous);
+            await seed.SaveChangesAsync();
+            previousPolicyId = previous.Id;
+        }
+        await SeedReportAsync(h.Fixture.AgencyAId, h.CustomerId, policyId: previousPolicyId, rawSuccess: true,
+            DateTimeOffset.UtcNow.AddDays(-3));
+
+        var dto = await StartChainAsync(h);
+        Assert.Equal("ReportReady", dto.Stage);
+        Assert.Equal(0m, dto.InquiryFeeToman);
+        Assert.Equal(0, _apiIr.CreditCalls);
+    }
+
     [Fact]
     public async Task Another_agencys_operator_sees_neither_the_chain_nor_the_credit_report()
     {
@@ -454,11 +601,20 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         public ActiveLoansResult? ActiveLoans { get; set; } = new(1, 20_000m, 5_000m, null, null, null, null);
         public bool RejectCalls { get; set; }
 
-        public Task<UnpaidChequeResult?> UnpaidChequeAsync(string nationalCode, Guid agencyId, CancellationToken ct = default) =>
-            Task.FromResult(RejectCalls ? null : UnpaidCheque);
+        /// <summary>Counts the two credit inquiries — the reuse tests assert a reused report fires none.</summary>
+        public int CreditCalls { get; private set; }
 
-        public Task<ActiveLoansResult?> ActiveLoansAsync(string nationalCode, Guid agencyId, CancellationToken ct = default) =>
-            Task.FromResult(RejectCalls ? null : ActiveLoans);
+        public Task<UnpaidChequeResult?> UnpaidChequeAsync(string nationalCode, Guid agencyId, CancellationToken ct = default)
+        {
+            CreditCalls++;
+            return Task.FromResult(RejectCalls ? null : UnpaidCheque);
+        }
+
+        public Task<ActiveLoansResult?> ActiveLoansAsync(string nationalCode, Guid agencyId, CancellationToken ct = default)
+        {
+            CreditCalls++;
+            return Task.FromResult(RejectCalls ? null : ActiveLoans);
+        }
 
         public Task<bool?> IsHolidayAsync(DateOnly date, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult<bool?>(null);

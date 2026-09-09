@@ -51,7 +51,7 @@ export function ContractTemplatesPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         تنظیم <em className="font-extralight not-italic text-(--ice-2)">قراردادهای اقساطی</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
         نگاشت نام قرارداد به «اقساطی بودن» — هیچ‌وقت فقط دنبال «اقساطی» نگردید
       </div>
 
@@ -99,14 +99,14 @@ export function ContractTemplatesPage() {
             value={newTemplate.contractNamePattern}
             onChange={(e) => setNewTemplate((t) => ({ ...t, contractNamePattern: e.target.value }))}
             placeholder="مثلاً تجارت آفرینان تسنیم"
-            className="col-span-2 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="col-span-2 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={newTemplate.defaultInstallmentCount}
             onChange={(e) => setNewTemplate((t) => ({ ...t, defaultInstallmentCount: Number(e.target.value) }))}
             type="number"
             placeholder="تعداد اقساط"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <button
             type="button"

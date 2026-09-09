@@ -8,6 +8,7 @@ using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Aqsat.Api.Controllers;
 
@@ -46,7 +47,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             totals.TotalIncome, totals.TotalExpense, totals.NetProfit,
             GroupBy(items, i => (i.InsuranceLineId?.ToString() ?? "none", i.LineLabel)),
             GroupBy(items, i => (i.MarketerId?.ToString() ?? "none", i.MarketerLabel)),
-            GroupBy(items, i => (i.EventDate.ToString("yyyy-MM"), i.EventDate.ToString("yyyy-MM"))),
+            GroupByJalaliMonth(items),
             totals.OperatingExpense,
             totals.MarketerCommissionPaid));
     }
@@ -270,6 +271,39 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             })
             .OrderByDescending(r => r.NetProfit)
             .ToList();
+
+    private static readonly string[] JalaliMonthNames =
+        ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+    private static readonly PersianCalendar Persian = new();
+
+    /// <summary>Monthly trend bucketed by Jalali months, in chronological order (a trend chart must
+    /// not arrive sorted by profit), with gap months between the first and last active month filled
+    /// with zeros so a quiet month reads as zero, not as missing data.</summary>
+    private static IReadOnlyList<PnlBreakdownRow> GroupByJalaliMonth(List<LineItem> items)
+    {
+        var buckets = new Dictionary<int, PnlTotals>();
+        foreach (var item in items)
+        {
+            var date = item.EventDate.ToDateTime(TimeOnly.MinValue);
+            var key = Persian.GetYear(date) * 12 + Persian.GetMonth(date) - 1;
+            buckets[key] = buckets.TryGetValue(key, out var existing) ? existing + item.Totals : item.Totals;
+        }
+        if (buckets.Count == 0)
+        {
+            return [];
+        }
+
+        var rows = new List<PnlBreakdownRow>();
+        for (var key = buckets.Keys.Min(); key <= buckets.Keys.Max(); key++)
+        {
+            var totals = buckets.TryGetValue(key, out var bucket) ? bucket : default;
+            rows.Add(new PnlBreakdownRow(
+                key.ToString(), $"{JalaliMonthNames[key % 12]} {key / 12}", totals.AgencyCommissionIncome, totals.ServiceFeeIncome,
+                totals.MarketerCommissionExpense, totals.DefaultWriteOffExpense, totals.TotalIncome, totals.TotalExpense, totals.NetProfit,
+                totals.OperatingExpense));
+        }
+        return rows;
+    }
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {

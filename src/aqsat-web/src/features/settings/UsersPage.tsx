@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 interface OrgUserDto {
   membershipId: string;
@@ -75,7 +77,7 @@ export function UsersPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         کاربران <em className="font-extralight not-italic text-(--ice-2)">و دسترسی‌ها</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">کاربرانی که به این نمایندگی دسترسی دارند</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">کاربرانی که به این نمایندگی دسترسی دارند</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -130,39 +132,39 @@ export function UsersPage() {
       {users === null ? (
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : users.length === 0 ? (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">کاربری ثبت نشده.</div>
+        <EmptyState
+          icon="👥"
+          title="کاربری ثبت نشده"
+          description="هنوز کاربری به این نمایندگی دسترسی ندارد؛ اولین کاربر را از فرم بالا اضافه کنید."
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {["نام", "شمارهٔ همراه", "نقش", ""].map((h) => (
-                  <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.membershipId} className="border-t border-(--edge) first:border-t-0">
-                  <td className="px-3 py-2.5 text-[13px] font-semibold">{u.fullName}</td>
-                  <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{fa(u.mobile)}</td>
-                  <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{u.roleName}</td>
-                  <td className="px-3 py-2.5 text-[13px]">
-                    <button
-                      type="button"
-                      onClick={() => deactivate(u.membershipId)}
-                      className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
-                    >
-                      حذف دسترسی
-                    </button>
-                  </td>
-                </tr>
+        <Table>
+          <thead>
+            <tr>
+              {["نام", "شمارهٔ همراه", "نقش", ""].map((h) => (
+                <Th key={h}>{h}</Th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <Tr key={u.membershipId}>
+                <Td className="py-2.5 font-semibold">{u.fullName}</Td>
+                <Td className="py-2.5 text-(--ice-3)">{fa(u.mobile)}</Td>
+                <Td className="py-2.5 text-(--ice-3)">{u.roleName}</Td>
+                <Td className="py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => deactivate(u.membershipId)}
+                    className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                  >
+                    حذف دسترسی
+                  </button>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

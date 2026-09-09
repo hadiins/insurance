@@ -3,6 +3,8 @@ import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 interface CollectionsReportRow {
   policyNumber: string;
@@ -99,7 +101,7 @@ export function CollectionsReportPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         وصولی‌های <em className="font-extralight not-italic text-(--ice-2)">دوره</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">وصولی، نرخ به‌موقع‌بودن و تحلیل نکول</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">وصولی، نرخ به‌موقع‌بودن و تحلیل نکول</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -110,12 +112,12 @@ export function CollectionsReportPage() {
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تا تاریخ</label>
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
         </div>
         <div className="flex gap-2">
@@ -152,36 +154,36 @@ export function CollectionsReportPage() {
 
       {pageData && (
         <>
-          <div className="mb-2 text-[11px] text-(--ice-3)">{fa(pageData.totalCount)} قسط</div>
+          <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(pageData.totalCount)} قسط</div>
           {pageData.rows.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">قسطی در این بازه نیست.</div>
+            <EmptyState
+              icon="🗓"
+              title="قسطی در این بازه نیست"
+              description="در بازهٔ انتخابی قسط سررسیدشده‌ای وجود ندارد؛ بازهٔ زمانی را تغییر دهید."
+            />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    {["بیمه‌نامه", "بیمه‌گذار", "رشته", "قسط", "سررسید", "مانده", "وضعیت"].map((h) => (
-                      <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageData.rows.map((r, idx) => (
-                    <tr key={idx} className="border-t border-(--edge) first:border-t-0">
-                      <td className="px-3 py-2.5 text-[13px] font-semibold">{fa(r.policyNumber)}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.customerFullName}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.insuranceLineNameFa}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(r.seqNo)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(r.dueDate)}</td>
-                      <td className="px-3 py-2.5 text-[13px] font-bold">{money(r.balance)}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{STATUS_LABEL[r.status] ?? r.status}</td>
-                    </tr>
+            <Table>
+              <thead>
+                <tr>
+                  {["بیمه‌نامه", "بیمه‌گذار", "رشته", "قسط", "سررسید", "مانده", "وضعیت"].map((h) => (
+                    <Th key={h}>{h}</Th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </tr>
+              </thead>
+              <tbody>
+                {pageData.rows.map((r, idx) => (
+                  <Tr key={idx}>
+                    <Td className="py-2.5 font-semibold">{fa(r.policyNumber)}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{r.customerFullName}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{r.insuranceLineNameFa}</Td>
+                    <Td className="py-2.5">{fa(r.seqNo)}</Td>
+                    <Td className="py-2.5">{toJalaliDisplay(r.dueDate)}</Td>
+                    <Td className="py-2.5 font-bold">{money(r.balance)}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{STATUS_LABEL[r.status] ?? r.status}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
           )}
           {totalPages > 1 && (
             <div className="mt-3 flex items-center justify-center gap-2">
@@ -216,8 +218,8 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
   const color = tone === "mint" ? "text-(--mint)" : tone === "ember" ? "text-(--ember)" : "text-(--ice)";
   return (
     <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-      <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">{label}</div>
-      <div className={`text-[17px] font-extrabold tracking-tight ${color}`}>{value}</div>
+      <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
+      <div className={`text-[20px] font-extrabold tracking-tight ${color}`}>{value}</div>
     </div>
   );
 }

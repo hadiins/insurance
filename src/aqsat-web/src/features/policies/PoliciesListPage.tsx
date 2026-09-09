@@ -5,6 +5,9 @@ import { useDraftState } from "../shell/useDraftState";
 import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { StatusBadge } from "../../components/StatusBadge";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 interface PolicyListFilterPayload {
   status?: string;
@@ -30,11 +33,11 @@ const STATUS_LABEL: Record<PolicyListItemDto["status"], string> = {
   PendingConfirmation: "در انتظار تأیید",
 };
 
-const STATUS_PILL_CLASS: Record<PolicyListItemDto["status"], string> = {
-  Active: "bg-(--mint)/12 text-(--mint)",
-  Settled: "bg-(--mint)/12 text-(--mint)",
-  Cancelled: "bg-(--ember)/13 text-(--ember)",
-  PendingConfirmation: "bg-(--amber)/13 text-(--amber)",
+const STATUS_TONE: Record<PolicyListItemDto["status"], "mint" | "amber" | "ember"> = {
+  Active: "mint",
+  Settled: "mint",
+  Cancelled: "ember",
+  PendingConfirmation: "amber",
 };
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -118,7 +121,7 @@ export function PoliciesListPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">فهرست بیمه‌نامه‌ها</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
         جست‌وجو بر اساس شمارهٔ کامل، سریال، سال، کد رشته، نام، موبایل، کد ملی یا پلاک خودرو
       </div>
 
@@ -128,13 +131,13 @@ export function PoliciesListPage() {
           onChange={(e) => setFilters({ ...filters, search: e.target.value })}
           placeholder="شمارهٔ بیمه‌نامه، نام، موبایل، کد ملی، پلاک…"
           dir="ltr"
-          className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-right text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+          className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-right text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
         />
         {search && (
           <button
             type="button"
             onClick={() => setFilters({ ...filters, search: "" })}
-            className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+            className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             پاک کردن
           </button>
@@ -145,7 +148,7 @@ export function PoliciesListPage() {
         <select
           value={status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
         >
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -156,7 +159,7 @@ export function PoliciesListPage() {
         <select
           value={installmentFilter}
           onChange={(e) => setFilters({ ...filters, installment: e.target.value })}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
         >
           {INSTALLMENT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -185,54 +188,57 @@ export function PoliciesListPage() {
 
       {!error && items !== null && (
         <>
-          <div className="mb-2 text-[11px] text-(--ice-3)">{fa(items.length)} بیمه‌نامه</div>
+          <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(items.length)} بیمه‌نامه</div>
           {items.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">بیمه‌نامه‌ای یافت نشد.</div>
+            <EmptyState
+              icon="📄"
+              title="بیمه‌نامه‌ای یافت نشد"
+              description={
+                search || status || installmentFilter
+                  ? "هیچ بیمه‌نامه‌ای با این فیلترها مطابقت ندارد. فیلترها را پاک کنید یا عبارت جستجو را تغییر دهید."
+                  : "هنوز بیمه‌نامه‌ای ثبت نشده است."
+              }
+              action={
+                status || installmentFilter
+                  ? { label: "پاک کردن فیلترها", onClick: () => setFilters({ ...filters, status: "", installment: "" }) }
+                  : undefined
+              }
+            />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    {["شمارهٔ بیمه‌نامه", "بیمه‌گذار", "رشته", "وضعیت", "مبلغ کل", "مانده", ""].map((h) => (
-                      <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((p) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => openPolicy(p)}
-                      className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
-                    >
-                      <td className="px-3 py-2.75 text-[13px] font-semibold">{p.policyNumber}</td>
-                      <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.customerFullName}</td>
-                      <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.insuranceLineNameFa}</td>
-                      <td className="px-3 py-2.75 text-[13px]">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL_CLASS[p.status]}`}>
-                          {STATUS_LABEL[p.status]}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.75 text-[13px]">{money(p.totalReceivable)}</td>
-                      <td className="px-3 py-2.75 text-[13px] font-bold">{money(p.balance)}</td>
-                      <td className="px-3 py-2.75 text-[13px]">
-                        {p.status === "PendingConfirmation" && (
-                          <button
-                            type="button"
-                            onClick={(e) => confirm(p.id, e)}
-                            className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
-                          >
-                            تأیید شد
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+            <Table>
+              <thead>
+                <tr>
+                  {["شمارهٔ بیمه‌نامه", "بیمه‌گذار", "رشته", "وضعیت", "مبلغ کل", "مانده", ""].map((h) => (
+                    <Th key={h}>{h}</Th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((p) => (
+                  <Tr key={p.id} onClick={() => openPolicy(p)}>
+                    <Td className="py-2.75 font-semibold">{p.policyNumber}</Td>
+                    <Td className="py-2.75 text-(--ice-3)">{p.customerFullName}</Td>
+                    <Td className="py-2.75 text-(--ice-3)">{p.insuranceLineNameFa}</Td>
+                    <Td className="py-2.75">
+                      <StatusBadge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</StatusBadge>
+                    </Td>
+                    <Td className="py-2.75">{money(p.totalReceivable)}</Td>
+                    <Td className="py-2.75 font-bold">{money(p.balance)}</Td>
+                    <Td className="py-2.75">
+                      {p.status === "PendingConfirmation" && (
+                        <button
+                          type="button"
+                          onClick={(e) => confirm(p.id, e)}
+                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                        >
+                          تأیید شد
+                        </button>
+                      )}
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
           )}
         </>
       )}

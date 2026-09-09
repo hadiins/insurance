@@ -1,5 +1,5 @@
 export type Theme = "light" | "dark";
-export type Palette = "indigo" | "mint" | "teal" | "zinc";
+export type Palette = "indigo" | "mint" | "teal" | "violet" | "zinc";
 
 const STORAGE_KEY = "aqsat-theme";
 const PALETTE_KEY = "aqsat-palette";

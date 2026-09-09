@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { money } from "../../lib/persian";
+import { StatusBadge } from "../../components/StatusBadge";
+import { EmptyState } from "../../components/EmptyState";
 
 interface MarketerCustomerDto {
   customerId: string;
@@ -50,7 +52,7 @@ export function MarketerPanelPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         پنل <em className="font-extralight not-italic text-(--ice-2)">بازاریاب</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">فقط مشتریانی که خودتان معرفی کرده‌اید</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">فقط مشتریانی که خودتان معرفی کرده‌اید</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -61,15 +63,15 @@ export function MarketerPanelPage() {
       {!error && commissions && (
         <div className="mb-4.5 grid grid-cols-3 gap-3">
           <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
-            <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">در انتظار تسویه</div>
+            <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">در انتظار تسویه</div>
             <div className="text-[20px] font-extrabold text-(--ice)">{money(commissions.pending)}</div>
           </div>
           <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
-            <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">قابل پرداخت</div>
+            <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">قابل پرداخت</div>
             <div className="text-[20px] font-extrabold text-(--amber)">{money(commissions.payable)}</div>
           </div>
           <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
-            <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">پرداخت‌شده</div>
+            <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">پرداخت‌شده</div>
             <div className="text-[20px] font-extrabold text-(--mint)">{money(commissions.paid)}</div>
           </div>
         </div>
@@ -91,22 +93,20 @@ export function MarketerPanelPage() {
             <tbody>
               {customers?.map((c) => (
                 <tr key={c.customerId} className="border-t border-(--edge)">
-                  <td className="px-3 py-2.5 text-[13px] font-semibold">{c.fullName}</td>
-                  <td className="px-3 py-2.5 text-[13px]">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        c.isOverdue ? "bg-(--ember)/13 text-(--ember)" : "bg-(--mint)/12 text-(--mint)"
-                      }`}
-                    >
-                      {c.isOverdue ? "معوق" : "به‌روز"}
-                    </span>
+                  <td className="px-3 py-2.5 text-[13.5px] font-semibold">{c.fullName}</td>
+                  <td className="px-3 py-2.5 text-[13.5px]">
+                    <StatusBadge tone={c.isOverdue ? "ember" : "mint"}>{c.isOverdue ? "معوق" : "به‌روز"}</StatusBadge>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
           {customers?.length === 0 && (
-            <div className="p-6 text-center text-[13px] text-(--ice-3)">هنوز مشتری‌ای معرفی نکرده‌اید.</div>
+            <EmptyState
+              icon="👥"
+              title="هنوز مشتری‌ای معرفی نکرده‌اید"
+              description="با معرفی مشتریان جدید، آن‌ها و وضعیت اقساطشان از همین پنل قابل پیگیری خواهد بود."
+            />
           )}
         </div>
       )}

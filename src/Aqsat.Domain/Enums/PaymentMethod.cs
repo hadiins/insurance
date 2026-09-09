@@ -23,11 +23,15 @@ public enum PaymentMethod : byte
     Online = 5,
 }
 
-/// <summary>Well-known values of Payment.Method (the free-text display column) that code keys
-/// on — defined once in Domain so controllers and services share the exact same string.</summary>
-public static class WellKnownPaymentMethods
-{
-    /// <summary>The marker ReportsController's cash-basis P&amp;L filters on to recognize a
-    /// down-payment Payment (which carries no PaymentAllocation rows).</summary>
-    public const string DownPayment = "پیش‌پرداخت";
-}
+    /// <summary>Well-known values of Payment.Method (the free-text display column) that code keys
+    /// on — defined once in Domain so controllers and services share the exact same string.</summary>
+    public static class WellKnownPaymentMethods
+    {
+        /// <summary>The marker ReportsController's cash-basis P&amp;L filters on to recognize a
+        /// down-payment Payment (which carries no PaymentAllocation rows).</summary>
+        public const string DownPayment = "پیش‌پرداخت";
+
+        /// <summary>An installment paid by the customer through the public /pay/{token} portal —
+        /// recorded automatically by InstallmentPaymentLinkService, never chosen by an operator.</summary>
+        public const string OnlineInstallment = "قسط (پورتال)";
+    }

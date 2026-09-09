@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { getPalette, setPalette, type Palette } from "../../app/theme";
 
 const PALETTES: ReadonlyArray<{ id: Palette; label: string; swatches: [string, string] }> = [
-  { id: "indigo", label: "نیلی", swatches: ["#4f46e5", "#8b9dff"] },
-  { id: "mint", label: "نعنایی", swatches: ["#0e7c6b", "#3ddc97"] },
-  { id: "teal", label: "فیروزه‌ای", swatches: ["#0f766e", "#2dd4bf"] },
-  { id: "zinc", label: "خاکستری", swatches: ["#2563eb", "#93b4ff"] },
+  { id: "indigo", label: "نیلی", swatches: ["#3e63dd", "#3358d4"] },
+  { id: "mint", label: "نعنایی", swatches: ["#027864", "#95f3d9"] },
+  { id: "teal", label: "فیروزه‌ای", swatches: ["#008573", "#10b3a3"] },
+  { id: "violet", label: "بنفش", swatches: ["#6e56cf", "#755ed6"] },
+  { id: "zinc", label: "خاکستری", swatches: ["#0d74ce", "#369eff"] },
 ];
 
 export function ThemePalettePicker() {

@@ -40,6 +40,11 @@ public sealed class PolicyVerificationService(
     IConfiguration configuration,
     ILogger<PolicyVerificationService> logger)
 {
+    /// <summary>Credit-inquiry cache window (CLAUDE.md rule 26) — a report younger than this is
+    /// reused by the wizard instead of re-queried, so the fee is charged at most once per
+    /// customer per 30 days.</summary>
+    public static readonly TimeSpan ReportReuseWindow = TimeSpan.FromDays(30);
+
     public async Task<PolicyVerificationResult> CreateForPolicyAsync(
         Guid policyId, Guid currentUserId, CancellationToken ct = default)
     {
@@ -110,20 +115,47 @@ public sealed class PolicyVerificationService(
             .FirstOrDefaultAsync(ct);
         var fee = platformPayment?.InquiryFeeToman ?? new PlatformPaymentSettings().InquiryFeeToman;
 
+        // A fresh report — standalone (customer-file portal link) or from a previous policy chain —
+        // inside the 30-day cache window (CLAUDE.md rule 26) is reused instead of charging the fee
+        // and re-querying api.ir: the chain starts at ReportReady with a zero fee and no SMS
+        // (owner decision 2026-09-03). The report row itself is COPIED onto this policy with its
+        // original RetrievedAtUtc preserved — the same snapshot pattern as InquiryFeeToman.
+        var reuseCutoff = DateTimeOffset.UtcNow - ReportReuseWindow;
+        var reusableReport = await dbContext.CreditReports.AsNoTracking()
+            .Where(r => r.CustomerId == customer.Id
+                && r.RawSuccess
+                && r.RetrievedAtUtc >= reuseCutoff)
+            .OrderByDescending(r => r.RetrievedAtUtc)
+            .ThenByDescending(r => r.BizId)
+            .FirstOrDefaultAsync(ct);
+
+        var now = DateTimeOffset.UtcNow;
         var invitation = new CustomerPortalInvitation
         {
+            // Client-side key: the reuse path's audit row (written in this same SaveChanges)
+            // references the invitation by Id, which a NEWSEQUENTIALID() key only gets after the
+            // insert (CLAUDE.md rule 1 allows either generator).
+            Id = SequentialGuidGenerator.Next(),
             AgencyId = agencyId,
             CustomerId = customer.Id,
             PolicyId = policy.Id,
             Token = GenerateToken(),
-            InquiryFeeToman = fee,
+            InquiryFeeToman = reusableReport is null ? fee : 0,
             DownPaymentAmountToman = policy.DownPayment,
             CreatedByUserId = currentUserId,
-            CreatedAtUtc = DateTimeOffset.UtcNow,
-            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(ttlHours),
-            Status = PortalInvitationStatus.Pending,
-            Stage = PolicyVerificationStage.FeePending,
+            CreatedAtUtc = now,
+            ExpiresAtUtc = now.AddHours(ttlHours),
+            Status = reusableReport is null ? PortalInvitationStatus.Pending : PortalInvitationStatus.Paid,
+            Stage = reusableReport is null ? PolicyVerificationStage.FeePending : PolicyVerificationStage.ReportReady,
         };
+        if (reusableReport is not null)
+        {
+            // Fee "settled" at zero at creation — Status=Paid also keeps the link immune to the
+            // lazy Pending→Expired flip, and the customer still needs it for contract approval and
+            // the down payment.
+            invitation.PaidAtUtc = now;
+            invitation.PaidAmountToman = 0;
+        }
         dbContext.CustomerPortalInvitations.Add(invitation);
         dbContext.PortalInvitationTokenIndex.Add(new PortalInvitationTokenIndex
         {
@@ -131,6 +163,43 @@ public sealed class PolicyVerificationService(
             Token = invitation.Token,
             InvitationId = invitation.Id,
         });
+
+        if (reusableReport is not null)
+        {
+            dbContext.CreditReports.Add(new CreditReport
+            {
+                AgencyId = agencyId,
+                PolicyId = policy.Id,
+                CustomerId = reusableReport.CustomerId,
+                ChequeCount = reusableReport.ChequeCount,
+                ChequeSumAmountToman = reusableReport.ChequeSumAmountToman,
+                ChequeSumBouncedAmountToman = reusableReport.ChequeSumBouncedAmountToman,
+                ActiveLoansCount = reusableReport.ActiveLoansCount,
+                LoanTotalAmountToman = reusableReport.LoanTotalAmountToman,
+                LoanDebtTotalAmountToman = reusableReport.LoanDebtTotalAmountToman,
+                LoanPastExpiredTotalAmountToman = reusableReport.LoanPastExpiredTotalAmountToman,
+                LoanDeferredTotalAmountToman = reusableReport.LoanDeferredTotalAmountToman,
+                LoanSuspiciousTotalAmountToman = reusableReport.LoanSuspiciousTotalAmountToman,
+                LoanDishonoredAmountToman = reusableReport.LoanDishonoredAmountToman,
+                RawSuccess = reusableReport.RawSuccess,
+                RetrievedAtUtc = reusableReport.RetrievedAtUtc,
+            });
+            dbContext.AuditEntries.Add(new AuditEntry
+            {
+                AgencyId = agencyId,
+                UserId = currentUserId,
+                UserDisplayName = "نمایندگی",
+                EntityType = nameof(CustomerPortalInvitation),
+                EntityId = invitation.Id,
+                PolicyId = policy.Id,
+                Action = AuditAction.PolicyVerification,
+                Description =
+                    $"بازیافت استعلام اعتباری قبلی ({reusableReport.RetrievedAtUtc:yyyy-MM-dd HH:mm} UTC) برای بیمه‌نامهٔ {policy.PolicyNumber} — بدون کارمزد و استعلام مجدد",
+                OccurredAt = now,
+            });
+            await dbContext.SaveChangesAsync(ct);
+            return new PolicyVerificationResult(invitation, false);
+        }
         await dbContext.SaveChangesAsync(ct);
 
         var smsSent = false;
@@ -168,22 +237,21 @@ public sealed class PolicyVerificationService(
         return (invitation, report);
     }
 
-    /// <summary>Runs both credit inquiries for an invitation whose fee was just paid. Callers must
-    /// already hold the invitation's agency scope (PortalInvitationService.PayAsync's open
-    /// connection, or the retry endpoint's ambient operator scope). A rejected call leaves the
-    /// stage at FeePaid and returns the Persian error — the fee is gone but the chain is retryable
-    /// (POST /verification/retry-inquiries); a sandboxed call yields a report with RawSuccess=false
-    /// so the representative sees "no real data" instead of silent zeros.</summary>
+    /// <summary>Runs both credit inquiries for an invitation whose fee was just paid — a policy
+    /// chain (invitation.PolicyId set) or a standalone customer-file link (PolicyId null, owner
+    /// decision 2026-09-03). Callers must already hold the invitation's agency scope
+    /// (PortalInvitationService.PayAsync's open connection, or the retry endpoint's ambient
+    /// operator scope). A rejected call leaves the stage at FeePaid and returns the Persian
+    /// error — the fee is gone but the chain is retryable (POST /verification/retry-inquiries);
+    /// a sandboxed call yields a report with RawSuccess=false so the representative sees "no
+    /// real data" instead of silent zeros.</summary>
     public async Task<InquiryRunResult> RunInquiriesAsync(
         CustomerPortalInvitation invitation, Guid agencyId, CancellationToken ct = default)
     {
-        if (invitation.PolicyId is null)
-        {
-            return new InquiryRunResult(false, "این لینک به بیمه‌نامه‌ای متصل نیست.");
-        }
-
-        var policy = await dbContext.Policies.AsNoTracking()
-            .FirstAsync(p => p.Id == invitation.PolicyId, ct);
+        var policy = invitation.PolicyId is null
+            ? null
+            : await dbContext.Policies.AsNoTracking()
+                .FirstAsync(p => p.Id == invitation.PolicyId, ct);
         var customer = await dbContext.Customers.AsNoTracking()
             .FirstAsync(c => c.Id == invitation.CustomerId, ct);
 
@@ -201,8 +269,12 @@ public sealed class PolicyVerificationService(
 
         var report = new CreditReport
         {
+            // Client-side key — the inquiry audit row references it by Id in this same
+            // SaveChanges (rule 29); a database-generated key would leave the audit pointing at
+            // EF's empty placeholder.
+            Id = SequentialGuidGenerator.Next(),
             AgencyId = agencyId,
-            PolicyId = invitation.PolicyId.Value,
+            PolicyId = invitation.PolicyId,
             CustomerId = invitation.CustomerId,
             ChequeCount = cheque.Count,
             ChequeSumAmountToman = RialToToman(cheque.SumAmountRial),
@@ -228,9 +300,11 @@ public sealed class PolicyVerificationService(
             UserDisplayName = "سیستم",
             EntityType = nameof(CreditReport),
             EntityId = report.Id,
-            PolicyId = invitation.PolicyId.Value,
+            PolicyId = invitation.PolicyId ?? Guid.Empty,
             Action = AuditAction.PolicyVerification,
-            Description = $"استعلام اعتباری بیمه‌نامهٔ {policy.PolicyNumber} انجام شد",
+            Description = policy is not null
+                ? $"استعلام اعتباری بیمه‌نامهٔ {policy.PolicyNumber} انجام شد"
+                : $"استعلام اعتباری مستقل مشتری {customer.FullName} انجام شد (لینک پورتال پروندهٔ مشتری)",
             OccurredAt = DateTimeOffset.UtcNow,
         });
         await dbContext.SaveChangesAsync(ct);
@@ -266,6 +340,42 @@ public sealed class PolicyVerificationService(
         var result = await RunInquiriesAsync(invitation, agencyId, ct);
         return result;
     }
+
+    /// <summary>The retry path for a standalone (customer-file) link whose inquiries failed after
+    /// the fee landed — same contract as RetryInquiriesAsync but keyed by invitation id, because a
+    /// standalone link has no policy to address it by.</summary>
+    public async Task<InquiryRunResult> RetryStandaloneInquiriesAsync(Guid invitationId, CancellationToken ct = default)
+    {
+        var invitation = await dbContext.CustomerPortalInvitations
+            .FirstOrDefaultAsync(i => i.Id == invitationId && i.PolicyId == null, ct);
+        if (invitation is null)
+        {
+            throw new PortalInvitationException("لینک یافت نشد یا به بیمه‌نامه متصل است.");
+        }
+
+        if (invitation.Stage != PolicyVerificationStage.FeePaid)
+        {
+            return new InquiryRunResult(false, "برای تلاش مجدد، وضعیت باید «کارمزد پرداخت‌شده و استعلام ناموفق» باشد.");
+        }
+
+        return await RunInquiriesAsync(invitation, invitation.AgencyId, ct);
+    }
+
+    /// <summary>The customer's latest credit report — any PolicyId, standalone included — plus its
+    /// reuse eligibility for the issuance wizard. Returns null when no report exists; the caller
+    /// renders the empty state, never an error (rule 17 applies to scope, not to a genuinely
+    /// report-less customer).</summary>
+    public async Task<CreditReport?> GetLatestCustomerReportAsync(Guid customerId, CancellationToken ct = default)
+    {
+        return await dbContext.CreditReports.AsNoTracking()
+            .Where(r => r.CustomerId == customerId)
+            .OrderByDescending(r => r.RetrievedAtUtc)
+            .ThenByDescending(r => r.BizId)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public static bool IsReusable(CreditReport report) =>
+        report.RawSuccess && report.RetrievedAtUtc >= DateTimeOffset.UtcNow - ReportReuseWindow;
 
     /// <summary>Approve keeps the chain moving; reject is terminal and cancels the policy with it.</summary>
     public async Task<PolicyVerificationResult> AgencyDecisionAsync(
@@ -437,6 +547,10 @@ public sealed class PolicyVerificationService(
             var occurredAt = DateTimeOffset.UtcNow;
             var payment = new Payment
             {
+                // Client-side key — the audit row below references it by Id in this same
+                // SaveChanges; a database-generated key would leave the audit pointing at EF's
+                // empty placeholder.
+                Id = SequentialGuidGenerator.Next(),
                 AgencyId = agencyId,
                 CustomerId = invitation.CustomerId,
                 InstallmentIdHint = policy.Id,

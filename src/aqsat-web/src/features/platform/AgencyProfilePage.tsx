@@ -142,7 +142,7 @@ export function AgencyProfilePage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">پروندهٔ {profile.name}</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">کد {fa(profile.code)} — {profile.province ?? "بدون استان"}{profile.city ? ` / ${profile.city}` : ""}</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">کد {fa(profile.code)} — {profile.province ?? "بدون استان"}{profile.city ? ` / ${profile.city}` : ""}</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
@@ -241,7 +241,7 @@ export function AgencyProfilePage() {
             onChange={(e) => { setIsActive(e.target.checked); setFormChanged(true); }}
             className="h-4 w-4 accent-(--mint)"
           />
-          <span className="text-[13px] text-(--ice)">نمایندگی فعال است</span>
+          <span className="text-[13.5px] text-(--ice)">نمایندگی فعال است</span>
         </label>
         <div className="mb-4 grid grid-cols-2 gap-3 text-[12.5px] text-(--ice-3) lg:grid-cols-3">
           <div>کد نمایندگی: <span className="text-(--ice-2)">{fa(profile.code)}</span></div>
@@ -265,7 +265,7 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
   return (
     <div className="relative overflow-hidden rounded-2xl border border-(--edge) bg-(--pane) px-3.5 pt-3 pb-2.5">
       <span className={`absolute start-0 top-0 h-0.5 w-7.5 ${tone === "mint" ? "bg-(--mint)" : "bg-(--ice-3)/40"}`} />
-      <div className="text-[10px] tracking-wider text-(--ice-3)">{label}</div>
+      <div className="text-[10.5px] tracking-wider text-(--ice-3)">{label}</div>
       <div className="mt-1 text-[15px] font-bold text-(--ice)">{value}</div>
     </div>
   );
@@ -274,11 +274,11 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
       {children}
     </div>
   );
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";

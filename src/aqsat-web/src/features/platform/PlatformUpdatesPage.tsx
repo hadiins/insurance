@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { api, ApiError, getToken } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 interface PlatformStatusDto {
   currentVersion: string;
@@ -198,7 +200,7 @@ export function PlatformUpdatesPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         به‌روزرسانی <em className="font-extralight not-italic text-(--ice-2)">سامانه</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">این صفحه فقط برای مالک پلتفرم است — نمایندگی‌ها آن را نمی‌بینند</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">این صفحه فقط برای مالک پلتفرم است — نمایندگی‌ها آن را نمی‌بینند</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -208,26 +210,26 @@ export function PlatformUpdatesPage() {
 
       {status && (
         <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">نسخهٔ فعلی</div>
+          <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">نسخهٔ فعلی</div>
           <div className="text-[20px] font-extrabold text-(--ice)">{status.currentVersion}</div>
           {status.maintenanceModeActive && (
-            <div className="mt-2 text-[12px] font-semibold text-(--amber)">🔵 سامانه در حال به‌روزرسانی است</div>
+            <div className="mt-2 text-[12.5px] font-semibold text-(--amber)">🔵 سامانه در حال به‌روزرسانی است</div>
           )}
         </div>
       )}
 
       {displayedRun && displayedRun.status === "Running" && (
         <div className="mb-4.5 rounded-2xl border border-(--mint)/30 bg-(--mint)/6 p-5">
-          <div className="mb-3 text-[13px] font-bold text-(--ice)">
+          <div className="mb-3 text-[13.5px] font-bold text-(--ice)">
             به‌روزرسانی به {displayedRun.toVersion} — {fa(displayedProgress)}٪
           </div>
           <div className="mb-3 h-2 overflow-hidden rounded-full bg-(--fld)">
             <div className="h-full bg-(--mint) transition-all" style={{ width: `${displayedProgress}%` }} />
           </div>
-          <div className="text-[12px] text-(--ice-3)">
+          <div className="text-[12.5px] text-(--ice-3)">
             مرحلهٔ فعلی: {STAGE_LABEL[displayedStage ?? ""] ?? displayedStage}
           </div>
-          <div className="mt-3 text-[11px] text-(--ice-3)">⚠️ بستن این صفحه به‌روزرسانی را متوقف نمی‌کند</div>
+          <div className="mt-3 text-[11.5px] text-(--ice-3)">⚠️ بستن این صفحه به‌روزرسانی را متوقف نمی‌کند</div>
         </div>
       )}
 
@@ -236,7 +238,7 @@ export function PlatformUpdatesPage() {
           <div className="mb-1 text-[14px] font-bold text-(--ember)">❌ به‌روزرسانی ناموفق بود</div>
           <div className="mb-2 text-[12.5px] text-(--ice-2)">{displayedRun.errorMessage}</div>
           {displayedRun.status === "RolledBack" && (
-            <div className="mb-3 text-[12px] text-(--mint)">🔄 بازگشت خودکار انجام شد — نسخهٔ {displayedRun.fromVersion} فعال است</div>
+            <div className="mb-3 text-[12.5px] text-(--mint)">🔄 بازگشت خودکار انجام شد — نسخهٔ {displayedRun.fromVersion} فعال است</div>
           )}
           <button
             type="button"
@@ -253,7 +255,11 @@ export function PlatformUpdatesPage() {
         {packages === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : packages.length === 0 ? (
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">نسخهٔ جدیدی موجود نیست.</div>
+          <EmptyState
+            icon="📦"
+            title="نسخهٔ جدیدی موجود نیست"
+            description="به‌روزترین نسخهٔ منتشرشده در حال حاضر روی سامانه در حال اجراست."
+          />
         ) : (
           <div className="space-y-2">
             {packages.map((pkg) => (
@@ -265,20 +271,20 @@ export function PlatformUpdatesPage() {
                     {pkg.hasDbMigration && <span className="rounded-full bg-(--amber)/13 px-2 py-0.5 text-[10.5px] text-(--amber)">تغییر ساختار دیتابیس</span>}
                   </div>
                 </div>
-                <div className="mb-3 whitespace-pre-line text-[12px] text-(--ice-3)">{pkg.releaseNotesFa}</div>
+                <div className="mb-3 whitespace-pre-line text-[12.5px] text-(--ice-3)">{pkg.releaseNotesFa}</div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     disabled={Boolean(displayedRun && displayedRun.status === "Running")}
                     onClick={() => requestOtp(pkg)}
-                    className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     اجرای به‌روزرسانی
                   </button>
                   <button
                     type="button"
                     onClick={() => yankPackage(pkg)}
-                    className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[12px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                    className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                   >
                     لغو این نسخه
                   </button>
@@ -295,7 +301,7 @@ export function PlatformUpdatesPage() {
             <b className="mb-3 block text-[14px] text-(--ice)">تأیید دومرحله‌ای — به‌روزرسانی به {otpPackage.version}</b>
             {otpError ? (
               <>
-                <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12px] text-(--ember)">
+                <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
                   {otpError}
                 </div>
                 <div className="mb-1">
@@ -312,7 +318,7 @@ export function PlatformUpdatesPage() {
               <div className="text-[12.5px] text-(--ice-3)">در حال ارسال کد…</div>
             ) : (
               <>
-                <div className="mb-3 text-[12px] text-(--ice-3)">کدی به شمارهٔ {mobileMasked} ارسال شد.</div>
+                <div className="mb-3 text-[12.5px] text-(--ice-3)">کدی به شمارهٔ {mobileMasked} ارسال شد.</div>
                 <input
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
@@ -353,13 +359,13 @@ export function PlatformUpdatesPage() {
             value={rollbackImageTag}
             onChange={(e) => setRollbackImageTag(e.target.value)}
             placeholder="برچسب ایمیج برای بازگشت (مثلاً registry/aqsat-api:1.4.2)"
-            className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
+            className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <button
             type="button"
             disabled={busy}
             onClick={rollback}
-            className="rounded-[10px] border border-(--ember) px-4 py-2 text-[12px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[10px] border border-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             بازگشت
           </button>
@@ -371,44 +377,44 @@ export function PlatformUpdatesPage() {
         {history === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : history.length === 0 ? (
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">هیچ به‌روزرسانی‌ای ثبت نشده.</div>
+          <EmptyState
+            icon="🕘"
+            title="هیچ به‌روزرسانی‌ای ثبت نشده"
+            description="هنوز به‌روزرسانی‌ای روی این سامانه اجرا نشده است."
+          />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {["نسخه", "توسط", "شروع", "وضعیت", ""].map((h) => (
-                    <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((run) => (
-                  <tr key={run.id} className="border-t border-(--edge) first:border-t-0">
-                    <td className="px-3 py-2.5 text-[13px] font-semibold">
-                      {run.fromVersion} ← {run.toVersion}
-                    </td>
-                    <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{run.startedByFullName}</td>
-                    <td className="px-3 py-2.5 text-[12.5px] text-(--ice-3)">{fa(run.startedAt.slice(0, 16).replace("T", " "))}</td>
-                    <td className="px-3 py-2.5 text-[13px]">{STATUS_LABEL[run.status] ?? run.status}</td>
-                    <td className="px-3 py-2.5 text-[13px]">
-                      {(run.status === "Failed" || run.status === "RolledBack") && (
-                        <button
-                          type="button"
-                          onClick={() => copyReport(run)}
-                          className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
-                        >
-                          کپی گزارش
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+          <Table>
+            <thead>
+              <tr>
+                {["نسخه", "توسط", "شروع", "وضعیت", ""].map((h) => (
+                  <Th key={h}>{h}</Th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((run) => (
+                <Tr key={run.id}>
+                  <Td className="py-2.5 font-semibold">
+                    {run.fromVersion} ← {run.toVersion}
+                  </Td>
+                  <Td className="py-2.5 text-(--ice-3)">{run.startedByFullName}</Td>
+                  <Td className="py-2.5 !text-[12.5px] text-(--ice-3)">{fa(run.startedAt.slice(0, 16).replace("T", " "))}</Td>
+                  <Td className="py-2.5">{STATUS_LABEL[run.status] ?? run.status}</Td>
+                  <Td className="py-2.5">
+                    {(run.status === "Failed" || run.status === "RolledBack") && (
+                      <button
+                        type="button"
+                        onClick={() => copyReport(run)}
+                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                      >
+                        کپی گزارش
+                      </button>
+                    )}
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
         )}
       </div>
     </div>

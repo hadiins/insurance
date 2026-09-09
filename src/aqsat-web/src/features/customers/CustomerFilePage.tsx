@@ -5,6 +5,10 @@ import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
+import { CreditReportCard, type CreditReportDto } from "../../components/CreditReportCard";
+import { CustomerRiskPanel } from "../risk/CustomerRiskPanel";
 
 interface CustomerFilePayload {
   customerId: string;
@@ -52,6 +56,20 @@ interface PortalInvitationDto {
   token: string;
 }
 
+interface CustomerCreditReportDto {
+  report: CreditReportDto | null;
+  isReusableForIssuance: boolean;
+  validUntilUtc: string | null;
+  failedStandaloneInvitationId: string | null;
+}
+
+interface PaymentLinkStatusDto {
+  hasActiveLink: boolean;
+  token: string | null;
+  expiresAtUtc: string | null;
+  lastSentAtUtc: string | null;
+}
+
 interface CustomerFileDto {
   customerId: string;
   fullName: string;
@@ -74,13 +92,24 @@ export function CustomerFilePage() {
 
   const [file, setFile] = useState<CustomerFileDto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [section, setSection] = useState<"policies" | "payments" | "collateral" | "portal" | "timeline">("policies");
+  const [section, setSection] = useState<"policies" | "payments" | "collateral" | "risk" | "portal" | "timeline">("policies");
 
   const [invitations, setInvitations] = useState<PortalInvitationDto[] | null>(null);
   const [invitationsError, setInvitationsError] = useState<string | null>(null);
   const [issueBusy, setIssueBusy] = useState(false);
   const [issueMessage, setIssueMessage] = useState<string | null>(null);
   const [issueError, setIssueError] = useState<string | null>(null);
+
+  // The latest credit report — standalone (this page's portal link) or from any policy chain.
+  const [creditReport, setCreditReport] = useState<CustomerCreditReportDto | null>(null);
+  const [creditReportError, setCreditReportError] = useState<string | null>(null);
+  const [retryBusy, setRetryBusy] = useState(false);
+
+  // The customer's long-lived installment-payment link (/pay/{token}) — minted and refreshed by
+  // the SMS reminder job, revocable here.
+  const [paymentLink, setPaymentLink] = useState<PaymentLinkStatusDto | null>(null);
+  const [paymentLinkError, setPaymentLinkError] = useState<string | null>(null);
+  const [revokeBusy, setRevokeBusy] = useState(false);
 
   const loadFile = () => {
     if (!payload?.customerId) return;
@@ -100,7 +129,31 @@ export function CustomerFilePage() {
   useEffect(() => {
     if (!payload?.customerId || section !== "portal") return;
     loadInvitations();
+    loadCreditReport();
+    loadPaymentLink();
   }, [payload?.customerId, section]);
+
+  function loadPaymentLink() {
+    setPaymentLink(null);
+    setPaymentLinkError(null);
+    api
+      .get<PaymentLinkStatusDto>(`/portal/links/customer/${payload!.customerId}`)
+      .then(setPaymentLink)
+      .catch((err) => setPaymentLinkError(err instanceof ApiError ? err.message : "خطا در بارگذاری لینک پرداخت"));
+  }
+
+  async function revokePaymentLink() {
+    setRevokeBusy(true);
+    setPaymentLinkError(null);
+    try {
+      await api.post(`/portal/links/customer/${payload!.customerId}/revoke`);
+      loadPaymentLink();
+    } catch (err) {
+      setPaymentLinkError(err instanceof ApiError ? err.message : "لغو لینک ناموفق بود.");
+    } finally {
+      setRevokeBusy(false);
+    }
+  }
 
   function loadInvitations() {
     setInvitations(null);
@@ -109,6 +162,28 @@ export function CustomerFilePage() {
       .get<PortalInvitationDto[]>(`/portal/invitations/customer/${payload!.customerId}`)
       .then(setInvitations)
       .catch((err) => setInvitationsError(err instanceof ApiError ? err.message : "خطا در بارگذاری دعوت‌نامه‌ها"));
+  }
+
+  function loadCreditReport() {
+    setCreditReport(null);
+    setCreditReportError(null);
+    api
+      .get<CustomerCreditReportDto>(`/portal/invitations/customer/${payload!.customerId}/credit-report`)
+      .then(setCreditReport)
+      .catch((err) => setCreditReportError(err instanceof ApiError ? err.message : "خطا در بارگذاری گزارش اعتباری"));
+  }
+
+  /// Retry only re-fires a paid-but-failed standalone inquiry — no second fee is ever charged.
+  async function retryStandaloneInquiries(invitationId: string) {
+    setRetryBusy(true);
+    setCreditReportError(null);
+    try {
+      setCreditReport(await api.post<CustomerCreditReportDto>(`/portal/invitations/${invitationId}/retry-inquiries`));
+    } catch (err) {
+      setCreditReportError(err instanceof ApiError ? err.message : "تلاش مجدد استعلام ناموفق بود.");
+    } finally {
+      setRetryBusy(false);
+    }
   }
 
   async function issueLink() {
@@ -158,29 +233,29 @@ export function CustomerFilePage() {
           <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
             پروندهٔ <em className="font-extralight not-italic text-(--ice-2)">{file.fullName}</em>
           </h2>
-          <div className="mb-4.5 text-xs text-(--ice-3)">
+          <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
             {file.mobile ? fa(file.mobile) : "بدون شمارهٔ همراه"}
             {file.nationalIdMasked && <> — کد ملی: {fa(file.nationalIdMasked)}</>}
           </div>
 
           <div className="mb-4.5 grid grid-cols-4 gap-3">
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-              <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">مانده کل</div>
-              <div className={`text-[23px] font-extrabold tracking-tight ${file.aggregateBalance > 0 ? "text-(--ember)" : "text-(--mint)"}`}>
+              <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مانده کل</div>
+              <div className={`text-[20px] font-extrabold tracking-tight ${file.aggregateBalance > 0 ? "text-(--ember)" : "text-(--mint)"}`}>
                 {money(file.aggregateBalance)}
               </div>
             </div>
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-              <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">تعداد بیمه‌نامه</div>
-              <div className="text-[23px] font-extrabold tracking-tight text-(--ice)">{fa(file.policies.length)}</div>
+              <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">تعداد بیمه‌نامه</div>
+              <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(file.policies.length)}</div>
             </div>
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-              <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">پرداخت‌ها</div>
-              <div className="text-[23px] font-extrabold tracking-tight text-(--ice)">{fa(file.payments.length)}</div>
+              <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">پرداخت‌ها</div>
+              <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(file.payments.length)}</div>
             </div>
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-              <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">وثیقه</div>
-              <div className="text-[23px] font-extrabold tracking-tight text-(--ice)">{fa(file.collateral.length)}</div>
+              <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">وثیقه</div>
+              <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(file.collateral.length)}</div>
             </div>
           </div>
 
@@ -190,6 +265,7 @@ export function CustomerFilePage() {
                 ["policies", `بیمه‌نامه‌ها (${fa(file.policies.length)})`],
                 ["payments", `پرداخت‌ها (${fa(file.payments.length)})`],
                 ["collateral", `وثیقه (${fa(file.collateral.length)})`],
+                ["risk", "اعتبار و ریسک"],
                 ["portal", `پورتال (${fa(invitations?.length ?? 0)})`],
                 ["timeline", `تاریخچه (${fa(file.timeline.length)})`],
               ] as const
@@ -209,99 +285,97 @@ export function CustomerFilePage() {
 
           {section === "policies" &&
             (file.policies.length === 0 ? (
-              <Empty text="بیمه‌نامه‌ای ثبت نشده." />
+              <EmptyState
+                icon="📄"
+                title="بیمه‌نامه‌ای ثبت نشده."
+                description="این مشتری هنوز بیمه‌نامه‌ای در سیستم ندارد."
+              />
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      {["بیمه‌نامه", "رشته", "وضعیت", "جمع دریافتی", "مانده"].map((h) => (
-                        <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {file.policies.map((p) => (
-                      <tr
-                        key={p.policyId}
-                        onClick={() => openPolicy(p.policyId, p.policyNumber)}
-                        className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov)"
-                      >
-                        <td className="px-3 py-2.75 text-[13px] font-semibold">{fa(p.policyNumber)}</td>
-                        <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.insuranceLineNameFa}</td>
-                        <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.status}</td>
-                        <td className="px-3 py-2.75 text-[13px]">{money(p.totalReceivable)}</td>
-                        <td className={`px-3 py-2.75 text-[13px] font-bold ${p.balance > 0 ? "text-(--ember)" : "text-(--mint)"}`}>
-                          {money(p.balance)}
-                        </td>
-                      </tr>
+              <Table>
+                <thead>
+                  <tr>
+                    {["بیمه‌نامه", "رشته", "وضعیت", "جمع دریافتی", "مانده"].map((h) => (
+                      <Th key={h}>{h}</Th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {file.policies.map((p) => (
+                    <Tr key={p.policyId} onClick={() => openPolicy(p.policyId, p.policyNumber)}>
+                      <Td className="py-2.75 font-semibold">{fa(p.policyNumber)}</Td>
+                      <Td className="py-2.75 text-(--ice-3)">{p.insuranceLineNameFa}</Td>
+                      <Td className="py-2.75 text-(--ice-3)">{p.status}</Td>
+                      <Td className="py-2.75">{money(p.totalReceivable)}</Td>
+                      <Td className={`py-2.75 font-bold ${p.balance > 0 ? "text-(--ember)" : "text-(--mint)"}`}>
+                        {money(p.balance)}
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
             ))}
 
           {section === "payments" &&
             (file.payments.length === 0 ? (
-              <Empty text="پرداختی ثبت نشده." />
+              <EmptyState
+                icon="💳"
+                title="پرداختی ثبت نشده."
+                description="برای این مشتری هنوز پرداختی در سیستم ثبت نشده است."
+              />
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      {["تاریخ", "مبلغ", "روش", "شمارهٔ پیگیری", "بابت"].map((h) => (
-                        <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {file.payments.map((p) => (
-                      <tr key={p.id} className="border-t border-(--edge) first:border-t-0">
-                        <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(p.paidOn)}</td>
-                        <td className="px-3 py-2.75 text-[13px] font-bold">{money(p.amount)}</td>
-                        <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.method}</td>
-                        <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.referenceNo ? fa(p.referenceNo) : "—"}</td>
-                        <td className="px-3 py-2.75 text-[12px] text-(--ice-3)">{p.allocatedTo.join("، ") || "—"}</td>
-                      </tr>
+              <Table>
+                <thead>
+                  <tr>
+                    {["تاریخ", "مبلغ", "روش", "شمارهٔ پیگیری", "بابت"].map((h) => (
+                      <Th key={h}>{h}</Th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {file.payments.map((p) => (
+                    <Tr key={p.id}>
+                      <Td className="py-2.75">{toJalaliDisplay(p.paidOn)}</Td>
+                      <Td className="py-2.75 font-bold">{money(p.amount)}</Td>
+                      <Td className="py-2.75 text-(--ice-3)">{p.method}</Td>
+                      <Td className="py-2.75 text-(--ice-3)">{p.referenceNo ? fa(p.referenceNo) : "—"}</Td>
+                      <Td className="py-2.75 !text-[12.5px] text-(--ice-3)">{p.allocatedTo.join("، ") || "—"}</Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
             ))}
 
           {section === "collateral" &&
             (file.collateral.length === 0 ? (
-              <Empty text="وثیقه‌ای ثبت نشده." />
+              <EmptyState
+                icon="🔒"
+                title="وثیقه‌ای ثبت نشده."
+                description="برای بیمه‌نامه‌های این مشتری وثیقه‌ای ثبت نشده است."
+              />
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      {["بیمه‌نامه", "نوع", "مبلغ", "سررسید", "وضعیت"].map((h) => (
-                        <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {file.collateral.map((c) => (
-                      <tr key={c.id} className="border-t border-(--edge) first:border-t-0">
-                        <td className="px-3 py-2.75 text-[13px]">{fa(c.policyNumber)}</td>
-                        <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{c.type}</td>
-                        <td className="px-3 py-2.75 text-[13px] font-bold">{money(c.amount)}</td>
-                        <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(c.dueDate)}</td>
-                        <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{c.status}</td>
-                      </tr>
+              <Table>
+                <thead>
+                  <tr>
+                    {["بیمه‌نامه", "نوع", "مبلغ", "سررسید", "وضعیت"].map((h) => (
+                      <Th key={h}>{h}</Th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {file.collateral.map((c) => (
+                    <Tr key={c.id}>
+                      <Td className="py-2.75">{fa(c.policyNumber)}</Td>
+                      <Td className="py-2.75 text-(--ice-3)">{c.type}</Td>
+                      <Td className="py-2.75 font-bold">{money(c.amount)}</Td>
+                      <Td className="py-2.75">{toJalaliDisplay(c.dueDate)}</Td>
+                      <Td className="py-2.75 text-(--ice-3)">{c.status}</Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
             ))}
+
+          {section === "risk" && <CustomerRiskPanel customerId={payload!.customerId} />}
 
           {section === "portal" && (
             <div>
@@ -324,8 +398,61 @@ export function CustomerFilePage() {
                 {issueBusy ? "در حال ساخت…" : "ارسال لینک پورتال به مشتری"}
               </button>
 
+              <div className="mb-2.5 text-[13px] font-bold text-(--ice)">گزارش اعتباری</div>
+              {creditReportError ? (
+                <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+                  {creditReportError}
+                  <button
+                    type="button"
+                    onClick={loadCreditReport}
+                    className="ms-2 rounded-[8px] border border-(--ember)/50 px-2.5 py-1 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                  >
+                    تلاش مجدد
+                  </button>
+                </div>
+              ) : creditReport === null ? (
+                <div className="mb-4.5 text-[12.5px] text-(--ice-3)">در حال بارگذاری گزارش اعتباری…</div>
+              ) : creditReport.report ? (
+                <div className="mb-4.5">
+                  <CreditReportCard report={creditReport.report} />
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {creditReport.isReusableForIssuance ? (
+                      <span className="rounded-full border border-(--mint)/40 bg-(--mint)/10 px-3 py-1 text-[11.5px] font-semibold text-(--mint)">
+                        معتبر تا {toJalaliDateTimeDisplay(creditReport.validUntilUtc!)} — در صدور بیمه‌نامهٔ جدید بازیافت میشود
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-(--amber)/40 bg-(--amber)/10 px-3 py-1 text-[11.5px] font-semibold text-(--amber)">
+                        گزارش تازه نیست (بیش از ۳۰ روز) — در صدور جدید دوباره استعلام و کارمزد لازم است
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-4.5">
+                  {creditReport.failedStandaloneInvitationId ? (
+                    <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2.5 text-[12.5px] leading-relaxed text-(--ember)">
+                      کارمزد پرداخت شد اما استعلام ناموفق بود. کارمزد دوباره گرفته نمیشود.
+                      <button
+                        type="button"
+                        onClick={() => void retryStandaloneInquiries(creditReport.failedStandaloneInvitationId!)}
+                        disabled={retryBusy}
+                        className="ms-2 rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {retryBusy ? "در حال تلاش…" : "تلاش مجدد استعلام"}
+                      </button>
+                    </div>
+                  ) : (
+                    <EmptyState
+                      icon="🧾"
+                      title="گزارش اعتباری‌ای برای این مشتری ثبت نشده."
+                      description="با دکمهٔ «ارسال لینک پورتال به مشتری»، مشتری کارمزد را آنلاین میپردازد و استعلام چک برگشتی و تسهیلات به‌صورت خودکار اجرا و همین‌جا نمایش داده میشود."
+                    />
+                  )}
+                </div>
+              )}
+
               {invitationsError && (
-                <div className="rounded-2xl border border-(--ember)/30 bg-(--ember)/10 p-4 text-[13px] text-(--ember)">
+                <div className="rounded-2xl border border-(--ember)/30 bg-(--ember)/10 p-4 text-[13.5px] text-(--ember)">
                   {invitationsError}
                 </div>
               )}
@@ -334,44 +461,83 @@ export function CustomerFilePage() {
               )}
               {invitations !== null &&
                 (invitations.length === 0 ? (
-                  <Empty text="هنوز لینکی برای این مشتری ساخته نشده." />
+                  <EmptyState
+                    icon="🔗"
+                    title="هنوز لینکی برای این مشتری ساخته نشده."
+                    description="با دکمهٔ بالا می‌توانید لینک پورتال بسازید و برای مشتری پیامک کنید."
+                  />
                 ) : (
-                  <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          {["تاریخ ساخت", "انقضا", "کارمزد", "وضعیت"].map((h) => (
-                            <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {invitations.map((i) => (
-                          <tr key={i.id} className="border-t border-(--edge) first:border-t-0">
-                            <td className="px-3 py-2.75 text-[13px]">{toJalaliDateTimeDisplay(i.createdAtUtc)}</td>
-                            <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{toJalaliDateTimeDisplay(i.expiresAtUtc)}</td>
-                            <td className="px-3 py-2.75 text-[13px] font-bold tabular-nums">{money(i.inquiryFeeToman)}</td>
-                            <td className="px-3 py-2.75 text-[13px]">
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                  i.status === "Paid"
-                                    ? "bg-(--mint)/15 text-(--mint)"
-                                    : i.status === "Pending"
-                                      ? "bg-(--amber)/15 text-(--amber)"
-                                      : "bg-(--ice-3)/15 text-(--ice-3)"
-                                }`}
-                              >
-                                {i.status === "Paid" ? "پرداخت‌شده" : i.status === "Pending" ? "در انتظار پرداخت" : "منقضی"}
-                              </span>
-                            </td>
-                          </tr>
+                  <Table>
+                    <thead>
+                      <tr>
+                        {["تاریخ ساخت", "انقضا", "کارمزد", "وضعیت"].map((h) => (
+                          <Th key={h}>{h}</Th>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invitations.map((i) => (
+                        <Tr key={i.id}>
+                          <Td className="py-2.75">{toJalaliDateTimeDisplay(i.createdAtUtc)}</Td>
+                          <Td className="py-2.75 text-(--ice-3)">{toJalaliDateTimeDisplay(i.expiresAtUtc)}</Td>
+                          <Td className="py-2.75 font-bold tabular-nums">{money(i.inquiryFeeToman)}</Td>
+                          <Td className="py-2.75">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${
+                                i.status === "Paid"
+                                  ? "bg-(--mint)/15 text-(--mint)"
+                                  : i.status === "Pending"
+                                    ? "bg-(--amber)/15 text-(--amber)"
+                                    : "bg-(--ice-3)/15 text-(--ice-3)"
+                              }`}
+                            >
+                              {i.status === "Paid" ? "پرداخت‌شده" : i.status === "Pending" ? "در انتظار پرداخت" : "منقضی"}
+                            </span>
+                          </Td>
+                        </Tr>
+                      ))}
+                    </tbody>
+                  </Table>
                 ))}
+
+              <div className="mt-4.5 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5">
+                <div className="mb-1 text-[12.5px] font-semibold text-(--ice)">لینک پرداخت آنلاین اقساط</div>
+                {paymentLinkError ? (
+                  <div className="text-[12px] leading-relaxed text-(--ember)">
+                    {paymentLinkError}
+                    <button
+                      type="button"
+                      onClick={loadPaymentLink}
+                      className="ms-2 rounded-[8px] border border-(--ember)/50 px-2.5 py-1 text-[11px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                    >
+                      تلاش مجدد
+                    </button>
+                  </div>
+                ) : paymentLink === null ? (
+                  <div className="text-[12px] text-(--ice-3)">در حال بارگذاری…</div>
+                ) : paymentLink.hasActiveLink ? (
+                  <div className="text-[12px] leading-relaxed text-(--ice-2)">
+                    پیامک یادآوری اقساط به‌صورت خودکار لینک پرداخت برای این مشتری می‌سازد و تازه می‌کند.
+                    <div className="mt-1 text-(--ice-3)">
+                      اعتبار تا {toJalaliDateTimeDisplay(paymentLink.expiresAtUtc!)}
+                      {paymentLink.lastSentAtUtc && <> — آخرین ارسال {toJalaliDateTimeDisplay(paymentLink.lastSentAtUtc)}</>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={revokePaymentLink}
+                      disabled={revokeBusy}
+                      className="mt-2 rounded-[8px] border border-(--ember)/50 px-3 py-1 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {revokeBusy ? "در حال لغو…" : "لغو لینک پرداخت"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-[12px] leading-relaxed text-(--ice-3)">
+                    لینک فعالی برای این مشتری وجود ندارد. با فعال بودن پورتال مشتری، اولین پیامک یادآوری قسط
+                    به‌صورت خودکار آن را می‌سازد.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -397,5 +563,5 @@ export function CustomerFilePage() {
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">{text}</div>;
+  return <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13.5px] text-(--ice-3)">{text}</div>;
 }

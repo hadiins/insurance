@@ -6,6 +6,7 @@ export type PageKind =
   | "customer-file"
   | "policy-file"
   | "customers-list"
+  | "new-customer"
   | "import-fanavaran"
   | "contract-templates"
   | "marketers"
@@ -44,6 +45,7 @@ export type PageKind =
   | "sms-outbox"
   | "sms-templates"
   | "sms-delivery-report"
+  | "sms-effectiveness-report"
   | "role-management"
   | "agencies-management"
   | "agency-profile"
@@ -51,6 +53,16 @@ export type PageKind =
   | "cheques-list"
   | "cash-flow"
   | "aging-report"
+  | "risk-dashboard"
+  | "risk-assessment"
+  | "risk-network"
+  | "risk-manual-reviews"
+  | "risk-warnings"
+  | "risk-settings"
+  | "monitoring-dashboard"
+  | "monitoring-logs"
+  | "security-dashboard"
+  | "alerts-rules"
   | "blank";
 
 export interface NavItem {

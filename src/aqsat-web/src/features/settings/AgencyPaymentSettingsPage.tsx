@@ -13,6 +13,7 @@ interface AgencyPaymentGatewayDto {
   hasAgentMerchantId: boolean;
   agentMerchantIdMasked: string | null;
   portalInvitationTtlHours: number;
+  paymentLinkTtlDays: number;
 }
 
 const PROVIDERS: Array<{ value: string; label: string; note: string }> = [
@@ -50,6 +51,7 @@ export function AgencyPaymentSettingsPage() {
         customerPortalEnabled: form.customerPortalEnabled,
         agentMerchantId: merchantIdInput.trim() || null,
         portalInvitationTtlHours: Number(form.portalInvitationTtlHours),
+        paymentLinkTtlDays: Number(form.paymentLinkTtlDays),
       });
       setForm(updated);
       setSaved(true);
@@ -79,7 +81,7 @@ export function AgencyPaymentSettingsPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         تنظیمات <em className="font-extralight not-italic text-(--ice-2)">درگاه پرداخت</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">{fa(form.name)} — کد {fa(form.code)}</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{fa(form.name)} — کد {fa(form.code)}</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
@@ -107,8 +109,8 @@ export function AgencyPaymentSettingsPage() {
                 className="mt-1 h-4 w-4 shrink-0 accent-(--mint)"
               />
               <span>
-                <span className="block text-[13px] font-semibold text-(--ice)">{p.label}</span>
-                <span className="block text-[11px] text-(--ice-3)">{p.note}</span>
+                <span className="block text-[13.5px] font-semibold text-(--ice)">{p.label}</span>
+                <span className="block text-[11.5px] text-(--ice-3)">{p.note}</span>
               </span>
             </label>
           ))}
@@ -132,6 +134,19 @@ export function AgencyPaymentSettingsPage() {
               className={inputClass}
             />
           </Field>
+        </div>
+
+        <div className="mt-3">
+          <Field label="اعتبار لینک پرداخت قسط در پیامک (روز)">
+            <input
+              value={form.paymentLinkTtlDays}
+              onChange={(e) => update("paymentLinkTtlDays", Number(e.target.value) as never)}
+              className={inputClass}
+            />
+          </Field>
+          <div className="mt-1.5 text-[11px] leading-relaxed text-(--ice-3)">
+            هر پیامک یادآوری قسط، اعتبار لینک پرداخت آنلاین مشتری را به همین تعداد روز تازه می‌کند.
+          </div>
         </div>
       </div>
 
@@ -159,7 +174,7 @@ export function AgencyPaymentSettingsPage() {
         type="button"
         disabled={busy}
         onClick={save}
-        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
       </button>
@@ -168,12 +183,12 @@ export function AgencyPaymentSettingsPage() {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
       {children}
     </div>
   );

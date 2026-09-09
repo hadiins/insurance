@@ -66,7 +66,7 @@ export function MissingSerialsPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         شماره‌های <em className="font-extralight not-italic text-(--ice-2)">جا افتاده</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
         فهرست سریال‌های غایب در سال جاری — تطبیق رایگان با فناوران، بدون هیچ API
       </div>
 
@@ -78,7 +78,7 @@ export function MissingSerialsPage() {
 
       <div className="mb-4 flex items-end gap-2.5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
         <div>
-          <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">سال (شمسی)</label>
+          <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">سال (شمسی)</label>
           <input
             value={year}
             onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
@@ -108,17 +108,17 @@ export function MissingSerialsPage() {
       {result && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
           {result.registeredCount === 0 ? (
-            <div className="text-[13px] text-(--ice-3)">هیچ بیمه‌نامهٔ تجزیه‌شده‌ای در سال {fa(result.year)} یافت نشد.</div>
+            <div className="text-[13.5px] text-(--ice-3)">هیچ بیمه‌نامهٔ تجزیه‌شده‌ای در سال {fa(result.year)} یافت نشد.</div>
           ) : (
             <>
-              <div className="mb-4 text-[13px] text-(--ice-2)" dir="ltr">
+              <div className="mb-4 text-[13.5px] text-(--ice-2)" dir="ltr">
                 محدوده: {fa(result.rangeStart)} تا {fa(result.rangeEnd!)} · ثبت‌شده: {fa(result.registeredCount)} · غایب:{" "}
                 <span className={result.missingCount > 0 ? "font-bold text-(--ember)" : "font-bold text-(--mint)"}>
                   {fa(result.missingCount)}
                 </span>
               </div>
               {result.missingCount === 0 ? (
-                <div className="text-[13px] text-(--mint)">✅ هیچ شماره‌ای جا نیفتاده است.</div>
+                <div className="text-[13.5px] text-(--mint)">✅ هیچ شماره‌ای جا نیفتاده است.</div>
               ) : (
                 <div className="grid grid-cols-6 gap-2 tabular-nums" dir="ltr">
                   {result.missing.map((s) => (

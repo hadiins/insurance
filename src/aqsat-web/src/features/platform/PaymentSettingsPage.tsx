@@ -76,7 +76,7 @@ export function PaymentSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-4.5 text-[17px] font-extrabold text-(--ice)">درگاه پرداخت مالک</h1>
+      <h1 className="mb-4.5 text-[20px] font-extrabold text-(--ice)">درگاه پرداخت مالک</h1>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -96,7 +96,7 @@ export function PaymentSettingsPage() {
       </div>
 
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
-        <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">وضعیت فعلی</div>
+        <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">وضعیت فعلی</div>
         {settings === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری...</div>
         ) : (
@@ -106,17 +106,17 @@ export function PaymentSettingsPage() {
                 ? `فعال — ${PROVIDERS.find((p) => p.value === settings.provider)?.label}`
                 : "غیرفعال"}
             </div>
-            <div className="mt-1 text-[12px] text-(--ice-3)">
+            <div className="mt-1 text-[12.5px] text-(--ice-3)">
               شناسهٔ پذیرنده: {settings.hasOwnerMerchantId ? settings.ownerMerchantIdMasked : "تنظیم نشده"}
             </div>
-            <div className="mt-0.5 text-[12px] text-(--ice-3)">
+            <div className="mt-0.5 text-[12.5px] text-(--ice-3)">
               کارمزد استعلام: {fa(settings.inquiryFeeToman)} تومان
             </div>
-            <div className="mt-0.5 text-[12px] text-(--ice-3)">
+            <div className="mt-0.5 text-[12.5px] text-(--ice-3)">
               آدرس کالبک: {settings.callbackBaseUrl ?? "تنظیم نشده — از پیکربندی سرور استفاده میشود"}
             </div>
             {settings.updatedAt && (
-              <div className="mt-0.5 text-[11px] text-(--ice-3)">
+              <div className="mt-0.5 text-[11.5px] text-(--ice-3)">
                 آخرین تغییر: {new Date(settings.updatedAt).toLocaleString("fa-IR")}
               </div>
             )}
@@ -127,7 +127,7 @@ export function PaymentSettingsPage() {
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">پیکربندی</div>
 
-        <div className="mb-1 text-[12px] font-semibold text-(--ice-2)">درگاه پرداخت</div>
+        <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">درگاه پرداخت</div>
         <div className="mb-2 space-y-2">
           {PROVIDERS.map((p) => (
             <label key={p.value} className="flex cursor-pointer items-start gap-2.5 rounded-[10px] bg-(--fld) px-3 py-2">
@@ -139,8 +139,8 @@ export function PaymentSettingsPage() {
                 className="mt-1 h-4 w-4 shrink-0 accent-(--mint)"
               />
               <span>
-                <span className="block text-[13px] font-semibold text-(--ice)">{p.label}</span>
-                <span className="block text-[11px] text-(--ice-3)">{p.note}</span>
+                <span className="block text-[13.5px] font-semibold text-(--ice)">{p.label}</span>
+                <span className="block text-[11.5px] text-(--ice-3)">{p.note}</span>
               </span>
             </label>
           ))}
@@ -153,10 +153,10 @@ export function PaymentSettingsPage() {
             onChange={(e) => setEnabled(e.target.checked)}
             className="h-4 w-4 accent-(--mint)"
           />
-          <span className="text-[13px] text-(--ice)">فعالسازی پرداخت آنلاین در پورتال مشتری</span>
+          <span className="text-[13.5px] text-(--ice)">فعالسازی پرداخت آنلاین در پورتال مشتری</span>
         </label>
 
-        <div className="mb-1 text-[12px] font-semibold text-(--ice-2)">کارمزد استعلام (تومان)</div>
+        <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">کارمزد استعلام (تومان)</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">
           مبلغی که هر مشتری پیش از اجرای استعلام‌ها در پورتال مشتری پرداخت می‌کند و از طریق همین درگاه به حساب مالک واریز می‌شود.
         </div>
@@ -164,7 +164,7 @@ export function PaymentSettingsPage() {
           <MoneyInput
             value={String(inquiryFee)}
             onChange={(v) => setInquiryFee(Number(v))}
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
         </div>
         {enabled && provider === "ZarinPal" && !settings?.hasOwnerMerchantId && merchantId.trim() === "" && (
@@ -173,7 +173,7 @@ export function PaymentSettingsPage() {
           </div>
         )}
 
-        <div className="mb-1 text-[12px] font-semibold text-(--ice-2)">شناسهٔ پذیرنده (Merchant ID)</div>
+        <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">شناسهٔ پذیرنده (Merchant ID)</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">
           برای حفظ مقدار فعلی خالی بگذارید. مقدار جدید جایگزین شناسهٔ ذخیرهشده میشود و پس از ذخیره هیچگاه کامل نمایش داده نمیشود.
         </div>
@@ -185,7 +185,7 @@ export function PaymentSettingsPage() {
           autoComplete="off"
         />
 
-        <div className="mb-1 text-[12px] font-semibold text-(--ice-2)">آدرس کالبک (Callback URL)</div>
+        <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">آدرس کالبک (Callback URL)</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">
           نشانی کامل سروری که درگاه، پس از پرداخت به آن برمیگرداند. خالی بگذارید تا از پیکربندی سرور استفاده شود.
         </div>

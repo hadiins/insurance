@@ -32,6 +32,7 @@ public sealed class RoleManagementController(AppDbContext dbContext) : Controlle
         (Permissions.FinanceRead, "مشاهدهٔ سود و زیان"),
         (Permissions.MarketerManage, "مدیریت بازاریاب‌ها و کارمزد"),
         (Permissions.MarketerSelfView, "پنل بازاریاب (مشاهدهٔ خودش)"),
+        (Permissions.RiskNetworkRead, "استعلام شبکه‌ای ریسک"),
         // Permissions.PlatformOwner is deliberately absent — never assignable through a role an
         // agency could hand to its own staff (docs/UPDATE-SYSTEM.md rule 1).
     ];

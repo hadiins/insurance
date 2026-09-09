@@ -62,7 +62,7 @@ export function ApiIrSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-4.5 text-[17px] font-extrabold text-(--ice)">تنظیمات api.ir</h1>
+      <h1 className="mb-4.5 text-[20px] font-extrabold text-(--ice)">تنظیمات api.ir</h1>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -76,7 +76,7 @@ export function ApiIrSettingsPage() {
       )}
 
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
-        <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">وضعیت فعلی</div>
+        <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">وضعیت فعلی</div>
         {settings === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری...</div>
         ) : (
@@ -84,11 +84,11 @@ export function ApiIrSettingsPage() {
             <div className="text-[15px] font-bold text-(--ice)">
               {settings.allowPaidEndpoints ? "سرویسهای پرداختی فعال" : "حالت آزمایشی (Sandbox)"}
             </div>
-            <div className="mt-1 text-[12px] text-(--ice-3)">
+            <div className="mt-1 text-[12.5px] text-(--ice-3)">
               کلید api.ir: {settings.hasApiKey ? settings.apiKeyMasked : "تنظیم نشده — از پیکربندی سرور استفاده میشود"}
             </div>
             {settings.updatedAt && (
-              <div className="mt-0.5 text-[11px] text-(--ice-3)">
+              <div className="mt-0.5 text-[11.5px] text-(--ice-3)">
                 آخرین تغییر: {new Date(settings.updatedAt).toLocaleString("fa-IR")}
               </div>
             )}
@@ -106,14 +106,14 @@ export function ApiIrSettingsPage() {
             onChange={(e) => setAllowPaid(e.target.checked)}
             className="h-4 w-4 accent-(--mint)"
           />
-          <span className="text-[13px] text-(--ice)">اجازهٔ تماس با سرویسهای پرداختی api.ir</span>
+          <span className="text-[13.5px] text-(--ice)">اجازهٔ تماس با سرویسهای پرداختی api.ir</span>
         </label>
         <div className="mb-4 rounded-[10px] border border-(--amber)/30 bg-(--amber)/8 px-3 py-2 text-[11.5px] leading-relaxed text-(--amber)">
           تا زمانی که این گزینه خاموش است، هر تماس پرداختی به endpoint آزمایشی (Sandbox/Echo) هدایت
           میشود و هیچ هزینهای ثبت نمیشود — اما هیچ نتیجهٔ واقعی هم دریافت نمیکند.
         </div>
 
-        <div className="mb-1 text-[12px] font-semibold text-(--ice-2)">کلید api.ir</div>
+        <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">کلید api.ir</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">
           برای حفظ کلید فعلی خالی بگذارید. مقدار جدید جایگزین کلید ذخیرهشده میشود.
         </div>
@@ -133,7 +133,7 @@ export function ApiIrSettingsPage() {
         >
           {busy ? "در حال ذخیره..." : "ذخیره"}
         </button>
-        <div className="mt-2 text-[11px] text-(--ice-3)">تغییرات چند ثانیه پس از ذخیره روی همهٔ تماسهای api.ir اعمال میشود.</div>
+        <div className="mt-2 text-[11.5px] text-(--ice-3)">تغییرات چند ثانیه پس از ذخیره روی همهٔ تماسهای api.ir اعمال میشود.</div>
       </div>
 
       <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
@@ -143,13 +143,13 @@ export function ApiIrSettingsPage() {
             <div key={endpoint.name} className="flex items-center justify-between rounded-[10px] bg-(--fld) px-3 py-2">
               <div>
                 <div className="text-[12.5px] font-semibold text-(--ice)">{endpoint.name}</div>
-                <div className="text-[11px] text-(--ice-3)">{endpoint.note}</div>
+                <div className="text-[11.5px] text-(--ice-3)">{endpoint.note}</div>
               </div>
-              <div className="text-[13px] font-bold text-(--ice-2)">{endpoint.cost}</div>
+              <div className="text-[13.5px] font-bold text-(--ice-2)">{endpoint.cost}</div>
             </div>
           ))}
         </div>
-        <div className="mt-3 text-[11px] text-(--ice-3)">هر تماس (واقعی یا آزمایشی) در لاگ هزینه ثبت میشود.</div>
+        <div className="mt-3 text-[11.5px] text-(--ice-3)">هر تماس (واقعی یا آزمایشی) در لاگ هزینه ثبت میشود.</div>
       </div>
     </div>
   );

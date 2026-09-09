@@ -123,7 +123,7 @@ export function SmsReminderPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         یادآوری <em className="font-extralight not-italic text-(--ice-2)">پیامکی</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">فیلتر کنید، تعداد و هزینه را ببینید، بعد ارسال کنید</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">فیلتر کنید، تعداد و هزینه را ببینید، بعد ارسال کنید</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -134,27 +134,27 @@ export function SmsReminderPage() {
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-3 gap-3">
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">سررسید از</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">سررسید از</label>
             <JalaliDateField
               value={filter.dueFrom}
               onChange={(v) => setFilter((f) => ({ ...f, dueFrom: v }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">سررسید تا</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">سررسید تا</label>
             <JalaliDateField
               value={filter.dueTo}
               onChange={(v) => setFilter((f) => ({ ...f, dueTo: v }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">وضعیت</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">وضعیت</label>
             <select
               value={filter.status}
               onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             >
               <option value="">همه</option>
               <option value="Unpaid">پرداخت‌نشده</option>
@@ -162,11 +162,11 @@ export function SmsReminderPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">رشتهٔ بیمه</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">رشتهٔ بیمه</label>
             <select
               value={filter.insuranceLineId}
               onChange={(e) => setFilter((f) => ({ ...f, insuranceLineId: e.target.value }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             >
               <option value="">همه</option>
               {lines?.map((l) => (
@@ -177,11 +177,11 @@ export function SmsReminderPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">بازاریاب</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">بازاریاب</label>
             <select
               value={filter.marketerId}
               onChange={(e) => setFilter((f) => ({ ...f, marketerId: e.target.value }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             >
               <option value="">همه</option>
               {marketers?.map((m) => (
@@ -193,19 +193,19 @@ export function SmsReminderPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حداقل مبلغ</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حداقل مبلغ</label>
               <input
                 value={filter.minAmount}
                 onChange={(e) => setFilter((f) => ({ ...f, minAmount: e.target.value }))}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حداکثر مبلغ</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حداکثر مبلغ</label>
               <input
                 value={filter.maxAmount}
                 onChange={(e) => setFilter((f) => ({ ...f, maxAmount: e.target.value }))}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
               />
             </div>
           </div>
@@ -256,16 +256,16 @@ export function SmsReminderPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <div className="border-b border-(--edge) px-4 py-2.5 text-[12px] font-semibold text-(--ice-2)">
+        <div className="border-b border-(--edge) px-4 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
           گزارش تحویل (آخرین ارسال‌ها)
         </div>
         {log?.length === 0 ? (
-          <div className="p-6 text-center text-[13px] text-(--ice-3)">هنوز پیامکی ارسال نشده.</div>
+          <div className="p-6 text-center text-[13.5px] text-(--ice-3)">هنوز پیامکی ارسال نشده.</div>
         ) : (
           log?.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-center justify-between border-t border-(--edge) px-4 py-2 text-[12px] first:border-t-0"
+              className="flex items-center justify-between border-t border-(--edge) px-4 py-2 text-[12.5px] first:border-t-0"
             >
               <span>
                 {entry.policyNumber ?? "—"} {entry.seqNo ? `— قسط ${fa(entry.seqNo)}` : ""}

@@ -25,7 +25,8 @@ namespace Aqsat.Api.Controllers;
 [EnableRateLimiting("portal")]
 public sealed class PortalPublicController(
     PortalInvitationService portalService,
-    PolicyVerificationService verificationService) : ControllerBase
+    PolicyVerificationService verificationService,
+    InstallmentPaymentLinkService paymentLinkService) : ControllerBase
 {
     [HttpGet("{token}")]
     public async Task<ActionResult<PublicPortalInfoDto>> GetInfo(string token, CancellationToken ct)
@@ -104,6 +105,50 @@ public sealed class PortalPublicController(
             var result = await verificationService.PayDownPaymentAsync(
                 token, HttpContext.Connection.RemoteIpAddress?.ToString(), ct);
             return Ok(new PublicPortalPayResultDto(result.PaidAmountToman, result.PaidAtUtc));
+        }
+        catch (PortalInvitationException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = ex.Message,
+            });
+        }
+    }
+
+    /// <summary>The installment-payment link's public page: the customer's open installments
+    /// across all their policies, ordered by due date. The "pay" literal cannot collide with a
+    /// token — real tokens are 43 chars of Base64Url.</summary>
+    [HttpGet("pay/{token}")]
+    public async Task<ActionResult<PublicPaymentLinkInfoDto>> GetPaymentLinkInfo(string token, CancellationToken ct)
+    {
+        try
+        {
+            var info = await paymentLinkService.GetOpenInstallmentsAsync(token, ct);
+            return Ok(new PublicPaymentLinkInfoDto(
+                info.CustomerDisplayName,
+                info.AgencyName,
+                info.Installments.Select(i => new PublicPaymentLinkInstallmentDto(
+                    i.Id, i.SeqNo, i.PolicyNumber, i.DueDate, i.BalanceToman, i.IsOverdue)).ToList()));
+        }
+        catch (PortalInvitationException ex)
+        {
+            return NotFoundProblem(ex.Message);
+        }
+    }
+
+    /// <summary>Pays one installment at its full remaining balance through the agency's own
+    /// gateway — the online counterpart of an agent-recorded receipt.</summary>
+    [HttpPost("pay/{token}/installments/{installmentId:guid}")]
+    public async Task<ActionResult<PublicPaymentLinkPayResultDto>> PayInstallment(
+        string token, Guid installmentId, CancellationToken ct)
+    {
+        try
+        {
+            var result = await paymentLinkService.PayInstallmentAsync(
+                token, installmentId, HttpContext.Connection.RemoteIpAddress?.ToString(), ct);
+            return Ok(new PublicPaymentLinkPayResultDto(
+                result.PaidAmountToman, result.PaidAtUtc, result.PolicyNumber, result.SeqNo));
         }
         catch (PortalInvitationException ex)
         {

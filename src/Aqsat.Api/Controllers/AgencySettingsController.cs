@@ -189,7 +189,8 @@ public sealed class AgencySettingsController(
             settings?.CustomerPortalEnabled ?? defaults.CustomerPortalEnabled,
             !string.IsNullOrWhiteSpace(settings?.AgentMerchantId),
             Mask(settings?.AgentMerchantId),
-            settings?.PortalInvitationTtlHours ?? defaults.PortalInvitationTtlHours));
+            settings?.PortalInvitationTtlHours ?? defaults.PortalInvitationTtlHours,
+            settings?.PaymentLinkTtlDays ?? defaults.PaymentLinkTtlDays));
     }
 
     [HttpPut("payment-gateway")]
@@ -205,6 +206,11 @@ public sealed class AgencySettingsController(
         if (request.PortalInvitationTtlHours <= 0)
         {
             return ValidationProblem("مدت اعتبار لینک باید مثبت باشد.");
+        }
+
+        if (request.PaymentLinkTtlDays <= 0)
+        {
+            return ValidationProblem("مدت اعتبار لینک پرداخت قسط باید مثبت باشد.");
         }
 
         var settings = await dbContext.OrgSettings.FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
@@ -223,6 +229,7 @@ public sealed class AgencySettingsController(
             settings.AgentMerchantId = request.AgentMerchantId.Trim();
         }
         settings.PortalInvitationTtlHours = request.PortalInvitationTtlHours;
+        settings.PaymentLinkTtlDays = request.PaymentLinkTtlDays;
 
         await dbContext.SaveChangesAsync(ct);
 

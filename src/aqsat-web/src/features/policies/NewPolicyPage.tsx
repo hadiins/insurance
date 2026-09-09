@@ -7,9 +7,12 @@ import { fa, isValidNationalId, money, toLatinDigits } from "../../lib/persian";
 import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
 import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./PlateField";
 import { JalaliDateField } from "../../components/JalaliDateField";
-import { addOneJalaliYear, toJalaliDisplay } from "../../lib/jalali";
+import { addOneJalaliYear, toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
 import { MoneyInput } from "../../components/MoneyInput";
 import { PolicyVerificationStep } from "./PolicyVerificationStep";
+import type { CreditReportDto } from "../../components/CreditReportCard";
+import { useNetworkRiskLookup } from "../risk/riskApi";
+import { NetworkRiskWizardSummary } from "../risk/NetworkRiskResultCard";
 
 interface InsuranceLineDto {
   id: string;
@@ -60,6 +63,13 @@ interface CustomerLookupResultDto {
   policyCount: number;
 }
 
+interface CustomerCreditReportDto {
+  report: CreditReportDto | null;
+  isReusableForIssuance: boolean;
+  validUntilUtc: string | null;
+  failedStandaloneInvitationId: string | null;
+}
+
 interface ScheduleInstallmentDto {
   seqNo: number;
   dueDate: string;
@@ -107,7 +117,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 const STEP_LABELS: Record<Step, string> = {
   1: "مشتری",
-  2: "بیمهنامه",
+  2: "بیمه‌نامه",
   3: "اقساط",
   4: "اعتبارسنجی",
   5: "دریافت و ثبت نهایی",
@@ -117,11 +127,11 @@ const METHOD_LABELS: Record<MethodType, string> = {
   Cash: "نقدی",
   BankTransfer: "واریز بانکی",
   Cheque: "چک",
-  PosDirect: "پوز مستقیم بیمهگر",
+  PosDirect: "پوز مستقیم بیمه‌گر",
 };
 
 const INPUT_CLASS =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 const BTN_PRIMARY =
   "rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
@@ -204,6 +214,33 @@ export function NewPolicyPage() {
   const [lookupCustomer, setLookupCustomer] = useState<CustomerLookupProfileDto | null>(null);
   const [lookupPolicyCount, setLookupPolicyCount] = useState(0);
   const [customerMode, setCustomerMode] = useState<"none" | "existing" | "new">("none");
+  // Phase 2B-1 — when the local lookup misses, the same national ID goes to the network lookup so
+  // the agent sees the person's cross-agency status under the new-customer form (non-blocking).
+  const [networkNationalId, setNetworkNationalId] = useState<string | null>(null);
+  const networkLookup = useNetworkRiskLookup(networkNationalId === null ? null : { nationalId: networkNationalId });
+  // Step 1's credit status strip — tells the agent up front whether step 4 will reuse a fresh
+  // report (no fee, no new inquiry) or needs one (owner decision 2026-09-03).
+  const [creditStatus, setCreditStatus] = useState<CustomerCreditReportDto | null>(null);
+  // Set after «ثبت مشتری و ارسال لینک اعتبارسنجی»: the portal link just went out by SMS, so the
+  // neutral "no fresh report" strip would read wrong without this confirmation next to it.
+  const [linkSentMobile, setLinkSentMobile] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
+
+  useEffect(() => {
+    const customerId = lookupCustomer?.id;
+    if (customerMode !== "existing" || !customerId) {
+      setCreditStatus(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .get<CustomerCreditReportDto>(`/portal/invitations/customer/${customerId}/credit-report`)
+      .then((data) => !cancelled && setCreditStatus(data))
+      .catch(() => !cancelled && setCreditStatus(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [customerMode, lookupCustomer?.id]);
 
   // docs/TASK-24-POLICY-NUMBER.md §2 — the number is composed from three locked segments plus one
   // editable serial, unless the "ورود دستی شمارهٔ کامل" escape hatch is on.
@@ -359,7 +396,7 @@ export function NewPolicyPage() {
         setSuggestion(s);
         setSerialInput((prev) => (prev.trim() ? prev : s.suggestedSerial));
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت پیشنهاد شمارهٔ بیمهنامه"))
+      .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت پیشنهاد شمارهٔ بیمه‌نامه"))
       .finally(() => setSuggestionLoading(false));
   }, [form.insuranceLineId, form.issueDate, manualEntry]);
 
@@ -418,7 +455,7 @@ export function NewPolicyPage() {
   }, [manualEntry, manualNumberInput, form.insuranceLineId, form.issueDate]);
 
   useEffect(() => {
-    setTitle(tabKey, finalPolicyNumber ? `بیمهنامه — ${finalPolicyNumber}` : "ثبت بیمهنامه");
+    setTitle(tabKey, finalPolicyNumber ? `بیمه‌نامه — ${finalPolicyNumber}` : "ثبت بیمه‌نامه");
   }, [finalPolicyNumber, tabKey, setTitle]);
 
   // Step 3 — suggest the down payment for the entered installment count (the server-side
@@ -492,6 +529,7 @@ export function NewPolicyPage() {
         setLookupCustomer(null);
         setLookupPolicyCount(0);
         setCustomerMode("new");
+        setNetworkNationalId(normalized);
         setForm((prev) => ({ ...prev, customerNationalId: normalized }));
       }
     } catch (err) {
@@ -505,15 +543,21 @@ export function NewPolicyPage() {
     setCustomerMode("none");
     setLookupCustomer(null);
     setLookupPolicyCount(0);
+    setNetworkNationalId(null);
   }
 
   function customerFieldsError(): string | null {
     const fullName = `${form.customerFirstName.trim()} ${form.customerLastName.trim()}`.trim();
     if (!fullName) {
-      return "نام و نام خانوادگی بیمهگذار الزامی است.";
+      return "نام و نام خانوادگی بیمه‌گذار الزامی است.";
+    }
+    const firstName = form.customerFirstName.trim();
+    const lastName = form.customerLastName.trim();
+    if (/^\d+$/.test(toLatinDigits(firstName)) || /^\d+$/.test(toLatinDigits(lastName))) {
+      return "نام و نام خانوادگی نمی‌تواند عدد باشد — کد ملی را در فیلد جداگانهٔ آن وارد کنید.";
     }
     if (!form.customerNationalId.trim() || !isValidNationalId(form.customerNationalId)) {
-      return "کد ملی بیمهگذار الزامی است و باید معتبر باشد.";
+      return "کد ملی بیمه‌گذار الزامی است و باید معتبر باشد.";
     }
     if (
       form.customerEmergencyMobile.trim() &&
@@ -522,10 +566,10 @@ export function NewPolicyPage() {
       return "موبایل اضطراری نباید با موبایل اصلی یکسان باشد.";
     }
     if (form.customerPostalCode.trim() && toLatinDigits(form.customerPostalCode.trim()).length !== 10) {
-      return "کد پستی بیمهگذار باید دقیقاً ۱۰ رقم باشد.";
+      return "کد پستی بیمه‌گذار باید دقیقاً ۱۰ رقم باشد.";
     }
     if (form.customerAddress.trim() && form.customerAddress.trim().length < 10) {
-      return "آدرس بیمهگذار باید حداقل ۱۰ کاراکتر باشد.";
+      return "آدرس بیمه‌گذار باید حداقل ۱۰ کاراکتر باشد.";
     }
     return null;
   }
@@ -545,9 +589,48 @@ export function NewPolicyPage() {
     setStep(2);
   }
 
+  // Owner decision 2026-09-03 — a first-time visitor can be credit-checked BEFORE issuance: the
+  // customer is registered right here (POST /api/customers) and the portal link goes out in the
+  // same action. The wizard then continues on the existing-customer path, and step 4 reuses the
+  // fresh report once the customer has paid the fee.
+  async function registerAndSendVerificationLink() {
+    const problem = customerFieldsError();
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    if (!form.customerMobile.trim()) {
+      setError("برای ارسال لینک اعتبارسنجی، شمارهٔ همراه بیمه‌گذار الزامی است.");
+      return;
+    }
+
+    setRegistering(true);
+    setError(null);
+    try {
+      const created = await api.post<CustomerLookupResultDto>("/customers", {
+        firstName: form.customerFirstName.trim(),
+        lastName: form.customerLastName.trim(),
+        nationalId: form.customerNationalId.trim(),
+        mobile: form.customerMobile.trim(),
+        emergencyMobile: form.customerEmergencyMobile.trim() || null,
+        postalCode: form.customerPostalCode.trim() || null,
+        address: form.customerAddress.trim() || null,
+      });
+      setLookupCustomer(created.customer);
+      setLookupPolicyCount(0);
+      setCustomerMode("existing");
+      await api.post<{ id: string }>("/portal/invitations", { customerId: created.customer!.id });
+      setLinkSentMobile(created.customer!.mobile);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ثبت مشتری یا ارسال لینک اعتبارسنجی ناموفق بود.");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
   async function savePolicy() {
     if (!selectedLine) {
-      setError("نوع بیمهنامه را انتخاب کنید.");
+      setError("نوع بیمه‌نامه را انتخاب کنید.");
       return;
     }
     if (!form.endDate) {
@@ -557,7 +640,7 @@ export function NewPolicyPage() {
     if (!finalPolicyNumber) {
       setError(
         manualEntry
-          ? "شمارهٔ بیمهنامه را وارد کنید."
+          ? "شمارهٔ بیمه‌نامه را وارد کنید."
           : "کد رشته یا کد نمایندگی تنظیم نشده — از «ورود دستی شمارهٔ کامل» استفاده کنید یا سریال را وارد کنید.",
       );
       return;
@@ -641,7 +724,7 @@ export function NewPolicyPage() {
       setStep(paymentType === "cash" ? 5 : 3);
       setDirty(tabKey, true); // the wizard is still mid-flight (schedule + receipt pending)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "ثبت بیمهنامه ناموفق بود.");
+      setError(err instanceof ApiError ? err.message : "ثبت بیمه‌نامه ناموفق بود.");
     } finally {
       setSaving(false);
     }
@@ -839,16 +922,16 @@ export function NewPolicyPage() {
     setPaymentType("installment");
     setVerificationRejected(false);
     setDirty(tabKey, false);
-    setTitle(tabKey, "ثبت بیمهنامه");
+    setTitle(tabKey, "ثبت بیمه‌نامه");
   }
 
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
-        ثبت <em className="font-extralight not-italic text-(--ice-2)">بیمهنامهٔ جدید</em>
+        ثبت <em className="font-extralight not-italic text-(--ice-2)">بیمه‌نامهٔ جدید</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
-        کد ملی ← بیمهنامه ← اقساط ← اعتبارسنجی ← دریافت پیشپرداخت و ثبت نهایی
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
+        کد ملی ← بیمه‌نامه ← اقساط ← اعتبارسنجی ← دریافت پیشپرداخت و ثبت نهایی
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-1.5">
@@ -878,10 +961,10 @@ export function NewPolicyPage() {
 
       {step === 1 && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-3 text-[13px] font-bold text-(--ice)">مشتری را با کد ملی پیدا کنید</div>
+          <div className="mb-3 text-[13.5px] font-bold text-(--ice)">مشتری را با کد ملی پیدا کنید</div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">کد ملی بیمهگذار</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">کد ملی بیمه‌گذار</label>
               <input
                 value={nationalIdInput}
                 onChange={(e) => setNationalIdInput(toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 10))}
@@ -902,8 +985,8 @@ export function NewPolicyPage() {
                 <div
                   className={
                     lookupCustomer.isProfileComplete
-                      ? "text-[11px] font-semibold text-(--mint)"
-                      : "text-[11px] font-semibold text-(--ember)"
+                      ? "text-[11.5px] font-semibold text-(--mint)"
+                      : "text-[11.5px] font-semibold text-(--ember)"
                   }
                 >
                   {lookupCustomer.isProfileComplete ? "پروفایل کامل" : "پروفایل ناقص"}
@@ -917,8 +1000,25 @@ export function NewPolicyPage() {
                   موبایل: <span className="tabular-nums text-(--ice)">{lookupCustomer.mobile ? fa(lookupCustomer.mobile) : "—"}</span>
                 </div>
                 <div className="col-span-2">آدرس: {lookupCustomer.address ?? "—"}</div>
-                <div className="col-span-2 text-(--ice-3)">این مشتری {fa(lookupPolicyCount)} بیمهنامه در سیستم دارد.</div>
+                <div className="col-span-2 text-(--ice-3)">این مشتری {fa(lookupPolicyCount)} بیمه‌نامه در سیستم دارد.</div>
               </div>
+              {creditStatus?.report && creditStatus.isReusableForIssuance ? (
+                <div className="mt-2 rounded-[8px] border border-(--mint)/30 bg-(--mint)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--mint)">
+                  گزارش اعتباری معتبر تا {toJalaliDateTimeDisplay(creditStatus.validUntilUtc!)} موجود است — در مرحلهٔ
+                  اعتبارسنجی بدون کارمزد و استعلام مجدد بازیافت میشود.
+                </div>
+              ) : creditStatus ? (
+                <div className="mt-2 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
+                  گزارش اعتباری تازه‌ای (۳۰ روز) برای این مشتری نیست — در صدور اقساطی، پرداخت کارمزد و استعلام لازم
+                  میشود. برای اعتبارسنجی قبل از صدور، از پروندهٔ مشتری لینک پورتال بفرستید.
+                </div>
+              ) : null}
+              {linkSentMobile && (
+                <div className="mt-2 rounded-[8px] border border-(--mint)/30 bg-(--mint)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--mint)">
+                  لینک اعتبارسنجی برای <b className="tabular-nums">{fa(linkSentMobile)}</b> پیامک شد — پس از پرداخت
+                  کارمزد توسط مشتری و اجرای استعلام، گزارش در مرحلهٔ اعتبارسنجی بدون کارمزد مجدد بازیافت میشود.
+                </div>
+              )}
               <div className="mt-3 flex gap-2">
                 <button type="button" onClick={goFromCustomerToPolicy} className={BTN_PRIMARY}>
                   ادامه با این مشتری
@@ -933,8 +1033,32 @@ export function NewPolicyPage() {
           {customerMode === "new" && (
             <div className="mt-4 rounded-[12px] border border-(--edge-2) bg-(--fld) p-4">
               <div className="mb-3 text-[12.5px] font-semibold text-(--ice)">
-                مشتری با این کد ملی پیدا نشد — اطلاعات بیمهگذار جدید را وارد کنید (هنگام ثبت بیمهنامه ساخته میشود):
+                مشتری با این کد ملی پیدا نشد — اطلاعات بیمه‌گذار جدید را وارد کنید:
               </div>
+              <div className="mb-3 text-[11.5px] leading-relaxed text-(--ice-3)">
+                برای اعتبارسنجی قبل از صدور، «ثبت مشتری و ارسال لینک اعتبارسنجی» را بزنید (مشتری همان‌جا ثبت و لینک
+                پیامک میشود)؛ در غیر این صورت مشتری هنگام ثبت بیمه‌نامه ساخته میشود.
+              </div>
+              {networkNationalId !== null && (
+                <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--card) p-3">
+                  <div className="mb-2 text-[12px] font-bold text-(--ice)">سابقهٔ شبکه‌ای این مشتری</div>
+                  {networkLookup.isPending ? (
+                    <div className="text-[11.5px] text-(--ice-3)">در حال استعلام از شبکهٔ نمایندگی‌ها…</div>
+                  ) : networkLookup.isError || !networkLookup.data || !networkLookup.data.isEnabled ? (
+                    <div className="text-[11.5px] text-(--ice-3)">
+                      {networkLookup.data && !networkLookup.data.isEnabled
+                        ? "استعلام شبکه‌ای فعلاً فعال نیست."
+                        : "استعلام شبکه‌ای در دسترس نیست."}
+                    </div>
+                  ) : networkLookup.data.results.length === 0 ? (
+                    <div className="text-[11.5px] text-(--ice-3)">
+                      سابقه‌ای برای این کد ملی در شبکهٔ نمایندگی‌ها ثبت نشده است.
+                    </div>
+                  ) : (
+                    <NetworkRiskWizardSummary results={networkLookup.data.results} />
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3.5">
                 <Field label="نام" value={form.customerFirstName} onChange={(v) => update("customerFirstName", v)} />
                 <Field label="نام خانوادگی" value={form.customerLastName} onChange={(v) => update("customerLastName", v)} />
@@ -950,9 +1074,17 @@ export function NewPolicyPage() {
                   <Field label="آدرس" value={form.customerAddress} onChange={(v) => update("customerAddress", v)} />
                 </div>
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={goFromCustomerToPolicy} className={BTN_PRIMARY}>
                   ادامه
+                </button>
+                <button
+                  type="button"
+                  onClick={registerAndSendVerificationLink}
+                  disabled={registering}
+                  className={BTN_SECONDARY}
+                >
+                  {registering ? "در حال ثبت..." : "ثبت مشتری و ارسال لینک اعتبارسنجی"}
                 </button>
                 <button type="button" onClick={backToLookup} className={BTN_SECONDARY}>
                   جستجوی مجدد
@@ -965,16 +1097,16 @@ export function NewPolicyPage() {
 
       {step === 2 && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-3 text-[13px] font-bold text-(--ice)">مشخصات بیمهنامه</div>
+          <div className="mb-3 text-[13.5px] font-bold text-(--ice)">مشخصات بیمه‌نامه</div>
           {customerMode === "existing" && lookupCustomer && (
             <div className="mb-3.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-[12.5px] text-(--ice-2)">
-              بیمهگذار: <b className="text-(--ice)">{lookupCustomer.fullName}</b> — کد ملی{" "}
+              بیمه‌گذار: <b className="text-(--ice)">{lookupCustomer.fullName}</b> — کد ملی{" "}
               <b className="tabular-nums text-(--ice)" dir="ltr">{fa(lookupCustomer.nationalId ?? "")}</b>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3.5">
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">نوع بیمهنامه</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">نوع بیمه‌نامه</label>
               <select value={form.insuranceLineId} onChange={(e) => update("insuranceLineId", e.target.value)} className={INPUT_CLASS}>
                 <option value="">انتخاب کنید...</option>
                 {lines?.map((l) => (
@@ -1007,16 +1139,16 @@ export function NewPolicyPage() {
             />
 
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حق بیمه (تومان)</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حق بیمه (تومان)</label>
               <MoneyInput value={form.netPremium} onChange={(v) => update("netPremium", v)} placeholder="۹٬۰۰۰٬۰۰۰" />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">کارمزد خدمات (تومان)</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">کارمزد خدمات (تومان)</label>
               <MoneyInput value={form.serviceFee} onChange={(v) => update("serviceFee", v)} placeholder="۵۰۰٬۰۰۰" />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">بیمه‌گر (اختیاری)</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">بیمه‌گر (اختیاری)</label>
               <input
                 value={form.insurerName}
                 onChange={(e) => update("insurerName", e.target.value)}
@@ -1026,7 +1158,7 @@ export function NewPolicyPage() {
             </div>
 
             <div className="col-span-full">
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">نوع پرداخت</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">نوع پرداخت</label>
               <div className="flex flex-wrap gap-2">
                 {(
                   [
@@ -1051,7 +1183,7 @@ export function NewPolicyPage() {
                   </button>
                 ))}
               </div>
-              <div className="mt-1.5 text-[11px] leading-relaxed text-(--ice-3)">
+              <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
                 {paymentType === "cash"
                   ? "پرداخت کامل مبلغ در یک مرحله — بدون اقساط و بدون اعتبارسنجی."
                   : "پیشپرداخت و اقساط — مشتری از طریق لینک پورتال کارمزد استعلام را پرداخت میکند، استعلام اعتباری انجام میشود و پس از تأیید شما و تأیید قرارداد توسط مشتری، پیشپرداخت قابل دریافت است."}
@@ -1060,7 +1192,7 @@ export function NewPolicyPage() {
 
             {marketers !== null && (
               <div className="col-span-full">
-                <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">بازاریاب</label>
+                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">بازاریاب</label>
                 <select
                   value={form.marketerId}
                   onChange={(e) => update("marketerId", e.target.value)}
@@ -1074,7 +1206,7 @@ export function NewPolicyPage() {
                   ))}
                 </select>
                 {form.marketerId && form.insuranceLineId && marketerRates !== null && (
-                  <div className={`mt-1.5 text-[11px] leading-relaxed ${applicableMarketerRate ? "text-(--mint)" : "text-(--ember)"}`}>
+                  <div className={`mt-1.5 text-[11.5px] leading-relaxed ${applicableMarketerRate ? "text-(--mint)" : "text-(--ember)"}`}>
                     {applicableMarketerRate
                       ? `نرخ پورسانت: ${fa(applicableMarketerRate.ratePercent)}٪ — هنگام ثبت قفل میشود و مبنای برشهای قسط به قسط خواهد بود.`
                       : "برای این بازاریاب در این رشته نرخ پورسانت ثبت نشده — برای این بیمه‌نامه پورسانتی تولید نخواهد شد."}
@@ -1113,7 +1245,7 @@ export function NewPolicyPage() {
 
           <div className="mt-4 flex gap-2">
             <button type="button" onClick={savePolicy} disabled={saving || lines === null} className={BTN_PRIMARY}>
-              {saving ? "در حال ثبت..." : "ثبت بیمهنامه و ادامه"}
+              {saving ? "در حال ثبت..." : "ثبت بیمه‌نامه و ادامه"}
             </button>
             <button type="button" onClick={() => setStep(1)} className={BTN_SECONDARY}>
               مرحلهٔ قبل
@@ -1124,17 +1256,17 @@ export function NewPolicyPage() {
 
       {step === 3 && created && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-1 text-[13px] font-bold text-(--ice)">
-            بیمهنامهٔ <span className="tabular-nums">{created.policyNumber}</span> ثبت شد — پیشپرداخت و اقساط
+          <div className="mb-1 text-[13.5px] font-bold text-(--ice)">
+            بیمه‌نامهٔ <span className="tabular-nums">{created.policyNumber}</span> ثبت شد — پیشپرداخت و اقساط
           </div>
-          <div className="mb-3.5 text-[12px] leading-relaxed text-(--ice-3)">
+          <div className="mb-3.5 text-[12.5px] leading-relaxed text-(--ice-3)">
             مبلغ کل دریافتی: <b className="tabular-nums text-(--ice)">{money((Number(form.netPremium) || 0) + (Number(form.serviceFee) || 0))}</b> تومان —
             تعداد اقساط و پیشپرداخت را مشخص کنید (پیشپرداخت ۰ یعنی فقط اقساط).
           </div>
 
           <div className="grid grid-cols-3 items-end gap-3.5">
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تعداد اقساط</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تعداد اقساط</label>
               <input
                 value={installmentCount}
                 onChange={(e) => setInstallmentCount(toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 2))}
@@ -1143,7 +1275,7 @@ export function NewPolicyPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">پیشپرداخت (تومان)</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">پیشپرداخت (تومان)</label>
               <MoneyInput
                 value={downPayment}
                 onChange={(v) => {
@@ -1158,7 +1290,7 @@ export function NewPolicyPage() {
                 {scheduling ? "در حال تولید..." : "تولید اقساط"}
               </button>
             ) : (
-              <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-center text-[12px] font-semibold text-(--mint)">
+              <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-center text-[12.5px] font-semibold text-(--mint)">
                 اقساط تولید شد
               </div>
             )}
@@ -1173,7 +1305,7 @@ export function NewPolicyPage() {
               )}
               <div className="mb-2 text-[12.5px] font-semibold text-(--mint)">{fa(scheduleResult.installments.length)} قسط ساخته شد</div>
               <div className="max-h-52 overflow-y-auto">
-                <table className="w-full border-collapse text-[12px]">
+                <table className="w-full border-collapse text-[12.5px]">
                   <tbody>
                     {scheduleResult.installments.map((i) => (
                       <tr key={i.seqNo} className="border-t border-(--edge)/50 first:border-t-0">
@@ -1193,7 +1325,7 @@ export function NewPolicyPage() {
               مرحلهٔ بعد
             </button>
             <div className="text-[11.5px] leading-relaxed text-(--ice-3)">
-              بیمهنامه ثبت شده و به مرحلهٔ قبل برگشت ندارد — برای اصلاح، از خود پروندهٔ بیمهنامه ادامه دهید.
+              بیمه‌نامه ثبت شده و به مرحلهٔ قبل برگشت ندارد — برای اصلاح، از خود پروندهٔ بیمه‌نامه ادامه دهید.
             </div>
           </div>
         </div>
@@ -1201,10 +1333,10 @@ export function NewPolicyPage() {
 
       {step === 4 && created && scheduleResult && paymentType === "installment" && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-1 text-[13px] font-bold text-(--ice)">
-            اعتبارسنجی مشتری — بیمهنامهٔ <span className="tabular-nums">{created.policyNumber}</span>
+          <div className="mb-1 text-[13.5px] font-bold text-(--ice)">
+            اعتبارسنجی مشتری — بیمه‌نامهٔ <span className="tabular-nums">{created.policyNumber}</span>
           </div>
-          <div className="mb-4 text-[12px] leading-relaxed text-(--ice-3)">
+          <div className="mb-4 text-[12.5px] leading-relaxed text-(--ice-3)">
             زنجیرهٔ اعتبارسنجی: پرداخت کارمزد ← استعلام اعتباری ← تأیید شما ← تأیید قرارداد توسط مشتری ← پیشپرداخت.
             سرور هم بدون تکمیل این زنجیره، دریافت پیشپرداخت را نمیپذیرد.
           </div>
@@ -1226,7 +1358,7 @@ export function NewPolicyPage() {
           {verificationRejected && (
             <div className="mt-4">
               <button type="button" onClick={reset} className={BTN_SECONDARY}>
-                ثبت بیمهنامهٔ جدید
+                ثبت بیمه‌نامهٔ جدید
               </button>
             </div>
           )}
@@ -1235,14 +1367,14 @@ export function NewPolicyPage() {
 
       {step === 5 && created && (paymentType === "cash" || scheduleResult) && (
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-3 text-[13px] font-bold text-(--ice)">
+          <div className="mb-3 text-[13.5px] font-bold text-(--ice)">
             بررسی پرونده، {paymentType === "cash" ? "ثبت پرداخت کامل" : "دریافت پیشپرداخت"} و ثبت نهایی
           </div>
 
           <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 rounded-[12px] border border-(--edge-2) bg-(--fld) p-4 text-[12.5px] text-(--ice-2)">
-            <div>شمارهٔ بیمهنامه: <b className="tabular-nums text-(--ice)">{created.policyNumber}</b></div>
+            <div>شمارهٔ بیمه‌نامه: <b className="tabular-nums text-(--ice)">{created.policyNumber}</b></div>
             <div>
-              بیمهگذار:{" "}
+              بیمه‌گذار:{" "}
               <b className="text-(--ice)">
                 {customerMode === "existing" ? lookupCustomer?.fullName : `${form.customerFirstName.trim()} ${form.customerLastName.trim()}`.trim()}
               </b>
@@ -1276,11 +1408,11 @@ export function NewPolicyPage() {
                   </div>
                   <div className="mb-2 grid grid-cols-2 gap-2">
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
                       <JalaliDateField value={receivePaidOn} onChange={setReceivePaidOn} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">روش دریافت</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">روش دریافت</label>
                       <select
                         value={receiveMethodType}
                         onChange={(e) => setReceiveMethodType(e.target.value as MethodType)}
@@ -1289,14 +1421,14 @@ export function NewPolicyPage() {
                         <option value="Cash">نقدی</option>
                         <option value="BankTransfer">واریز بانکی</option>
                         <option value="Cheque">چک</option>
-                        <option value="PosDirect">پوز مستقیم بیمهگر</option>
+                        <option value="PosDirect">پوز مستقیم بیمه‌گر</option>
                       </select>
                     </div>
                   </div>
                   <div className="mb-2 grid grid-cols-2 gap-2">
                     {receiveMethodType === "BankTransfer" && (
                       <div>
-                        <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+                        <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">حساب بانکی</label>
                         <select value={receiveBankAccountId} onChange={(e) => setReceiveBankAccountId(e.target.value)} className={INPUT_CLASS}>
                           <option value="">انتخاب کنید...</option>
                           {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -1309,7 +1441,7 @@ export function NewPolicyPage() {
                     )}
                     {(receiveMethodType === "Cash" || receiveMethodType === "Cheque") && (
                       <div>
-                        <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">
+                        <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">
                           صندوق {receiveMethodType === "Cheque" && "(محل نگهداری چک)"}
                         </label>
                         <select value={receiveCashBoxId} onChange={(e) => setReceiveCashBoxId(e.target.value)} className={INPUT_CLASS}>
@@ -1323,7 +1455,7 @@ export function NewPolicyPage() {
                       </div>
                     )}
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ پیگیری / مرجع</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ پیگیری / مرجع</label>
                       <input value={receiveReferenceNo} onChange={(e) => setReceiveReferenceNo(e.target.value)} className={INPUT_CLASS} />
                     </div>
                   </div>
@@ -1333,7 +1465,7 @@ export function NewPolicyPage() {
                       <Field label="بانک عامل" value={chequeBankName} onChange={setChequeBankName} />
                       <Field label="نام تحویلدهنده" value={chequePresenterName} onChange={setChequePresenterName} />
                       <div>
-                        <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">سرسید چک</label>
+                        <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">سرسید چک</label>
                         <JalaliDateField value={chequeDueDate} onChange={setChequeDueDate} />
                       </div>
                     </div>
@@ -1352,7 +1484,7 @@ export function NewPolicyPage() {
           )}
           {paymentType === "installment" && scheduledDownPayment <= 0 && (
             <div className="mb-4 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] leading-relaxed text-(--ice-3)">
-              برای این بیمهنامه پیشپرداخت تعریف نشده — پس از مرور پرونده در بالا میتوانید ثبت نهایی کنید.
+              برای این بیمه‌نامه پیشپرداخت تعریف نشده — پس از مرور پرونده در بالا میتوانید ثبت نهایی کنید.
             </div>
           )}
 
@@ -1385,16 +1517,16 @@ export function NewPolicyPage() {
 
       {finalized && created && (
         <div className="mt-4.5 rounded-2xl border border-(--mint)/30 bg-(--mint)/8 p-5">
-          <div className="mb-3 text-[14px] font-bold text-(--mint)">بیمهنامه با موفقیت ثبت و نهایی شد</div>
-          <div className="mb-4 text-[13px] text-(--ice-2)">
-            شمارهٔ بیمهنامه: <b>{created.policyNumber}</b> — پروندهٔ بیمهنامه در تب جدید باز شد.
+          <div className="mb-3 text-[14px] font-bold text-(--mint)">بیمه‌نامه با موفقیت ثبت و نهایی شد</div>
+          <div className="mb-4 text-[13.5px] text-(--ice-2)">
+            شمارهٔ بیمه‌نامه: <b>{created.policyNumber}</b> — پروندهٔ بیمه‌نامه در تب جدید باز شد.
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={openPolicyFile} className={BTN_PRIMARY}>
-              مشاهدهٔ پروندهٔ بیمهنامه
+              مشاهدهٔ پروندهٔ بیمه‌نامه
             </button>
             <button type="button" onClick={reset} className={BTN_SECONDARY}>
-              ثبت بیمهنامهٔ جدید
+              ثبت بیمه‌نامهٔ جدید
             </button>
           </div>
         </div>
@@ -1406,11 +1538,11 @@ export function NewPolicyPage() {
             <div className="mb-2 text-[14px] font-bold text-(--ember)">
               ⚠️ {fa(gapPrompt.length)} شماره جا افتاده
             </div>
-            <div className="mb-4 text-[13px] tabular-nums text-(--ice-2)" dir="ltr">
+            <div className="mb-4 text-[13.5px] tabular-nums text-(--ice-2)" dir="ltr">
               {gapPrompt.map(fa).join(" و ")}
             </div>
-            <div className="mb-4 text-[12px] leading-relaxed text-(--ice-3)">
-              اگر عمدی است ادامه دهید. معمولاً این یعنی بیمهنامهای در فناوران هست که هنوز در سیستم ثبت نشده.
+            <div className="mb-4 text-[12.5px] leading-relaxed text-(--ice-3)">
+              اگر عمدی است ادامه دهید. معمولاً این یعنی بیمه‌نامهای در فناوران هست که هنوز در سیستم ثبت نشده.
             </div>
             <div className="flex gap-2">
               <button
@@ -1440,7 +1572,7 @@ export function NewPolicyPage() {
                 <li key={i}>{w}</li>
               ))}
             </ul>
-            <div className="mb-4 text-[12px] leading-relaxed text-(--ice-3)">
+            <div className="mb-4 text-[12.5px] leading-relaxed text-(--ice-3)">
               موارد مرزی واقعی وجود دارد — صدور آخر اسفند، انتقال پرونده. اگر عمدی است ادامه دهید.
             </div>
             <div className="flex gap-2">
@@ -1478,7 +1610,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={INPUT_CLASS} />
     </div>
   );
@@ -1487,7 +1619,7 @@ function Field({
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
       <JalaliDateField value={value} onChange={onChange} />
     </div>
   );

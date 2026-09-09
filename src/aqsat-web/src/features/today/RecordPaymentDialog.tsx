@@ -155,7 +155,7 @@ export function RecordPaymentDialog({
         <Dialog.Content className="fixed inset-0 z-[60] grid place-items-center p-5">
           <div className="w-full max-w-[380px] rounded-2xl border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
             <Dialog.Title className="mb-1.5 text-[15px] font-bold text-(--ice)">ثبت پرداخت</Dialog.Title>
-            <Dialog.Description className="mb-4.5 text-[13px] text-(--ice-2)">{customerFullName}</Dialog.Description>
+            <Dialog.Description className="mb-4.5 text-[13.5px] text-(--ice-2)">{customerFullName}</Dialog.Description>
 
             {result ? (
               <>
@@ -170,7 +170,7 @@ export function RecordPaymentDialog({
                     </div>
                   ))}
                   {result.unallocatedAmount > 0 && (
-                    <div className="rounded-[10px] border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12px] text-(--amber)">
+                    <div className="rounded-[10px] border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
                       {money(result.unallocatedAmount)} تومان مازاد — به‌عنوان اعتبار مشتری باقی ماند.
                     </div>
                   )}
@@ -186,19 +186,19 @@ export function RecordPaymentDialog({
             ) : (
               <>
                 {error && (
-                  <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12px] text-(--ember)">
+                  <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
                     {error}
                   </div>
                 )}
 
-                <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">مبلغ (تومان)</label>
+                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">مبلغ (تومان)</label>
                 <MoneyInput
                   value={amount}
                   onChange={setAmount}
                   className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
                 />
 
-                <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
+                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
                 <div className="mb-3.5">
                   <JalaliDateField
                     value={paidOn}
@@ -207,7 +207,7 @@ export function RecordPaymentDialog({
                   />
                 </div>
 
-                <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">روش پرداخت</label>
+                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">روش پرداخت</label>
                 <select
                   value={methodType}
                   onChange={(e) => setMethodType(e.target.value as MethodType)}
@@ -221,7 +221,7 @@ export function RecordPaymentDialog({
 
                 {methodType === "BankTransfer" && (
                   <>
-                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حساب بانکی</label>
                     <select
                       value={bankAccountId}
                       onChange={(e) => setBankAccountId(e.target.value)}
@@ -239,7 +239,7 @@ export function RecordPaymentDialog({
 
                 {(methodType === "Cash" || methodType === "Cheque") && (
                   <>
-                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">
+                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">
                       صندوق {methodType === "Cheque" && "(محل نگهداری چک)"}
                     </label>
                     <select
@@ -259,15 +259,15 @@ export function RecordPaymentDialog({
 
                 {methodType === "PosDirect" && (
                   <>
-                    <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12px] text-(--ice-3)">
+                    <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
                       مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود — نیازی به انتخاب صندوق یا حساب بانکی نیست.
                     </div>
-                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ مرجع/ترمینال (اختیاری)</label>
+                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ مرجع/ترمینال (اختیاری)</label>
                     <input
                       value={referenceNo}
                       onChange={(e) => setReferenceNo(e.target.value)}
                       dir="ltr"
-                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                     />
                   </>
                 )}
@@ -275,20 +275,20 @@ export function RecordPaymentDialog({
                 {methodType === "Cheque" && (
                   <div className="mb-4.5 grid grid-cols-2 gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 p-2.5">
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
                       <input
                         value={chequeNumber}
                         onChange={(e) => setChequeNumber(e.target.value)}
                         dir="ltr"
-                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">بانک عامل</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">بانک عامل</label>
                       <select
                         value={chequeBankName}
                         onChange={(e) => setChequeBankName(e.target.value)}
-                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                       >
                         <option value="">انتخاب کنید…</option>
                         {banks.filter((b) => b.isActive).map((b) => (
@@ -299,15 +299,15 @@ export function RecordPaymentDialog({
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
                       <JalaliDateField value={chequeDueDate} onChange={setChequeDueDate} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
+                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
                       <input
                         value={chequePresenterName}
                         onChange={(e) => setChequePresenterName(e.target.value)}
-                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                       />
                     </div>
                   </div>

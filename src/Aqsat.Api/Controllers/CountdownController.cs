@@ -86,11 +86,22 @@ public sealed class CountdownController(AppDbContext dbContext, TimeProvider tim
             .CountAsync(w => w.Status == RenewalWatchStatus.Watching
                 && w.CurrentExpiryDate <= today.AddDays(w.NotifyDaysBefore), ct);
 
-        var total = await dbContext.Customers.AsNoTracking().CountAsync(c => !c.IsProfileComplete, ct);
-        var withoutMobile = await dbContext.Customers.AsNoTracking().CountAsync(c => c.Mobile == null, ct);
-        var withoutNationalId = await dbContext.Customers.AsNoTracking().CountAsync(c => c.NationalId == null, ct);
+        var counts = await dbContext.Customers.AsNoTracking()
+            .Where(c => !c.IsProfileComplete)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                WithoutMobile = g.Count(c => c.Mobile == null),
+                WithoutNationalId = g.Count(c => c.NationalId == null),
+                WithoutAddress = g.Count(c => c.Address == null),
+                WithoutPostalCode = g.Count(c => c.PostalCode == null),
+                WithoutName = g.Count(c => c.FirstName == null || c.LastName == null),
+            })
+            .FirstOrDefaultAsync(ct);
 
-        return Ok(new TodaySummaryDto(overdue, dueRenewals,
-            new IncompleteProfileSummaryDto(total, withoutMobile, withoutNationalId)));
+        return Ok(new TodaySummaryDto(overdue, dueRenewals, new IncompleteProfileSummaryDto(
+            counts?.Total ?? 0, counts?.WithoutMobile ?? 0, counts?.WithoutNationalId ?? 0,
+            counts?.WithoutAddress ?? 0, counts?.WithoutPostalCode ?? 0, counts?.WithoutName ?? 0)));
     }
 }

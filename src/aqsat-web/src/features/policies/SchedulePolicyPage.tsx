@@ -4,6 +4,8 @@ import { fa, money, toLatinDigits } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { MoneyInput } from "../../components/MoneyInput";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 interface CashBoxDto {
   id: string;
@@ -197,7 +199,7 @@ export function SchedulePolicyPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         زمان‌بندی <em className="font-extralight not-italic text-(--ice-2)">اقساط</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
         بیمه‌نامه‌هایی که هنوز پیش‌پرداخت و تعداد اقساط برایشان تعیین نشده
       </div>
 
@@ -211,56 +213,51 @@ export function SchedulePolicyPage() {
 
       {pending !== null && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-            <table className="w-full border-collapse">
+          {pending.length === 0 ? (
+            <EmptyState
+              icon="🗓"
+              title="بیمه‌نامه‌ای در انتظار زمان‌بندی نیست"
+              description="همهٔ بیمه‌نامه‌های صادرشده پیش‌پرداخت و تعداد اقساط خود را گرفته‌اند."
+            />
+          ) : (
+            <Table>
               <thead>
                 <tr>
                   {["شمارهٔ بیمه‌نامه", "بیمه‌گذار", "مبلغ کل", ""].map((h) => (
-                    <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      {h}
-                    </th>
+                    <Th key={h}>{h}</Th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {pending.map((p) => (
-                  <tr
+                  <Tr
                     key={p.policyId}
                     onClick={() => selectPolicy(p)}
-                    className={`cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov) ${
-                      selected?.policyId === p.policyId ? "bg-(--mint)/9" : ""
-                    }`}
+                    className={selected?.policyId === p.policyId ? "bg-(--mint)/9" : ""}
                   >
-                    <td className="px-3 py-2.75 text-[13px] font-semibold">{p.policyNumber}</td>
-                    <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.customerFullName}</td>
-                    <td className="px-3 py-2.75 text-[13px] font-bold">{money(p.totalReceivable)}</td>
-                    <td />
-                  </tr>
+                    <Td className="py-2.75 font-semibold">{p.policyNumber}</Td>
+                    <Td className="py-2.75 text-(--ice-3)">{p.customerFullName}</Td>
+                    <Td className="py-2.75 font-bold">{money(p.totalReceivable)}</Td>
+                    <Td />
+                  </Tr>
                 ))}
-                {pending.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                      بیمه‌نامه‌ای در انتظار زمان‌بندی نیست.
-                    </td>
-                  </tr>
-                )}
               </tbody>
-            </table>
-          </div>
+            </Table>
+          )}
 
           <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
             {!selected ? (
               <div className="text-[12.5px] text-(--ice-3)">یک بیمه‌نامه را از فهرست انتخاب کنید.</div>
             ) : (
               <>
-                <div className="mb-3 text-[13px] font-semibold text-(--ice)">
+                <div className="mb-3 text-[13.5px] font-semibold text-(--ice)">
                   {selected.policyNumber} — {selected.customerFullName}
                 </div>
-                <div className="mb-3.5 text-[12px] text-(--ice-3)">مبلغ کل: {money(selected.totalReceivable)}</div>
+                <div className="mb-3.5 text-[12.5px] text-(--ice-3)">مبلغ کل: {money(selected.totalReceivable)}</div>
 
                 <div className="mb-3.5 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تعداد اقساط</label>
+                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تعداد اقساط</label>
                     <input
                       value={fa(installmentCount)}
                       onChange={(e) => setInstallmentCount(toLatinDigits(e.target.value).replace(/[^\d]/g, ""))}
@@ -270,7 +267,7 @@ export function SchedulePolicyPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">پیش‌پرداخت (تومان)</label>
+                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">پیش‌پرداخت (تومان)</label>
                     <MoneyInput
                       value={downPayment}
                       onChange={(v) => {
@@ -281,7 +278,7 @@ export function SchedulePolicyPage() {
                     />
                   </div>
                 </div>
-                <div className="mb-3.5 text-[11px] text-(--ice-3)">
+                <div className="mb-3.5 text-[11.5px] text-(--ice-3)">
                   پیش‌پرداخت به‌صورت خودکار پیشنهاد می‌شود تا اقساط عدد گرد شوند — قابل ویرایش است.
                 </div>
 
@@ -297,7 +294,7 @@ export function SchedulePolicyPage() {
                 {result && (
                   <div className="mt-4 rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 p-3">
                     {result.exceedsMaxInstallments && (
-                      <div className="mb-2 text-[12px] text-(--amber)">
+                      <div className="mb-2 text-[12.5px] text-(--amber)">
                         ⚠️ تعداد اقساط از سقف تنظیم‌شدهٔ نمایندگی بیشتر است.
                       </div>
                     )}
@@ -305,7 +302,7 @@ export function SchedulePolicyPage() {
                       {fa(result.installments.length)} قسط ساخته شد
                     </div>
                     <div className="max-h-48 overflow-y-auto">
-                      <table className="w-full border-collapse text-[12px]">
+                      <table className="w-full border-collapse text-[12.5px]">
                         <tbody>
                           {result.installments.map((i) => (
                             <tr key={i.seqNo} className="border-t border-(--edge)/50 first:border-t-0">
@@ -329,15 +326,15 @@ export function SchedulePolicyPage() {
                             </div>
                             <div className="mb-2 grid grid-cols-2 gap-2">
                               <div>
-                                <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
+                                <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
                                 <JalaliDateField value={receivePaidOn} onChange={setReceivePaidOn} />
                               </div>
                               <div>
-                                <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">روش دریافت</label>
+                                <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">روش دریافت</label>
                                 <select
                                   value={receiveMethodType}
                                   onChange={(e) => setReceiveMethodType(e.target.value as MethodType)}
-                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                 >
                                   <option value="Cash">نقدی</option>
                                   <option value="BankTransfer">واریز بانکی</option>
@@ -349,11 +346,11 @@ export function SchedulePolicyPage() {
                             <div className="mb-2 grid grid-cols-2 gap-2">
                               {receiveMethodType === "BankTransfer" && (
                                 <div>
-                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+                                  <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">حساب بانکی</label>
                                   <select
                                     value={receiveBankAccountId}
                                     onChange={(e) => setReceiveBankAccountId(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                   >
                                     <option value="">انتخاب کنید…</option>
                                     {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -366,13 +363,13 @@ export function SchedulePolicyPage() {
                               )}
                               {(receiveMethodType === "Cash" || receiveMethodType === "Cheque") && (
                                 <div>
-                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">
+                                  <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">
                                     صندوق {receiveMethodType === "Cheque" && "(محل نگهداری چک)"}
                                   </label>
                                   <select
                                     value={receiveCashBoxId}
                                     onChange={(e) => setReceiveCashBoxId(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                   >
                                     <option value="">انتخاب کنید…</option>
                                     {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -384,16 +381,16 @@ export function SchedulePolicyPage() {
                                 </div>
                               )}
                               {receiveMethodType === "PosDirect" && (
-                                <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12px] text-(--ice-3)">
+                                <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
                                   مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود.
                                 </div>
                               )}
                               <div>
-                                <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ مرجع (اختیاری)</label>
+                                <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ مرجع (اختیاری)</label>
                                 <input
                                   value={receiveReferenceNo}
                                   onChange={(e) => setReceiveReferenceNo(e.target.value)}
-                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                 />
                               </div>
                             </div>
@@ -401,32 +398,32 @@ export function SchedulePolicyPage() {
                             {receiveMethodType === "Cheque" && (
                               <div className="mb-2 grid grid-cols-2 gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 p-2.5">
                                 <div>
-                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
+                                  <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
                                   <input
                                     value={chequeNumber}
                                     onChange={(e) => setChequeNumber(e.target.value)}
                                     dir="ltr"
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                   />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">بانک عامل</label>
+                                  <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">بانک عامل</label>
                                   <input
                                     value={chequeBankName}
                                     onChange={(e) => setChequeBankName(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                   />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
+                                  <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
                                   <JalaliDateField value={chequeDueDate} onChange={setChequeDueDate} />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-[11px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
+                                  <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
                                   <input
                                     value={chequePresenterName}
                                     onChange={(e) => setChequePresenterName(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                                   />
                                 </div>
                               </div>

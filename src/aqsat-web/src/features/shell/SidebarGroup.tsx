@@ -48,7 +48,7 @@ export function SidebarGroup({
         {!collapsed && (
           <>
             <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{group.label}</span>
-            <span className="flex-none rounded-full bg-(--btn-bg) px-1.5 text-[10px] leading-[15px] text-(--ice-3)">
+            <span className="flex-none rounded-full bg-(--btn-bg) px-1.5 text-[10.5px] leading-[15px] text-(--ice-3)">
               {fa(filteredItems.length)}
             </span>
             <svg

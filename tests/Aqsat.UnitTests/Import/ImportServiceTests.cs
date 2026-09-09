@@ -112,6 +112,31 @@ public class ImportServiceTests
     }
 
     [Fact]
+    public async Task A_mapping_missing_a_required_field_is_refused_up_front_not_row_by_row()
+    {
+        await using var context = TestDbContextFactory.Create();
+        var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
+        AgencyContext.Current = agencyA.AgencyId;
+
+        var fileBytes = BuildWorkbook([
+            ($"POL-{Guid.NewGuid():N}"[..12], $"EXT-{Guid.NewGuid():N}"[..12], "مشتری یک", "1404-05-01", 9_000_000m, "تجارت آفرینان تسنیم"),
+        ]);
+
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var incomplete = BuildMapping();
+        incomplete.Remove(ImportTargetFields.PolicyNumber);
+
+        // Before the fix this committed a batch whose every row failed with «شمارهٔ بیمه‌نامه
+        // خالی است.» — one clear Persian error up front beats 500 failed rows.
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CommitAsync(
+            fileBytes, "policies.xlsx", agencyA.AgencyId, incomplete, DetectedDateFormat.Jalali,
+            amountsAreInRials: false, CancellationToken.None));
+
+        Assert.Contains("نگاشت ستون‌های الزامی", ex.Message);
+        Assert.Contains("شمارهٔ بیمه‌نامه", ex.Message);
+    }
+
+    [Fact]
     public async Task A_row_with_an_invalid_date_fails_without_aborting_the_rest_of_the_batch()
     {
         await using var context = TestDbContextFactory.Create();

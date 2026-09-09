@@ -71,6 +71,15 @@ public sealed class ScopeResolutionMiddleware(RequestDelegate next)
             membership = match;
         }
 
+        // Covers both a pending self-serve signup (feature 5) and an agency the owner later
+        // suspended — either way the tenant is locked, and the lock must be an explicit 403, not
+        // a silently empty scope (rule 17).
+        if (!membership.Organization.IsActive)
+        {
+            await WriteForbiddenAsync(httpContext, "نمایندگی در حال حاضر غیرفعال است.");
+            return;
+        }
+
         var appUser = await dbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, httpContext.RequestAborted);

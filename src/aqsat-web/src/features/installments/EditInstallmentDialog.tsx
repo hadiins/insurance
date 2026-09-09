@@ -93,7 +93,7 @@ export function EditInstallmentDialog({
             <label className="mb-1.5 block text-[11.5px] text-(--ice-3)">مبلغ (تومان)</label>
             <MoneyInput value={amount} onChange={setAmount} className="mb-3.5" />
 
-            <label className="flex cursor-pointer items-center gap-2 text-[12px] text-(--ice-2)">
+            <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-(--ice-2)">
               <input
                 type="checkbox"
                 checked={shiftFollowing}

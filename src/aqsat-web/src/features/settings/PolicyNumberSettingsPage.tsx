@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
+import { StatusBadge } from "../../components/StatusBadge";
+import { EmptyState } from "../../components/EmptyState";
 
 interface InsuranceLineDto {
   id: string;
@@ -27,7 +29,7 @@ interface PolicyNumberFormatDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** docs/TASK-24-POLICY-NUMBER.md §7 — settings for the two things the issuance form's locked
  * segments depend on: which numeric code maps to which line, and the tunable parts of the format
@@ -124,7 +126,7 @@ export function PolicyNumberSettingsPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         کدهای <em className="font-extralight not-italic text-(--ice-2)">بیمه‌نامه</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">{format ? `شرکت بیمه: ${format.insurerName}` : "…"}</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{format ? `شرکت بیمه: ${format.insurerName}` : "…"}</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -133,52 +135,49 @@ export function PolicyNumberSettingsPage() {
       )}
 
       <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["کد", "رشته", "وضعیت", ""].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {codes?.map((c) => (
-              <tr key={c.id} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2.5 text-[13px] font-semibold tabular-nums" dir="ltr">
-                  {c.code}
-                </td>
-                <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{c.insuranceLineNameFa}</td>
-                <td className="px-3 py-2.5 text-[13px]">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${c.isActive ? "bg-(--mint)/12 text-(--mint)" : "bg-(--ice-3)/12 text-(--ice-3)"}`}
-                  >
-                    {c.isActive ? "فعال" : "غیرفعال"}
-                  </span>
-                </td>
-                <td className="px-3 py-2.5 text-[13px]">
-                  <button type="button" onClick={() => toggleActive(c)} className="ms-2 text-[11px] text-(--ice-3) hover:text-(--ice)">
-                    {c.isActive ? "غیرفعال کردن" : "فعال کردن"}
-                  </button>
-                  <button type="button" onClick={() => removeCode(c.id)} className="ms-2 text-[11px] text-(--ember) hover:brightness-110">
-                    حذف
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {codes?.length === 0 && (
+        {codes !== null && codes.length === 0 ? (
+          <EmptyState
+            icon="🔢"
+            title="هنوز کدی ثبت نشده است"
+            description="کد هر رشتهٔ بیمه‌ای بخشی از شمارهٔ بیمه‌نامه را می‌سازد؛ اولین کد را از فرم پایین ثبت کنید."
+          />
+        ) : (
+          <table className="w-full border-collapse">
+            <thead>
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  هنوز کدی ثبت نشده است.
-                </td>
+                {["کد", "رشته", "وضعیت", ""].map((h) => (
+                  <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {codes?.map((c) => (
+                <tr key={c.id} className="border-t border-(--edge) first:border-t-0">
+                  <td className="px-3 py-2.5 text-[13.5px] font-semibold tabular-nums" dir="ltr">
+                    {c.code}
+                  </td>
+                  <td className="px-3 py-2.5 text-[13.5px] text-(--ice-3)">{c.insuranceLineNameFa}</td>
+                  <td className="px-3 py-2.5 text-[13.5px]">
+                    <StatusBadge tone={c.isActive ? "mint" : "neutral"}>{c.isActive ? "فعال" : "غیرفعال"}</StatusBadge>
+                  </td>
+                  <td className="px-3 py-2.5 text-[13.5px]">
+                    <button type="button" onClick={() => toggleActive(c)} className="ms-2 text-[11.5px] text-(--ice-3) hover:text-(--ice)">
+                      {c.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                    </button>
+                    <button type="button" onClick={() => removeCode(c.id)} className="ms-2 text-[11.5px] text-(--ember) hover:brightness-110">
+                      حذف
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         <div className="flex items-end gap-2 border-t border-(--edge) p-3">
           <div className="w-56">
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">رشته</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">رشته</label>
             <select value={newLineId} onChange={(e) => setNewLineId(e.target.value)} className={inputClass}>
               <option value="">انتخاب کنید…</option>
               {lines?.map((l) => (
@@ -189,7 +188,7 @@ export function PolicyNumberSettingsPage() {
             </select>
           </div>
           <div className="w-28">
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">کد</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">کد</label>
             <input value={newCode} onChange={(e) => setNewCode(e.target.value)} dir="ltr" className={inputClass} />
           </div>
           <button
@@ -269,7 +268,7 @@ export function PolicyNumberSettingsPage() {
               </select>
             </FormatField>
           </div>
-          <div className="mt-4 text-[12px] text-(--ice-3)">
+          <div className="mt-4 text-[12.5px] text-(--ice-3)">
             نمونهٔ زنده: <span className="tabular-nums text-(--mint)" dir="ltr">{example}</span>
           </div>
         </div>
@@ -281,7 +280,7 @@ export function PolicyNumberSettingsPage() {
 function FormatField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">{label}</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
       {children}
     </div>
   );

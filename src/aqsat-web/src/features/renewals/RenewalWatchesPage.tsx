@@ -5,6 +5,9 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { StatusBadge } from "../../components/StatusBadge";
+import { Table, Td, Th, Tr } from "../../components/Table";
+import { EmptyState } from "../../components/EmptyState";
 
 interface InsuranceLineDto {
   id: string;
@@ -35,11 +38,11 @@ const STATUS_LABEL: Record<RenewalWatchDto["status"], string> = {
   Lost: "از دست رفت",
 };
 
-const STATUS_PILL_CLASS: Record<RenewalWatchDto["status"], string> = {
-  Watching: "bg-(--mint)/12 text-(--mint)",
-  Notified: "bg-(--amber)/13 text-(--amber)",
-  Converted: "bg-(--mint)/12 text-(--mint)",
-  Lost: "bg-(--ember)/13 text-(--ember)",
+const STATUS_TONE: Record<RenewalWatchDto["status"], "mint" | "amber" | "ember"> = {
+  Watching: "mint",
+  Notified: "amber",
+  Converted: "mint",
+  Lost: "ember",
 };
 
 export function RenewalWatchesPage() {
@@ -139,7 +142,7 @@ export function RenewalWatchesPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         سررسید <em className="font-extralight not-italic text-(--ice-2)">تمدید</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
         مشتریان احتمالی و بیمه‌نامه‌های در حال انقضا — یادآوری خودکار به مشتری و بازاریاب
       </div>
 
@@ -193,7 +196,7 @@ export function RenewalWatchesPage() {
           <input
             value={notifyDaysBefore}
             onChange={(e) => setProspectForm({ ...prospectForm, notifyDaysBefore: e.target.value })}
-            className="w-16 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)"
+            className="w-16 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
           />
           <button
             type="button"
@@ -220,85 +223,86 @@ export function RenewalWatchesPage() {
         ))}
       </div>
 
-      {watches !== null && <div className="mb-2 text-[11px] text-(--ice-3)">{fa(watches.length)} مورد</div>}
+      {watches !== null && <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(watches.length)} مورد</div>}
 
       {watches === null ? (
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : watches.length === 0 ? (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">
-          موردی یافت نشد.
-        </div>
+        <EmptyState
+          icon="⏰"
+          title="موردی یافت نشد"
+          description={
+            statusFilter
+              ? "هیچ سررسید تمدیدی با این وضعیت مطابقت ندارد. فیلتر را پاک کنید تا همهٔ موارد را ببینید."
+              : "هنوز مشتری احتمالی یا بیمه‌نامه‌ای برای پایش تمدید ثبت نشده است."
+          }
+          action={statusFilter ? { label: "پاک کردن فیلترها", onClick: () => setStatusFilter("") } : undefined}
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {["نام", "رشته", "بیمه‌گر فعلی", "سررسید", "بازاریاب", "وضعیت", ""].map((h) => (
-                  <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {watches.map((w) => (
-                <tr key={w.id} className="border-t border-(--edge) first:border-t-0">
-                  <td className="px-3 py-2.75 text-[13px] font-semibold">{w.customerFullName ?? w.prospectName}</td>
-                  <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{w.insuranceLineNameFa}</td>
-                  <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{w.currentInsurer ?? "—"}</td>
-                  <td className="px-3 py-2.75 text-[13px]">{toJalaliDisplay(w.currentExpiryDate)}</td>
-                  <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{w.marketerFullName ?? "—"}</td>
-                  <td className="px-3 py-2.75 text-[13px]">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL_CLASS[w.status]}`}>
-                      {STATUS_LABEL[w.status]}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.75 text-[13px]">
-                    {(w.status === "Watching" || w.status === "Notified") && (
-                      <div className="flex items-center gap-1.5">
-                        {convertingId === w.id ? (
-                          <>
-                            <input
-                              value={convertPolicyId}
-                              onChange={(e) => setConvertPolicyId(e.target.value)}
-                              placeholder="شناسهٔ بیمه‌نامهٔ جدید"
-                              className="w-40 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11px] text-(--ice)"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => convert(w.id)}
-                              className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11px] font-semibold text-(--on-mint)"
-                            >
-                              تأیید
-                            </button>
-                          </>
-                        ) : (
+        <Table>
+          <thead>
+            <tr>
+              {["نام", "رشته", "بیمه‌گر فعلی", "سررسید", "بازاریاب", "وضعیت", ""].map((h) => (
+                <Th key={h}>{h}</Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {watches.map((w) => (
+              <Tr key={w.id}>
+                <Td className="py-2.75 font-semibold">{w.customerFullName ?? w.prospectName}</Td>
+                <Td className="py-2.75 text-(--ice-3)">{w.insuranceLineNameFa}</Td>
+                <Td className="py-2.75 text-(--ice-3)">{w.currentInsurer ?? "—"}</Td>
+                <Td className="py-2.75">{toJalaliDisplay(w.currentExpiryDate)}</Td>
+                <Td className="py-2.75 text-(--ice-3)">{w.marketerFullName ?? "—"}</Td>
+                <Td className="py-2.75">
+                  <StatusBadge tone={STATUS_TONE[w.status]}>{STATUS_LABEL[w.status]}</StatusBadge>
+                </Td>
+                <Td className="py-2.75">
+                  {(w.status === "Watching" || w.status === "Notified") && (
+                    <div className="flex items-center gap-1.5">
+                      {convertingId === w.id ? (
+                        <>
+                          <input
+                            value={convertPolicyId}
+                            onChange={(e) => setConvertPolicyId(e.target.value)}
+                            placeholder="شناسهٔ بیمه‌نامهٔ جدید"
+                            className="w-40 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11.5px] text-(--ice)"
+                          />
                           <button
                             type="button"
-                            onClick={() => {
-                              setConvertingId(w.id);
-                              setConvertPolicyId("");
-                            }}
-                            className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11px] font-semibold text-(--on-mint)"
+                            onClick={() => convert(w.id)}
+                            className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
                           >
-                            تمدید شد
+                            تأیید
                           </button>
-                        )}
+                        </>
+                      ) : (
                         <button
                           type="button"
-                          onClick={() => markLost(w.id)}
-                          className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11px] font-semibold text-(--ice-3) transition-colors hover:bg-(--hov)"
+                          onClick={() => {
+                            setConvertingId(w.id);
+                            setConvertPolicyId("");
+                          }}
+                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
                         >
-                          از دست رفت
+                          تمدید شد
                         </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => markLost(w.id)}
+                        className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11.5px] font-semibold text-(--ice-3) transition-colors hover:bg-(--hov)"
+                      >
+                        از دست رفت
+                      </button>
+                    </div>
+                  )}
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

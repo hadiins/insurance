@@ -2,6 +2,8 @@ import { useState } from "react";
 import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { money } from "../../lib/persian";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { MetricCard } from "../../components/MetricCard";
+import { TrendBars } from "../../components/TrendBars";
 
 interface PnlBreakdownRow {
   groupKey: string;
@@ -36,11 +38,12 @@ export function PnlPage() {
   const [writeOffDays, setWriteOffDays] = useState("");
   const [result, setResult] = useState<PnlResultDto | null>(null);
   const [compareBasis, setCompareBasis] = useState<PnlResultDto | null>(null);
+  const [previousPeriod, setPreviousPeriod] = useState<PnlResultDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  function buildQuery(basisValue: "Accrual" | "Cash") {
-    const params = new URLSearchParams({ from, to, basis: basisValue });
+  function buildQuery(basisValue: "Accrual" | "Cash", fromValue = from, toValue = to) {
+    const params = new URLSearchParams({ from: fromValue, to: toValue, basis: basisValue });
     if (writeOffDays) params.set("writeOffThresholdDays", writeOffDays);
     return params.toString();
   }
@@ -49,12 +52,22 @@ export function PnlPage() {
     setBusy(true);
     setError(null);
     try {
-      const [primary, other] = await Promise.all([
+      const fromMs = new Date(from).getTime();
+      const toMs = new Date(to).getTime();
+      const spanMs = toMs - fromMs;
+      const prevTo = new Date(fromMs - 86_400_000).toISOString().slice(0, 10);
+      const prevFrom = new Date(fromMs - 86_400_000 - spanMs).toISOString().slice(0, 10);
+
+      const [primary, other, previous] = await Promise.all([
         api.get<PnlResultDto>(`/reports/pnl?${buildQuery(basis)}`),
         api.get<PnlResultDto>(`/reports/pnl?${buildQuery(basis === "Accrual" ? "Cash" : "Accrual")}`),
+        api
+          .get<PnlResultDto>(`/reports/pnl?${buildQuery(basis, prevFrom, prevTo)}`)
+          .catch(() => null),
       ]);
       setResult(primary);
       setCompareBasis(other);
+      setPreviousPeriod(previous);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "دریافت گزارش ناموفق بود.");
     } finally {
@@ -88,7 +101,7 @@ export function PnlPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         سود <em className="font-extralight not-italic text-(--ice-2)">و زیان</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">درآمد کارمزد شرکت بیمه + کارمزد خدمات، منهای پورسانت بازاریاب و سوخت نکول</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">درآمد کارمزد شرکت بیمه + کارمزد خدمات، منهای پورسانت بازاریاب و سوخت نکول</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -99,31 +112,31 @@ export function PnlPage() {
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-4 gap-3">
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)" />
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تا تاریخ</label>
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">مبنا</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">مبنا</label>
             <select
               value={basis}
               onChange={(e) => setBasis(e.target.value as "Accrual" | "Cash")}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             >
               <option value="Accrual">تعهدی (صدور)</option>
               <option value="Cash">نقدی (وصول)</option>
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">آستانهٔ سوخت نکول (روز)</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">آستانهٔ سوخت نکول (روز)</label>
             <input
               value={writeOffDays}
               onChange={(e) => setWriteOffDays(e.target.value)}
               placeholder="پیش‌فرض نمایندگی"
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice)"
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             />
           </div>
         </div>
@@ -150,15 +163,46 @@ export function PnlPage() {
 
       {result && compareBasis && (
         <>
+          <div className="mb-4.5 grid grid-cols-3 gap-4">
+            <MetricCard
+              icon="💰"
+              label="درآمد کل"
+              value={result.totalIncome}
+              previousValue={previousPeriod?.totalIncome}
+            />
+            <MetricCard
+              icon="📉"
+              label="هزینهٔ کل"
+              value={result.totalExpense}
+              previousValue={previousPeriod?.totalExpense}
+              invertTrend
+              tone="amber"
+            />
+            <MetricCard
+              icon="📈"
+              label="سود خالص"
+              value={result.netProfit}
+              previousValue={previousPeriod?.netProfit}
+              tone={result.netProfit >= 0 ? "mint" : "ember"}
+            />
+          </div>
+
           <div className="mb-4.5 grid grid-cols-2 gap-4">
             <PnlSummaryCard title={basis === "Accrual" ? "تعهدی" : "نقدی"} result={result} highlight />
             <PnlSummaryCard title={basis === "Accrual" ? "نقدی" : "تعهدی"} result={compareBasis} />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
+            <div className="mb-2 text-[12.5px] font-semibold text-(--ice-2)">سود خالص به‌تفکیک ماه</div>
+            <TrendBars
+              title="سود خالص به‌تفکیک ماه"
+              data={result.byMonth.map((r) => ({ label: r.groupLabel, value: r.netProfit }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <BreakdownTable title="به‌تفکیک رشته" rows={result.byLine} />
             <BreakdownTable title="به‌تفکیک بازاریاب" rows={result.byMarketer} />
-            <BreakdownTable title="به‌تفکیک ماه" rows={result.byMonth} />
           </div>
         </>
       )}
@@ -170,8 +214,8 @@ function PnlSummaryCard({ title, result, highlight }: { title: string; result: P
   const netColor = result.netProfit >= 0 ? "text-(--mint)" : "text-(--ember)";
   return (
     <div className={`rounded-2xl border p-5 ${highlight ? "border-(--mint)/30 bg-(--mint)/6" : "border-(--edge) bg-(--pane)"}`}>
-      <div className="mb-3 text-[13px] font-bold text-(--ice)">{title}</div>
-      <div className="mb-3 grid grid-cols-2 gap-2 text-[12px]">
+      <div className="mb-3 text-[13.5px] font-bold text-(--ice)">{title}</div>
+      <div className="mb-3 grid grid-cols-2 gap-2 text-[12.5px]">
         <Line label="کارمزد از بیمه‌گر" value={result.agencyCommissionIncome} />
         <Line label="کارمزد خدمات" value={result.serviceFeeIncome} />
         <Line label="پورسانت بازاریاب" value={-result.marketerCommissionExpense} />
@@ -180,8 +224,8 @@ function PnlSummaryCard({ title, result, highlight }: { title: string; result: P
         <Line label="هزینه‌های عملیاتی" value={-result.operatingExpense} />
       </div>
       <div className="border-t border-(--edge-2) pt-2.5">
-        <div className="text-[10px] tracking-wider text-(--ice-3)">سود خالص</div>
-        <div className={`text-[22px] font-extrabold ${netColor}`}>{money(result.netProfit)}</div>
+        <div className="text-[10.5px] tracking-wider text-(--ice-3)">سود خالص</div>
+        <div className={`text-[20px] font-extrabold ${netColor}`}>{money(result.netProfit)}</div>
       </div>
     </div>
   );
@@ -199,7 +243,7 @@ function Line({ label, value, muted }: { label: string; value: number; muted?: b
 function BreakdownTable({ title, rows }: { title: string; rows: PnlBreakdownRow[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-      <div className="border-b border-(--edge) px-3.5 py-2.5 text-[12px] font-semibold text-(--ice-2)">{title}</div>
+      <div className="border-b border-(--edge) px-3.5 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">{title}</div>
       {rows.length === 0 ? (
         <div className="p-4 text-center text-[11.5px] text-(--ice-3)">داده‌ای نیست</div>
       ) : (

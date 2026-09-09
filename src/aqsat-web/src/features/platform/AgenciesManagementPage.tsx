@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { useTabsStore } from "../../app/store/tabsStore";
+import { EmptyState } from "../../components/EmptyState";
+import type { RiskNetworkSettingsDto } from "../risk/riskTypes";
 
 interface AgencyListRowDto {
   id: string;
@@ -58,6 +61,11 @@ interface CreateAgencyResultDto {
   roleName: string;
 }
 
+interface PlatformSignupSettingsDto {
+  allowAgencySignup: boolean;
+  updatedAtUtc: string | null;
+}
+
 const PAGE_SIZE = 25;
 const CHART_COLOR = "var(--mint)";
 
@@ -90,6 +98,18 @@ export function AgenciesManagementPage() {
   const [managerMobile, setManagerMobile] = useState("");
   const [managerPassword, setManagerPassword] = useState("");
 
+  // Phase 2B-1 — the platform-wide risk-sharing switch (owner decision 2026-09-07: default OFF,
+  // mutual once ON; only the platform owner sees this section's endpoint at all).
+  const [riskNetwork, setRiskNetwork] = useState<RiskNetworkSettingsDto | null>(null);
+  const [riskNetworkError, setRiskNetworkError] = useState<string | null>(null);
+  const [riskNetworkSaving, setRiskNetworkSaving] = useState(false);
+
+  // Feature 5 — the public self-serve signup switch. DB-backed singleton: flipping it here takes
+  // effect on /signup immediately, no appsettings edit or redeploy (owner request 2026-09-08).
+  const [signupOpen, setSignupOpen] = useState<PlatformSignupSettingsDto | null>(null);
+  const [signupOpenError, setSignupOpenError] = useState<string | null>(null);
+  const [signupOpenSaving, setSignupOpenSaving] = useState(false);
+
   const hasActiveFilter = province !== "" || city !== "" || insurer !== "" || status !== "" || search.trim() !== "";
   const totalPages = pageData ? Math.max(1, Math.ceil(pageData.totalCount / PAGE_SIZE)) : 1;
 
@@ -121,7 +141,39 @@ export function AgenciesManagementPage() {
       .get<AgencyFilterOptionsDto>("/platform/agencies/filters")
       .then(setFilters)
       .catch(() => setFilters({ provinces: [], cities: [], insurers: [] }));
+    api
+      .get<RiskNetworkSettingsDto>("/risk/network/settings")
+      .then(setRiskNetwork)
+      .catch(() => setRiskNetwork(null));
+    api
+      .get<PlatformSignupSettingsDto>("/platform/signup-settings")
+      .then(setSignupOpen)
+      .catch((err) => setSignupOpenError(err instanceof ApiError ? err.message : "خطا در بارگذاری تنظیمات ثبت‌نام"));
   }, []);
+
+  async function toggleRiskNetwork(next: boolean) {
+    setRiskNetworkSaving(true);
+    setRiskNetworkError(null);
+    try {
+      setRiskNetwork(await api.put<RiskNetworkSettingsDto>("/risk/network/settings", { isEnabled: next }));
+    } catch (err) {
+      setRiskNetworkError(err instanceof ApiError ? err.message : "ذخیرهٔ تنظیمات ناموفق بود.");
+    } finally {
+      setRiskNetworkSaving(false);
+    }
+  }
+
+  async function toggleSignupOpen(next: boolean) {
+    setSignupOpenSaving(true);
+    setSignupOpenError(null);
+    try {
+      setSignupOpen(await api.put<PlatformSignupSettingsDto>("/platform/signup-settings", { allowAgencySignup: next }));
+    } catch (err) {
+      setSignupOpenError(err instanceof ApiError ? err.message : "ذخیرهٔ تنظیمات ناموفق بود.");
+    } finally {
+      setSignupOpenSaving(false);
+    }
+  }
 
   useEffect(loadList, [loadList]);
 
@@ -213,7 +265,7 @@ export function AgenciesManagementPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">نمایندگی‌ها</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">مدیریت و پروندهٔ تمام نمایندگی‌های فعال روی پلتفرم</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">مدیریت و پروندهٔ تمام نمایندگی‌های فعال روی پلتفرم</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -271,6 +323,96 @@ export function AgenciesManagementPage() {
       )}
 
       <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="text-[13px] font-bold text-(--ice)">اشتراک‌گذاری ریسک شبکه‌ای</div>
+        <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
+          با فعال‌سازی، همهٔ نمایندگی‌ها به‌صورت خودکار و متقابل وضعیت ریسک مشتریان (فقط امتیاز، معوقات و سابقهٔ
+          پرداخت — بدون مبلغ و اطلاعات هویتی) را برای استعلام یکدیگر به اشتراک می‌گذارند. دادهٔ مشتق همیشه ثبت
+          می‌شود، پس تغییر سوئیچ فوری اثر می‌کند.
+        </div>
+        {riskNetworkError && (
+          <div className="mt-2 text-[11.5px] text-(--ember)">{riskNetworkError}</div>
+        )}
+        {riskNetwork === null && !riskNetworkError && (
+          <div className="mt-2 text-[11.5px] text-(--ice-3)">در حال بارگذاری…</div>
+        )}
+        {riskNetwork && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void toggleRiskNetwork(!riskNetwork.isEnabled)}
+              disabled={riskNetworkSaving}
+              className={`rounded-[10px] border px-4 py-2 text-[12.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                riskNetwork.isEnabled
+                  ? "border-(--ember)/50 bg-(--ember)/10 text-(--ember) hover:brightness-110"
+                  : "border-(--mint) bg-(--mint) text-(--on-mint) hover:brightness-105"
+              }`}
+            >
+              {riskNetworkSaving
+                ? "در حال ذخیره…"
+                : riskNetwork.isEnabled
+                  ? "خاموش کردن اشتراک‌گذاری"
+                  : "فعال‌سازی اشتراک‌گذاری"}
+            </button>
+            <span
+              className={`text-[12px] font-semibold ${riskNetwork.isEnabled ? "text-(--mint)" : "text-(--ice-3)"}`}
+            >
+              وضعیت فعلی: {riskNetwork.isEnabled ? "فعال" : "غیرفعال"}
+            </span>
+            {riskNetwork.updatedAtUtc && (
+              <span className="text-[11px] text-(--ice-3)">
+                آخرین تغییر: {toJalaliDateTimeDisplay(riskNetwork.updatedAtUtc)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="text-[13px] font-bold text-(--ice)">ثبت‌نام خودکار نمایندگی</div>
+        <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
+          با فعال‌سازی، لینک «ثبت‌نام نمایندگی جدید» در صفحهٔ ورود باز می‌شود و نمایندهٔ بیمه می‌تواند خودش
+          نمایندگی و حساب مدیر بسازد. نمایندگی در حالت «در انتظار تأیید» ساخته می‌شود و تا زمانی که شما از همین
+          صفحه فعالش کنید، ورود مدیر بسته است. تغییر سوئیچ بلافاصله اعمال می‌شود.
+        </div>
+        {signupOpenError && (
+          <div className="mt-2 text-[11.5px] text-(--ember)">{signupOpenError}</div>
+        )}
+        {signupOpen === null && !signupOpenError && (
+          <div className="mt-2 text-[11.5px] text-(--ice-3)">در حال بارگذاری…</div>
+        )}
+        {signupOpen && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void toggleSignupOpen(!signupOpen.allowAgencySignup)}
+              disabled={signupOpenSaving}
+              className={`rounded-[10px] border px-4 py-2 text-[12.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                signupOpen.allowAgencySignup
+                  ? "border-(--ember)/50 bg-(--ember)/10 text-(--ember) hover:brightness-110"
+                  : "border-(--mint) bg-(--mint) text-(--on-mint) hover:brightness-105"
+              }`}
+            >
+              {signupOpenSaving
+                ? "در حال ذخیره…"
+                : signupOpen.allowAgencySignup
+                  ? "بستن ثبت‌نام عمومی"
+                  : "فعال‌سازی ثبت‌نام عمومی"}
+            </button>
+            <span
+              className={`text-[12px] font-semibold ${signupOpen.allowAgencySignup ? "text-(--mint)" : "text-(--ice-3)"}`}
+            >
+              وضعیت فعلی: {signupOpen.allowAgencySignup ? "فعال" : "غیرفعال"}
+            </span>
+            {signupOpen.updatedAtUtc && (
+              <span className="text-[11px] text-(--ice-3)">
+                آخرین تغییر: {toJalaliDateTimeDisplay(signupOpen.updatedAtUtc)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             value={search}
@@ -317,9 +459,16 @@ export function AgenciesManagementPage() {
         ) : pageData === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : pageData.rows.length === 0 ? (
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">
-            {hasActiveFilter ? "نمایندگی‌ای با این فیلترها یافت نشد." : "هنوز نمایندگی‌ای ساخته نشده."}
-          </div>
+          <EmptyState
+            icon="🏢"
+            title={hasActiveFilter ? "نمایندگی‌ای با این فیلترها یافت نشد" : "هنوز نمایندگی‌ای ساخته نشده"}
+            description={
+              hasActiveFilter
+                ? "هیچ نمایندگی‌ای با این فیلترها مطابقت ندارد؛ فیلترها را پاک کنید یا جست‌وجوی دیگری را امتحان کنید."
+                : "اولین نمایندگی را از فرم پایین صفحه بسازید."
+            }
+            action={hasActiveFilter ? { label: "حذف فیلترها", onClick: clearFilters } : undefined}
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -347,18 +496,18 @@ export function AgenciesManagementPage() {
                       className="cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--fld)"
                       title={`پروندهٔ ${a.name}`}
                     >
-                      <td className="px-3 py-2.5 text-[13px] font-semibold text-(--ice)">{fa(a.code)}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice)">{a.name}</td>
+                      <td className="px-3 py-2.5 text-[13.5px] font-semibold text-(--ice)">{fa(a.code)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px] text-(--ice)">{a.name}</td>
                       <td className="px-3 py-2.5 text-[12.5px] text-(--ice-3)">
                         {a.province ?? "—"}{a.city ? ` / ${a.city}` : ""}
                       </td>
                       <td className="px-3 py-2.5 text-[12.5px] text-(--ice-3)">{a.insurerName ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(a.userCount)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(a.policiesTotal)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(a.smsSentTotal)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(a.inquiryPaymentsTotal)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{fa(a.inquiryCallsTotal)}</td>
-                      <td className="px-3 py-2.5 text-[13px]">{money(a.inquiryRevenueToman)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px]">{fa(a.userCount)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px]">{fa(a.policiesTotal)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px]">{fa(a.smsSentTotal)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px]">{fa(a.inquiryPaymentsTotal)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px]">{fa(a.inquiryCallsTotal)}</td>
+                      <td className="px-3 py-2.5 text-[13.5px]">{money(a.inquiryRevenueToman)}</td>
                       <td className="px-3 py-2.5">
                         <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${a.isActive ? "bg-(--mint)/15 text-(--mint)" : "bg-(--ember)/15 text-(--ember)"}`}>
                           {a.isActive ? "فعال" : "غیرفعال"}
@@ -370,7 +519,7 @@ export function AgenciesManagementPage() {
               </table>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-[12px] text-(--ice-3)">
+            <div className="mt-3 flex items-center justify-between text-[12.5px] text-(--ice-3)">
               <div>مجموع: {fa(pageData.totalCount)} نمایندگی</div>
               <div className="flex items-center gap-2">
                 <button
@@ -442,7 +591,7 @@ function SortableTh({ label, active, dir, onClick }: { label: string; active: bo
       className="cursor-pointer border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3) transition-colors select-none hover:text-(--ice-2)"
     >
       {label}
-      {active && <span className="ms-1 text-[9px]">{dir === "asc" ? "▲" : "▼"}</span>}
+      {active && <span className="ms-1 text-[10.5px]">{dir === "asc" ? "▲" : "▼"}</span>}
     </th>
   );
 }
@@ -451,7 +600,7 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
   return (
     <div className="relative overflow-hidden rounded-2xl border border-(--edge) bg-(--pane) px-3.5 pt-3 pb-2.5">
       <span className={`absolute start-0 top-0 h-0.5 w-7.5 ${tone === "mint" ? "bg-(--mint)" : "bg-(--ice-3)/40"}`} />
-      <div className="text-[10px] tracking-wider text-(--ice-3)">{label}</div>
+      <div className="text-[10.5px] tracking-wider text-(--ice-3)">{label}</div>
       <div className="mt-1 text-[15px] font-bold text-(--ice)">{value}</div>
     </div>
   );

@@ -56,10 +56,8 @@ export function Shell() {
     <div className="flex h-full flex-col overflow-hidden">
       <MaintenanceBanner />
       <div className="flex flex-none items-center gap-3.5 border-b border-(--edge) bg-(--slate) px-4 py-2.5">
-        <div className="grid h-[30px] w-[30px] flex-none place-items-center rounded-[9px] bg-linear-to-br from-(--mint) to-(--mint-dim) text-[14px] font-black text-(--on-mint) shadow-[var(--gl-mint)]">
-          ق
-        </div>
-        <b className="text-[14.5px] font-bold text-(--ice)">دفتر اقساط</b>
+        <img src="/credix-logo.png" alt="Credix" className="brand-logo-light h-[23px] w-auto" />
+        <img src="/credix-logo-light.png" alt="Credix" className="brand-logo-dark h-[23px] w-auto" />
         <span className="flex-1" />
 
         <NotificationBell />

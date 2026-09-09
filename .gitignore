@@ -33,6 +33,7 @@ Thumbs.db
 
 # deployment artifacts / scripts with embedded secrets — never committed
 publish-monsterasp/
+publish/
 deploy-ftp*.ps1
 
 .kilo/

@@ -6,14 +6,18 @@ using Aqsat.Api.Hangfire;
 using Aqsat.Api.Hubs;
 using Aqsat.Api.Middleware;
 using Aqsat.Application.Auth;
+using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure;
 using Aqsat.Infrastructure.Auth;
 using Aqsat.Infrastructure.Jobs;
+using Aqsat.Infrastructure.Monitoring;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Security;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -66,7 +70,13 @@ try
         .WriteTo.Console()
         .WriteTo.File("logs/aqsat-api-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30));
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .ConfigureApiBehaviorOptions(options =>
+        {
+            // Framework default validation responses are English ("The Mobile field is required.")
+            // — this keeps every user-facing 400 Persian (CLAUDE.md UI conventions).
+            options.InvalidModelStateResponseFactory = PersianValidationResponses.InvalidModelStateResponse;
+        });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
@@ -172,6 +182,27 @@ try
                 PermitLimit = isTestHost ? int.MaxValue : 20,
                 Window = TimeSpan.FromMinutes(1),
             }));
+
+        // Every 429 lands on the platform owner's security dashboard — rate-limit abuse is an attack
+        // signal (token guessing, scraping, brute force upstream of the login counter), not noise.
+        // Resolved from the rejected request's own scope; a failure to record is logged inside the
+        // writer and never turns into a 500 on top of the 429.
+        options.OnRejected = async (context, cancellationToken) =>
+        {
+            var policy = context.HttpContext.GetEndpoint()?.Metadata
+                .GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "global";
+            await context.HttpContext.RequestServices.GetRequiredService<SecurityEventWriter>()
+                .WriteAsync(
+                    SecurityEventType.RateLimitRejection,
+                    SecuritySeverity.Warning,
+                    $"درخواست بیش از حد مجاز (سقف policy «{policy}») از این نشانی رد شد: {context.HttpContext.Request.Path}",
+                    cancellationToken: cancellationToken);
+            await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی بعد دوباره تلاش کنید.",
+            }, cancellationToken);
+        };
     });
 
     builder.Services.AddCors(options =>
@@ -203,6 +234,11 @@ try
     }
     app.UseForwardedHeaders(forwardedHeadersOptions);
 
+    // First in the pipeline after forwarded headers so it wraps everything — even a 500 out of the
+    // exception handler or a 429 out of the rate limiter still lands in the APM numbers with its
+    // real status code. Static files are included deliberately: transparent beats flattering.
+    app.UseMiddleware<RequestMetricsMiddleware>();
+
     app.UseExceptionHandler();
 
     if (app.Environment.IsDevelopment())
@@ -225,6 +261,11 @@ try
     app.UseRateLimiter();
 
     app.UseAuthentication();
+    // Registered BEFORE the 403-producing middlewares on purpose: registration order is the
+    // pipeline's nesting order, so "after" them would sit INSIDE them and never see their
+    // short-circuited 403 responses. Out here it observes every /api 403 — policy denials from
+    // UseAuthorization, scope rejections, maintenance mode — as they unwind.
+    app.UseMiddleware<PermissionDeniedMiddleware>();
     app.UseMiddleware<ScopeResolutionMiddleware>();
     app.UseAuthorization();
     // After authorization (needs the resolved "permission" claims) so Platform.Owner's own bypass
@@ -308,6 +349,9 @@ try
                     // a marketer panel access (MarketersController's panel-access endpoints). Idempotent
                     // get-or-create, so it lands here alongside the other startup seeding.
                     await Aqsat.Infrastructure.Seed.MarketerRoleSeeder.EnsureSeededAsync(migrationContext);
+                    // Default alert rules for the owner's monitoring dashboard — same idempotent
+                    // startup-seed pattern; a database the owner already customized is left alone.
+                    await Aqsat.Infrastructure.Seed.AlertRuleSeeder.EnsureSeededAsync(migrationContext);
                     // One-time, idempotent: decrypts the legacy NationalIdEncrypted columns into the new
                     // plaintext NationalId columns and drops the legacy columns once empty (owner
                     // decision 2026-08-28 — CLAUDE.md rule 12 rewritten). SQL cannot decrypt AES-GCM,
@@ -375,6 +419,13 @@ try
                 "renewal-watches",
                 job => job.RunAsync(CancellationToken.None),
                 Cron.Daily);
+            // Phase 2A stage 4 — the nightly assessment that keeps warnings, trends, and the
+            // high-risk view current without operator action. Runs after deadline recalculation
+            // (Cron.Daily) and before the backup (3) / stats (4) windows.
+            RecurringJob.AddOrUpdate<RiskAssessmentJob>(
+                "risk-assessment-nightly",
+                job => job.RunAsync(CancellationToken.None),
+                Cron.Daily(1));
             RecurringJob.AddOrUpdate<DatabaseBackupJob>(
                 "database-backup",
                 job => job.RunAsync(CancellationToken.None),
@@ -389,6 +440,12 @@ try
                 "agency-stats-full-rebuild",
                 job => job.RunFullRebuildAsync(CancellationToken.None),
                 Cron.Monthly(1, 5));
+            // The monitoring pipeline's heartbeat: drains the in-memory request buckets into
+            // MetricSample/EndpointStat, probes process/DB health, evaluates alert rules, prunes.
+            RecurringJob.AddOrUpdate<MetricsSamplerJob>(
+                "metrics-sampler",
+                job => job.RunAsync(CancellationToken.None),
+                "* * * * *");
         }
         catch (Exception ex)
         {

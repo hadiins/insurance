@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
+import { StatusBadge } from "../../components/StatusBadge";
+import { EmptyState } from "../../components/EmptyState";
 
 interface ExpenseCategoryDto {
   id: string;
@@ -8,7 +10,7 @@ interface ExpenseCategoryDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** «دسته‌بندی هزینه‌ها» — agency-definable, never a fixed system list. */
 export function ExpenseCategorySettingsPage() {
@@ -71,49 +73,46 @@ export function ExpenseCategorySettingsPage() {
       )}
 
       <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["نام", "وضعیت", ""].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {categories?.map((c) => (
-              <tr key={c.id} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2.5 text-[13px] font-semibold">{c.name}</td>
-                <td className="px-3 py-2.5 text-[13px]">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${c.isActive ? "bg-(--mint)/12 text-(--mint)" : "bg-(--ice-3)/12 text-(--ice-3)"}`}
-                  >
-                    {c.isActive ? "فعال" : "غیرفعال"}
-                  </span>
-                </td>
-                <td className="px-3 py-2.5 text-[13px]">
-                  <button type="button" onClick={() => toggleActive(c)} className="ms-2 text-[11px] text-(--ice-3) hover:text-(--ice)">
-                    {c.isActive ? "غیرفعال کردن" : "فعال کردن"}
-                  </button>
-                  <button type="button" onClick={() => removeCategory(c.id)} className="ms-2 text-[11px] text-(--ember) hover:brightness-110">
-                    حذف
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {categories?.length === 0 && (
+        {categories !== null && categories.length === 0 ? (
+          <EmptyState
+            icon="🗂"
+            title="هنوز دسته‌ای ثبت نشده است"
+            description="دسته‌بندی هزینه‌ها را نمایندگی خودش تعریف می‌کند؛ اولین دسته را از فرم پایین اضافه کنید."
+          />
+        ) : (
+          <table className="w-full border-collapse">
+            <thead>
               <tr>
-                <td colSpan={3} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  هنوز دسته‌ای ثبت نشده است.
-                </td>
+                {["نام", "وضعیت", ""].map((h) => (
+                  <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {categories?.map((c) => (
+                <tr key={c.id} className="border-t border-(--edge) first:border-t-0">
+                  <td className="px-3 py-2.5 text-[13.5px] font-semibold">{c.name}</td>
+                  <td className="px-3 py-2.5 text-[13.5px]">
+                    <StatusBadge tone={c.isActive ? "mint" : "neutral"}>{c.isActive ? "فعال" : "غیرفعال"}</StatusBadge>
+                  </td>
+                  <td className="px-3 py-2.5 text-[13.5px]">
+                    <button type="button" onClick={() => toggleActive(c)} className="ms-2 text-[11.5px] text-(--ice-3) hover:text-(--ice)">
+                      {c.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                    </button>
+                    <button type="button" onClick={() => removeCategory(c.id)} className="ms-2 text-[11.5px] text-(--ember) hover:brightness-110">
+                      حذف
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         <div className="flex items-end gap-2 border-t border-(--edge) p-3">
           <div className="flex-1">
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">نام دسته</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">نام دسته</label>
             <input value={newName} onChange={(e) => setNewName(e.target.value)} className={inputClass} />
           </div>
           <button

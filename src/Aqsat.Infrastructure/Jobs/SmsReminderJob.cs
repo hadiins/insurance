@@ -2,7 +2,10 @@ using Aqsat.Application.Sms;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Portal;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Aqsat.Infrastructure.Jobs;
 
@@ -14,7 +17,13 @@ namespace Aqsat.Infrastructure.Jobs;
 /// optimisation, it's what keeps a ~960-installment agency from paying for ~2880 SMS a month
 /// instead of ~1300).
 /// </summary>
-public sealed class SmsReminderJob(AppDbContext dbContext, ISmsSender smsSender, TimeProvider timeProvider)
+public sealed class SmsReminderJob(
+    AppDbContext dbContext,
+    ISmsSender smsSender,
+    TimeProvider timeProvider,
+    InstallmentPaymentLinkService paymentLinkService,
+    IConfiguration configuration,
+    ILogger<SmsReminderJob> logger)
 {
     public async Task RunAsync(CancellationToken ct = default)
     {
@@ -71,8 +80,31 @@ public sealed class SmsReminderJob(AppDbContext dbContext, ISmsSender smsSender,
                     continue;
                 }
 
+                // The online-payment link rides the reminder when the agency has opted into the
+                // customer portal. Created-on-demand here (with its own immediate SaveChanges —
+                // the catch below detaches this context's whole pending batch, so a half-created
+                // link must never sit in it). A failure to mint the link must never cost the
+                // customer their reminder — degrade to a plain-text reminder and log it (rule 15).
+                string? paymentLink = null;
+                if (orgSettings?.CustomerPortalEnabled == true)
+                {
+                    try
+                    {
+                        var link = await paymentLinkService.EnsureLinkAsync(
+                            installment.Policy.CustomerId, Guid.Empty, ct);
+                        paymentLink = $"{configuration["Portal:PublicBaseUrl"]?.TrimEnd('/')}/pay/{link.Token}";
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex,
+                            "Failed to ensure payment link for customer {CustomerId}; reminder goes out without a link.",
+                            installment.Policy.CustomerId);
+                    }
+                }
+
                 var text = InstallmentReminderTemplate.Render(
-                    installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance, installment.DueDate, customBody);
+                    installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance,
+                    installment.DueDate, customBody, paymentLink);
                 var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
 
                 dbContext.ReminderLogs.Add(new ReminderLog
@@ -117,9 +149,11 @@ public sealed class SmsReminderJob(AppDbContext dbContext, ISmsSender smsSender,
             .ToHashSet();
 }
 
-/// <summary>{PolicyNumber}/{SeqNo}/{Balance}/{DueDate} placeholders — an agency's own SmsTemplate
-/// row (Key = installment-reminder-v1) overrides DefaultBody; absence of a row falls back to it,
-/// so customizing a template is optional, never required for sending to keep working.</summary>
+/// <summary>{PolicyNumber}/{SeqNo}/{Balance}/{DueDate}/{PaymentLink} placeholders — an agency's own
+/// SmsTemplate row (Key = installment-reminder-v1) overrides DefaultBody; absence of a row falls
+/// back to it, so customizing a template is optional, never required for sending to keep working.
+/// {PaymentLink} is only replaced when the reminder carried a link (agency portal enabled); a
+/// template without the placeholder simply never shows one.</summary>
 public static class InstallmentReminderTemplate
 {
     public const string Key = "installment-reminder-v1";
@@ -127,10 +161,26 @@ public static class InstallmentReminderTemplate
     public const string DefaultBody =
         "بیمه‌گذار گرامی، قسط شمارهٔ {SeqNo} بیمه‌نامهٔ {PolicyNumber} به مبلغ {Balance} تومان تا تاریخ {DueDate} سررسید دارد.";
 
-    public static string Render(string policyNumber, int seqNo, decimal balance, DateOnly dueDate, string? customBody = null) =>
-        (customBody ?? DefaultBody)
+    public static string Render(
+        string policyNumber, int seqNo, decimal balance, DateOnly dueDate,
+        string? customBody = null, string? paymentLink = null)
+    {
+        var body = (customBody ?? DefaultBody)
             .Replace("{PolicyNumber}", policyNumber)
             .Replace("{SeqNo}", seqNo.ToString())
             .Replace("{Balance}", balance.ToString("N0"))
             .Replace("{DueDate}", dueDate.ToString("yyyy-MM-dd"));
+
+        if (paymentLink is null)
+        {
+            return body;
+        }
+
+        // The default body carries no {PaymentLink} slot (it must stay valid for agencies with the
+        // portal off), so the link is appended as its own line; a custom template that already has
+        // the placeholder gets it substituted in place instead.
+        return body.Contains("{PaymentLink}")
+            ? body.Replace("{PaymentLink}", paymentLink)
+            : $"{body}\nپرداخت آنلاین: {paymentLink}";
+    }
 }

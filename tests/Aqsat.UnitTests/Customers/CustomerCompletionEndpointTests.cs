@@ -35,9 +35,32 @@ public class CustomerCompletionEndpointTests : IClassFixture<WebApplicationFacto
         Assert.True(summary!.Total >= 1);
         Assert.True(summary.WithoutMobile >= 1);
         Assert.True(summary.WithoutNationalId >= 1);
+        Assert.True(summary.WithoutAddress >= 1);
+        Assert.True(summary.WithoutPostalCode >= 1);
+        Assert.True(summary.WithoutName >= 1);
 
         var byMobileFilter = await client.GetFromJsonAsync<List<CustomerIncompleteRowDto>>("/api/customers/incomplete?filter=no-mobile");
         Assert.Contains(byMobileFilter!, r => r.Id == customerId);
+
+        var byAddressFilter = await client.GetFromJsonAsync<List<CustomerIncompleteRowDto>>("/api/customers/incomplete?filter=no-address");
+        Assert.Contains(byAddressFilter!, r => r.Id == customerId);
+
+        var byNameFilter = await client.GetFromJsonAsync<List<CustomerIncompleteRowDto>>("/api/customers/incomplete?filter=no-name");
+        Assert.Contains(byNameFilter!, r => r.Id == customerId);
+    }
+
+    /// <summary>Production incident 2026-09-07: a national ID (Persian digits) typed into the
+    /// lastName field. Digits-only names must be rejected at the door, in both the completion
+    /// grid's save and manual creation.</summary>
+    [Fact]
+    public async Task A_digits_only_name_is_rejected()
+    {
+        var (client, customerId) = await SeedIncompleteCustomerAsync();
+
+        var response = await client.PutAsJsonAsync($"/api/customers/{customerId}/complete-profile",
+            new CompleteCustomerProfileRequest(null, "۰۳۸۶۵۲۹۵۵۸", null, null, null, null, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

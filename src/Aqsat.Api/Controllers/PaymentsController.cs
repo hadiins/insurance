@@ -67,6 +67,11 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             return (null, "مبلغ پرداخت باید مثبت باشد.");
         }
 
+        if (!PaymentDateValidator.IsValid(request.PaidOn))
+        {
+            return (null, PaymentDateValidator.ErrorMessage);
+        }
+
         // Idempotency pre-check (CLAUDE.md rule 24) — the common sequential-duplicate case.
         var existing = await FindExistingPaymentResultAsync(request, ct);
         if (existing is not null)
@@ -136,6 +141,13 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             if (request.Cheque is null)
             {
                 return (null, "برای پرداخت چکی، مشخصات چک الزامی است.");
+            }
+
+            var chequeError = ChequeDetailsValidator.Validate(request.Cheque)
+                ?? await CashBoxExistsAsync(request.Cheque.CashBoxId, ct);
+            if (chequeError is not null)
+            {
+                return (null, chequeError);
             }
 
             dbContext.PaymentCheques.Add(new PaymentCheque
@@ -277,6 +289,14 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
 
         return null;
     }
+
+    /// <summary>CLAUDE.md rule 11 — a cheque's CashBoxId must point at a real cash box inside the
+    /// caller's agency. RLS scopes the lookup; an invisible box reads as "not found", never as an
+    /// FK violation the user can't act on.</summary>
+    private async Task<string?> CashBoxExistsAsync(Guid cashBoxId, CancellationToken ct) =>
+        await dbContext.CashBoxes.AsNoTracking().AnyAsync(c => c.Id == cashBoxId, ct)
+            ? null
+            : "صندوق انتخاب‌شده یافت نشد.";
 
     private static InstallmentStatus RecomputeStatus(decimal paidAmount, decimal amount) =>
         paidAmount <= 0 ? InstallmentStatus.Unpaid : paidAmount >= amount ? InstallmentStatus.Settled : InstallmentStatus.Partial;

@@ -56,7 +56,7 @@ export function SmsTemplatesPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">قالب پیامک‌ها</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">متن هر پیامک یادآوری را می‌توانید سفارشی کنید</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">متن هر پیامک یادآوری را می‌توانید سفارشی کنید</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -79,7 +79,7 @@ export function SmsTemplatesPage() {
                 value={drafts[t.key] ?? ""}
                 onChange={(e) => setDrafts((d) => ({ ...d, [t.key]: e.target.value }))}
                 rows={3}
-                className="mb-3 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+                className="mb-3 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               />
               <div className="flex gap-2">
                 <button

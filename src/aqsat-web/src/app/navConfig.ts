@@ -96,6 +96,7 @@ export const NAV: NavGroup[] = [
     label: "مشتریان",
     icon: ICONS.users,
     items: [
+      { navType: "customers-new", title: "مشتری جدید", kind: "multi-create", page: "new-customer", requiresPermission: "Policy.Write" },
       { navType: "customers-list", title: "فهرست مشتریان", kind: "singleton", page: "customers-list", requiresPermission: "Policy.Read" },
       {
         navType: "customer-payment-history", title: "سابقهٔ پرداخت", kind: "singleton", page: "customer-lookup",
@@ -125,6 +126,7 @@ export const NAV: NavGroup[] = [
       { navType: "sms-templates", title: "قالب پیامک‌ها", kind: "singleton", page: "sms-templates", requiresPermission: "Settings.Write" },
       { navType: "sms-schedule", title: "زمان‌بندی یادآوری", kind: "singleton", page: "sms-reminders", requiresPermission: "Policy.Write" },
       { navType: "sms-delivery-report", title: "گزارش تحویل", kind: "singleton", page: "sms-delivery-report", requiresPermission: "Policy.Write" },
+      { navType: "sms-effectiveness", title: "اثربخشی پیامک", kind: "singleton", page: "sms-effectiveness-report", requiresPermission: "Policy.Write" },
     ],
   },
   {
@@ -134,6 +136,19 @@ export const NAV: NavGroup[] = [
     items: [
       { navType: "marketers-manage", title: "بازاریاب‌ها و پورسانت", kind: "singleton", page: "marketers", requiresPermission: "Marketer.Manage" },
       { navType: "marketer-panel", title: "پنل بازاریاب", kind: "singleton", page: "marketer-panel", requiresPermission: "Marketer.SelfView" },
+    ],
+  },
+  {
+    id: "risk",
+    label: "اعتبار و ریسک",
+    icon: ICONS.chart,
+    items: [
+      { navType: "risk-dashboard", title: "داشبورد ریسک", kind: "singleton", page: "risk-dashboard", requiresPermission: "Policy.Read" },
+      { navType: "risk-assessment", title: "ارزیابی اعتبار", kind: "singleton", page: "risk-assessment", requiresPermission: "Policy.Read" },
+      { navType: "risk-network", title: "استعلام شبکه‌ای", kind: "singleton", page: "risk-network", requiresPermission: "Risk.NetworkRead" },
+      { navType: "risk-manual-reviews", title: "بررسی‌های دستی", kind: "singleton", page: "risk-manual-reviews", requiresPermission: "Policy.Read" },
+      { navType: "risk-warnings", title: "هشدارها", kind: "singleton", page: "risk-warnings", requiresPermission: "Policy.Read" },
+      { navType: "risk-settings", title: "قوانین اعتبارسنجی", kind: "singleton", page: "risk-settings", requiresPermission: "Settings.Write" },
     ],
   },
   {
@@ -162,6 +177,29 @@ export const NAV: NavGroup[] = [
       { navType: "import-contract-templates", title: "تنظیم قراردادهای اقساطی", kind: "singleton", page: "contract-templates", requiresPermission: "Policy.Write" },
       { navType: "import-history", title: "تاریخچهٔ ورود داده", kind: "singleton", page: "import-history", requiresPermission: "Import.Run" },
       { navType: "import-mismatches", title: "رکوردهای ناسازگار", kind: "singleton", page: "import-mismatches", requiresPermission: "Import.Run" },
+    ],
+  },
+  {
+    id: "monitoring",
+    label: "پایش و امنیت",
+    icon: ICONS.chart,
+    items: [
+      {
+        navType: "monitoring-dashboard", title: "پایش سامانه", kind: "singleton", page: "monitoring-dashboard",
+        requiresPermission: "Platform.Owner",
+      },
+      {
+        navType: "security-dashboard", title: "امنیت سامانه", kind: "singleton", page: "security-dashboard",
+        requiresPermission: "Platform.Owner",
+      },
+      {
+        navType: "alerts-rules", title: "هشدارها و قوانین", kind: "singleton", page: "alerts-rules",
+        requiresPermission: "Platform.Owner",
+      },
+      {
+        navType: "monitoring-logs", title: "لاگ‌های سامانه", kind: "singleton", page: "monitoring-logs",
+        requiresPermission: "Platform.Owner",
+      },
     ],
   },
   {

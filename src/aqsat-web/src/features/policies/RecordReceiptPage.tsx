@@ -4,6 +4,8 @@ import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { MoneyInput } from "../../components/MoneyInput";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
 
 interface PolicyListItemDto {
@@ -111,7 +113,7 @@ export function RecordReceiptPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         ثبت <em className="font-extralight not-italic text-(--ice-2)">دریافت</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">جستجوی بیمه‌نامه یا بیمه‌گذار و ثبت دریافت وجه</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">جستجوی بیمه‌نامه یا بیمه‌گذار و ثبت دریافت وجه</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -138,50 +140,44 @@ export function RecordReceiptPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {results && (
-          <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-            <table className="w-full border-collapse">
+        {results &&
+          (results.length === 0 ? (
+            <EmptyState
+              icon="🔍"
+              title="نتیجه‌ای یافت نشد"
+              description="هیچ بیمه‌نامه‌ای با این عبارت مطابقت ندارد. شمارهٔ بیمه‌نامه یا نام دیگری را جستجو کنید."
+            />
+          ) : (
+            <Table>
               <thead>
                 <tr>
                   {["شمارهٔ بیمه‌نامه", "بیمه‌گذار", ""].map((h) => (
-                    <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                      {h}
-                    </th>
+                    <Th key={h}>{h}</Th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {results.map((p) => (
-                  <tr
+                  <Tr
                     key={p.id}
                     onClick={() => selectPolicy(p)}
-                    className={`cursor-pointer border-t border-(--edge) transition-colors first:border-t-0 hover:bg-(--hov) ${
-                      selected?.id === p.id ? "bg-(--mint)/9" : ""
-                    }`}
+                    className={selected?.id === p.id ? "bg-(--mint)/9" : ""}
                   >
-                    <td className="px-3 py-2.75 text-[13px] font-semibold">{p.policyNumber}</td>
-                    <td className="px-3 py-2.75 text-[13px] text-(--ice-3)">{p.customerFullName}</td>
-                    <td />
-                  </tr>
+                    <Td className="py-2.75 font-semibold">{p.policyNumber}</Td>
+                    <Td className="py-2.75 text-(--ice-3)">{p.customerFullName}</Td>
+                    <Td />
+                  </Tr>
                 ))}
-                {results.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                      نتیجه‌ای یافت نشد.
-                    </td>
-                  </tr>
-                )}
               </tbody>
-            </table>
-          </div>
-        )}
+            </Table>
+          ))}
 
         <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
           {!status ? (
             <div className="text-[12.5px] text-(--ice-3)">یک بیمه‌نامه را از فهرست انتخاب کنید.</div>
           ) : (
             <>
-              <div className="mb-3 text-[13px] font-semibold text-(--ice)">
+              <div className="mb-3 text-[13.5px] font-semibold text-(--ice)">
                 {status.policyNumber} — {status.customerFullName}
               </div>
 
@@ -197,11 +193,11 @@ export function RecordReceiptPage() {
 
               {status.isScheduled && status.openInstallments.length > 0 && (
                 <div className="mt-3">
-                  <div className="mb-2 text-[11px] tracking-wider text-(--ice-3)">اقساط باز</div>
+                  <div className="mb-2 text-[11.5px] tracking-wider text-(--ice-3)">اقساط باز</div>
                   {status.openInstallments.map((i) => (
                     <div
                       key={i.id}
-                      className="mb-1.5 flex items-center justify-between rounded-[8px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px]"
+                      className="mb-1.5 flex items-center justify-between rounded-[8px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px]"
                     >
                       <span>
                         قسط {fa(i.seqNo)} — {toJalaliDisplay(i.dueDate)}
@@ -211,7 +207,7 @@ export function RecordReceiptPage() {
                         <button
                           type="button"
                           onClick={() => setActiveInstallmentId(i.id)}
-                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11px] font-semibold text-(--on-mint)"
+                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
                         >
                           ثبت دریافت
                         </button>
@@ -305,11 +301,11 @@ function DownPaymentBox({
       <div className="mb-2 text-[12.5px] font-semibold text-(--ice)">دریافت پیش‌پرداخت — {money(amount)} تومان</div>
       {error && <div className="mb-2 text-[11.5px] text-(--ember)">{error}</div>}
       <div className="mb-2 grid grid-cols-2 gap-2">
-        <JalaliDateField value={paidOn} onChange={setPaidOn} className="w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)" />
+        <JalaliDateField value={paidOn} onChange={setPaidOn} className="w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)" />
         <select
           value={methodType}
           onChange={(e) => setMethodType(e.target.value as MethodType)}
-          className="w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)"
+          className="w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
         >
           <option value="Cash">نقدی</option>
           <option value="BankTransfer">واریز بانکی</option>
@@ -317,7 +313,7 @@ function DownPaymentBox({
         </select>
       </div>
       {methodType === "Cash" && (
-        <select value={cashBoxId} onChange={(e) => setCashBoxId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)">
+        <select value={cashBoxId} onChange={(e) => setCashBoxId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)">
           <option value="">انتخاب صندوق…</option>
           {cashBoxes.filter((b) => b.isActive).map((b) => (
             <option key={b.id} value={b.id}>
@@ -327,7 +323,7 @@ function DownPaymentBox({
         </select>
       )}
       {methodType === "BankTransfer" && (
-        <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)">
+        <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)">
           <option value="">انتخاب حساب بانکی…</option>
           {bankAccounts.filter((a) => a.isActive).map((a) => (
             <option key={a.id} value={a.id}>
@@ -340,7 +336,7 @@ function DownPaymentBox({
         type="button"
         onClick={submit}
         disabled={saving}
-        className="w-full rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12px] font-semibold text-(--on-mint) disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12.5px] font-semibold text-(--on-mint) disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saving ? "در حال ثبت…" : "ثبت دریافت پیش‌پرداخت"}
       </button>
@@ -411,19 +407,19 @@ function FullPaymentBox({
       {error && <div className="mb-2 text-[11.5px] text-(--ember)">{error}</div>}
       <div className="mb-2 grid grid-cols-2 gap-2">
         <MoneyInput value={amountText} onChange={setAmountText} />
-        <JalaliDateField value={paidOn} onChange={setPaidOn} className="w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)" />
+        <JalaliDateField value={paidOn} onChange={setPaidOn} className="w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)" />
       </div>
       <select
         value={methodType}
         onChange={(e) => setMethodType(e.target.value as MethodType)}
-        className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)"
+        className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
       >
         <option value="Cash">نقدی</option>
         <option value="BankTransfer">واریز بانکی</option>
         <option value="PosDirect">پوز مستقیم بیمه‌گر</option>
       </select>
       {methodType === "Cash" && (
-        <select value={cashBoxId} onChange={(e) => setCashBoxId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)">
+        <select value={cashBoxId} onChange={(e) => setCashBoxId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)">
           <option value="">انتخاب صندوق…</option>
           {cashBoxes.filter((b) => b.isActive).map((b) => (
             <option key={b.id} value={b.id}>
@@ -433,7 +429,7 @@ function FullPaymentBox({
         </select>
       )}
       {methodType === "BankTransfer" && (
-        <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12px] text-(--ice)">
+        <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className="mb-2 w-full rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)">
           <option value="">انتخاب حساب بانکی…</option>
           {bankAccounts.filter((a) => a.isActive).map((a) => (
             <option key={a.id} value={a.id}>
@@ -446,7 +442,7 @@ function FullPaymentBox({
         type="button"
         onClick={submit}
         disabled={saving}
-        className="w-full rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12px] font-semibold text-(--on-mint) disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12.5px] font-semibold text-(--on-mint) disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saving ? "در حال ثبت…" : "ثبت پرداخت کامل"}
       </button>

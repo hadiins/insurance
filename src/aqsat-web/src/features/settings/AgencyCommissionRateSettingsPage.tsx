@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { isoToJalaliText, jalaliTextToIso, toJalaliDisplay } from "../../lib/jalali";
+import { EmptyState } from "../../components/EmptyState";
 
 interface InsuranceLineDto {
   id: string;
@@ -18,7 +19,7 @@ interface AgencyCommissionRateDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** «کارمزد از بیمه‌گر» — the agency's own commission rate from the insurer, per insurance line
  * (including sub-lines). Locked into Policy.AgencyCommissionPercent at issuance; a rate change
@@ -75,42 +76,43 @@ export function AgencyCommissionRateSettingsPage() {
       )}
 
       <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {["رشته", "درصد", "از تاریخ", "تا تاریخ", ""].map((h) => (
-                <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rates?.map((r) => (
-              <tr key={r.id} className="border-t border-(--edge) first:border-t-0">
-                <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{r.insuranceLineNameFa}</td>
-                <td className="px-3 py-2.5 text-[13px] font-semibold tabular-nums">{fa(r.ratePercent)}٪</td>
-                <td className="px-3 py-2.5 text-[13px] tabular-nums">{toJalaliDisplay(r.effectiveFrom)}</td>
-                <td className="px-3 py-2.5 text-[13px] tabular-nums text-(--ice-3)">
-                  {r.effectiveTo ? toJalaliDisplay(r.effectiveTo) : "—"}
-                </td>
-                <td className="px-3 py-2.5 text-[13px]">
-                  {!r.effectiveTo && <span className="rounded-full bg-(--mint)/12 px-2.5 py-0.5 text-[11px] font-semibold text-(--mint)">فعال</span>}
-                </td>
-              </tr>
-            ))}
-            {rates?.length === 0 && (
+        {rates !== null && rates.length === 0 ? (
+          <EmptyState
+            icon="📈"
+            title="هنوز نرخی ثبت نشده است"
+            description="نرخ کارمزد از بیمه‌گر به تفکیک رشته ثبت می‌شود و هنگام صدور در بیمه‌نامه قفل می‌شود؛ اولین نرخ را از فرم پایین اضافه کنید."
+          />
+        ) : (
+          <table className="w-full border-collapse">
+            <thead>
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[12.5px] text-(--ice-3)">
-                  هنوز نرخی ثبت نشده است.
-                </td>
+                {["رشته", "درصد", "از تاریخ", "تا تاریخ", ""].map((h) => (
+                  <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rates?.map((r) => (
+                <tr key={r.id} className="border-t border-(--edge) first:border-t-0">
+                  <td className="px-3 py-2.5 text-[13.5px] text-(--ice-3)">{r.insuranceLineNameFa}</td>
+                  <td className="px-3 py-2.5 text-[13.5px] font-semibold tabular-nums">{fa(r.ratePercent)}٪</td>
+                  <td className="px-3 py-2.5 text-[13.5px] tabular-nums">{toJalaliDisplay(r.effectiveFrom)}</td>
+                  <td className="px-3 py-2.5 text-[13.5px] tabular-nums text-(--ice-3)">
+                    {r.effectiveTo ? toJalaliDisplay(r.effectiveTo) : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-[13.5px]">
+                    {!r.effectiveTo && <span className="rounded-full bg-(--mint)/12 px-2.5 py-0.5 text-[11.5px] font-semibold text-(--mint)">فعال</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         <div className="flex items-end gap-2 border-t border-(--edge) p-3">
           <div className="w-56">
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">رشته</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">رشته</label>
             <select value={newLineId} onChange={(e) => setNewLineId(e.target.value)} className={inputClass}>
               <option value="">انتخاب کنید…</option>
               {lines?.map((l) => (
@@ -121,11 +123,11 @@ export function AgencyCommissionRateSettingsPage() {
             </select>
           </div>
           <div className="w-24">
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">درصد</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">درصد</label>
             <input value={newRatePercent} onChange={(e) => setNewRatePercent(e.target.value)} dir="ltr" className={inputClass} />
           </div>
           <div className="w-36">
-            <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">از تاریخ</label>
+            <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
             <input value={newEffectiveFrom} onChange={(e) => setNewEffectiveFrom(e.target.value)} dir="ltr" className={inputClass} />
           </div>
           <button

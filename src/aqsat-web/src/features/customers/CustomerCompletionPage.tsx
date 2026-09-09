@@ -15,8 +15,22 @@ interface CustomerIncompleteRowDto {
   isProfileComplete: boolean;
 }
 
-type Filter = "all" | "no-mobile" | "no-national-id";
+type Filter = "all" | "no-mobile" | "no-national-id" | "no-address" | "no-postal-code" | "no-name";
 const PAGE_SIZE = 50;
+
+const FILTER_OPTIONS: { value: Filter; label: string }[] = [
+  { value: "all", label: "همه" },
+  { value: "no-mobile", label: "بدون موبایل" },
+  { value: "no-national-id", label: "بدون کد ملی" },
+  { value: "no-address", label: "بدون آدرس" },
+  { value: "no-postal-code", label: "بدون کد پستی" },
+  { value: "no-name", label: "بدون نام/نام خانوادگی" },
+];
+
+function isDigitsOnly(v: string): boolean {
+  const s = v.trim().replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+  return s.length > 0 && /^\d+$/.test(s);
+}
 
 /** docs/TASK-25-IDENTITY-VEHICLE.md §3 — "شبیه اکسل، نه ۱۳۷ فرم": one grid, editable cells,
  * auto-save per row on blur, no per-customer modal. */
@@ -55,6 +69,15 @@ export function CustomerCompletionPage() {
     const rowEdits = edits[row.id];
     if (!rowEdits || Object.keys(rowEdits).length === 0) return;
 
+    if ((rowEdits.firstName !== undefined && isDigitsOnly(rowEdits.firstName)) ||
+        (rowEdits.lastName !== undefined && isDigitsOnly(rowEdits.lastName))) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [row.id]: "نام/نام خانوادگی نمی‌تواند عدد باشد — کد ملی در فیلد جداگانهٔ خودش وارد می‌شود.",
+      }));
+      return;
+    }
+
     setSavingRow(row.id);
     setRowErrors((prev) => ({ ...prev, [row.id]: "" }));
     try {
@@ -90,10 +113,10 @@ export function CustomerCompletionPage() {
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
         تکمیل <em className="font-extralight not-italic text-(--ice-2)">پروندهٔ مشتریان</em>
       </h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">حرکت با Tab · ذخیرهٔ خودکار هر ردیف با خروج از سطر</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">حرکت با Tab · ذخیرهٔ خودکار هر ردیف با خروج از سطر</div>
 
       <div className="mb-4 flex items-center gap-2">
-        <label className="text-[11px] tracking-wider text-(--ice-3)">فیلتر</label>
+        <label className="text-[11.5px] tracking-wider text-(--ice-3)">فیلتر</label>
         <select
           value={filter}
           onChange={(e) => {
@@ -102,9 +125,11 @@ export function CustomerCompletionPage() {
           }}
           className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
         >
-          <option value="all">همه</option>
-          <option value="no-mobile">بدون موبایل</option>
-          <option value="no-national-id">بدون کد ملی</option>
+          {FILTER_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -119,7 +144,7 @@ export function CustomerCompletionPage() {
       {!error && rows !== null && (
         <>
           {rows.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">
+            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13.5px] text-(--ice-3)">
               {page === 1 ? "همهٔ پرونده‌ها کامل است." : "این صفحه رکوردی ندارد."}
             </div>
           ) : (
@@ -127,7 +152,7 @@ export function CustomerCompletionPage() {
               <table className="w-full min-w-[900px] border-collapse">
                 <thead>
                   <tr>
-                    {["نام", "نام خانوادگی", "کد ملی", "موبایل", "موبایل اضطراری", "آدرس", "کد پستی", ""].map((h) => (
+                    {["نام کامل", "نام", "نام خانوادگی", "کد ملی", "موبایل", "موبایل اضطراری", "آدرس", "کد پستی", ""].map((h) => (
                       <th key={h} className="border-b border-(--edge) px-2.5 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
                         {h}
                       </th>
@@ -163,7 +188,7 @@ export function CustomerCompletionPage() {
                         onBlur={() => saveRow(row)}
                         dir="ltr"
                       />
-                      <td className="px-2 py-1.5 text-[11px] text-(--ice-3)">
+                      <td className="px-2 py-1.5 text-[11.5px] text-(--ice-3)">
                         {savingRow === row.id ? "در حال ذخیره…" : rowErrors[row.id] ? <span className="text-(--ember)">{rowErrors[row.id]}</span> : null}
                       </td>
                     </tr>

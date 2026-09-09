@@ -51,6 +51,11 @@ public class OrgSettings
     /// <summary>How long a portal invitation link stays valid after the agent creates it.</summary>
     public int PortalInvitationTtlHours { get; set; } = 72;
 
+    /// <summary>Rolling validity of a customer's installment-payment link (/pay/{token}): every
+    /// reminder send refreshes ExpiresAtUtc to now + this many days. The 72-hour invitation TTL is
+    /// wrong here — a reminder link must survive until the next reminder refreshes it.</summary>
+    public int PaymentLinkTtlDays { get; set; } = 60;
+
     /// <summary>Master switch for this agency's customer portal — the link-issuing endpoint
     /// refuses when false, regardless of anything else.</summary>
     public bool CustomerPortalEnabled { get; set; }

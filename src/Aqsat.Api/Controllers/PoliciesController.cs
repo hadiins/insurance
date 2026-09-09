@@ -27,7 +27,8 @@ namespace Aqsat.Api.Controllers;
 [Authorize(Policy = Permissions.PolicyWrite)]
 public sealed class PoliciesController(
     AppDbContext dbContext, IHolidayChecker holidayChecker, ICurrentUserContext currentUser,
-    IFieldEncryptor fieldEncryptor, PolicyNumberSuggestionService numberSuggestionService)
+    PolicyNumberSuggestionService numberSuggestionService,
+    Aqsat.Infrastructure.Customers.CustomerCreationService customerCreationService)
     : ControllerBase
 {
     /// <summary>The marker ReportsController's cash-basis P&amp;L filters on to recognize a
@@ -115,7 +116,41 @@ public sealed class PoliciesController(
             return ValidationProblem("حق بیمه باید مثبت باشد.");
         }
 
+        // TotalReceivable = NetPremium + ServiceFee feeds every installment/P&L calculation — a
+        // negative or larger-than-premium fee is always a typo (field order mixup with the premium
+        // box), and it corrupts the schedule silently if it lands.
+        if (request.ServiceFee < 0 || request.ServiceFee > request.NetPremium)
+        {
+            return ValidationProblem("کارمزد خدمات نمی‌تواند منفی یا بیش از مبلغ حق بیمه باشد.");
+        }
+
+        if (request.AgencyCommissionPercent is { } commissionPct && (commissionPct < 0 || commissionPct > 100m))
+        {
+            return ValidationProblem("درصد کمیسیون نمایندگی باید بین ۰ تا ۱۰۰ باشد.");
+        }
+
+        // A Jalali/Gregorian year mixup (1404 vs 2026) or a reversed month/day silently poisons
+        // every due date the schedule generates from StartDate — this system's whole job is the
+        // countdown those dates drive, so sanity-check the window instead of trusting the picker.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (request.EndDate <= request.StartDate)
+        {
+            return ValidationProblem("تاریخ پایان باید بعد از تاریخ شروع باشد.");
+        }
+
+        if (request.StartDate < today.AddYears(-1) || request.StartDate > today.AddYears(2))
+        {
+            return ValidationProblem(
+                "تاریخ شروع باید در بازهٔ یک سال گذشته تا دو سال آینده باشد — در صورت تبدیل دستی تاریخ شمسی، سال را بازبینی کنید.");
+        }
+
         var agencyId = currentUser.ActiveOrganizationId;
+
+        // One transaction across the whole issuance: the vehicle/property/customer saves and the
+        // policy save must land together or not at all — a failure after the vehicle save (most
+        // commonly the duplicate-number race below) otherwise orphans rows RLS makes invisible to
+        // every cleanup path.
+        await using var tx = await dbContext.Database.BeginTransactionAsync(ct);
 
         Guid customerId;
         if (request.CustomerId is { } existingCustomerId)
@@ -135,79 +170,23 @@ public sealed class PoliciesController(
                 return ValidationProblem("نام بیمه‌گذار الزامی است.");
             }
 
-            var customer = new Customer
+            // The shared manual-creation path (extracted from here so the standalone "مشتری جدید"
+            // form and the wizard register a customer through exactly the same rules).
+            try
             {
-                AgencyId = agencyId,
-                // No natural join key for a manually-entered customer (unlike an import row) — a
-                // generated code just satisfies the NOT NULL + unique constraint.
-                ExternalCode = $"MAN-{Guid.NewGuid():N}"[..12],
-                FullName = request.CustomerFullName.Trim(),
-                FirstName = string.IsNullOrWhiteSpace(request.CustomerFirstName) ? null : request.CustomerFirstName.Trim(),
-                LastName = string.IsNullOrWhiteSpace(request.CustomerLastName) ? null : request.CustomerLastName.Trim(),
-            };
-
-            if (!string.IsNullOrWhiteSpace(request.CustomerMobile))
-            {
-                if (!MobileNumberValidator.IsValid(request.CustomerMobile))
-                {
-                    return ValidationProblem("شمارهٔ موبایل بیمه‌گذار نامعتبر است.");
-                }
-
-                customer.Mobile = MobileNumberValidator.Normalize(request.CustomerMobile);
+                var customer = await customerCreationService.CreateAsync(
+                    agencyId,
+                    new Aqsat.Infrastructure.Customers.CreateCustomerInput(
+                        request.CustomerFullName!, request.CustomerFirstName, request.CustomerLastName,
+                        request.CustomerNationalId, request.CustomerMobile, request.CustomerEmergencyMobile,
+                        request.CustomerPostalCode, request.CustomerAddress),
+                    ct);
+                customerId = customer.Id;
             }
-
-            if (!string.IsNullOrWhiteSpace(request.CustomerEmergencyMobile))
+            catch (Aqsat.Infrastructure.Customers.CustomerCreationException ex)
             {
-                if (!MobileNumberValidator.IsValid(request.CustomerEmergencyMobile))
-                {
-                    return ValidationProblem("شمارهٔ موبایل اضطراری نامعتبر است.");
-                }
-
-                var normalizedEmergency = MobileNumberValidator.Normalize(request.CustomerEmergencyMobile);
-                if (normalizedEmergency == customer.Mobile)
-                {
-                    return ValidationProblem("موبایل اضطراری نباید با موبایل اصلی یکسان باشد.");
-                }
-
-                customer.EmergencyMobile = normalizedEmergency;
+                return ValidationProblem(ex.Message);
             }
-
-            if (!string.IsNullOrWhiteSpace(request.CustomerNationalId))
-            {
-                var normalizedNationalId = DigitNormalizer.ToLatin(request.CustomerNationalId).Trim();
-                if (!NationalIdValidator.IsValid(normalizedNationalId))
-                {
-                    return ValidationProblem("کد ملی وارد شده نامعتبر است.");
-                }
-
-                customer.NationalId = normalizedNationalId;
-                customer.NationalIdHash = fieldEncryptor.Hash(normalizedNationalId);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.CustomerPostalCode))
-            {
-                var normalizedPostalCode = DigitNormalizer.ToLatin(request.CustomerPostalCode).Trim();
-                if (normalizedPostalCode.Length != 10 || !normalizedPostalCode.All(char.IsAsciiDigit))
-                {
-                    return ValidationProblem("کد پستی باید دقیقاً ۱۰ رقم باشد.");
-                }
-
-                customer.PostalCode = normalizedPostalCode;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.CustomerAddress))
-            {
-                if (request.CustomerAddress.Trim().Length < 10)
-                {
-                    return ValidationProblem("آدرس بیمه‌گذار باید حداقل ۱۰ کاراکتر باشد.");
-                }
-
-                customer.Address = request.CustomerAddress.Trim();
-            }
-
-            dbContext.Customers.Add(customer);
-            await dbContext.SaveChangesAsync(ct);
-            customerId = customer.Id;
         }
 
         Guid? vehicleId = null;
@@ -353,7 +332,28 @@ public sealed class PoliciesController(
             PnManualEntry = request.PnManualEntry,
         };
         dbContext.Policies.Add(policy);
-        await dbContext.SaveChangesAsync(ct);
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // The duplicate pre-check above raced another tab issuing the same number — the unique
+            // index caught it at the database. Disposing the transaction rolls the vehicle/property
+            // rows back too; re-check so the agent gets the same linked message as the slow path.
+            var racedDuplicate = await dbContext.Policies.AsNoTracking()
+                .Where(p => p.PolicyNumber == policyNumber)
+                .Select(p => new { p.Id })
+                .FirstOrDefaultAsync(ct);
+            if (racedDuplicate is not null)
+            {
+                return ValidationProblem($"این شماره قبلاً برای بیمه‌نامهٔ دیگری ثبت شده است: {racedDuplicate.Id}");
+            }
+
+            throw;
+        }
+
+        await tx.CommitAsync(ct);
 
         return Ok(new CreatePolicyResultDto(policy.Id, policy.PolicyNumber, customerId));
     }
@@ -437,6 +437,11 @@ public sealed class PoliciesController(
             return ValidationProblem("مبلغ پرداخت باید مثبت باشد.");
         }
 
+        if (!PaymentDateValidator.IsValid(request.PaidOn))
+        {
+            return ValidationProblem(PaymentDateValidator.ErrorMessage);
+        }
+
         var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (policy is null)
         {
@@ -476,6 +481,13 @@ public sealed class PoliciesController(
             if (request.Cheque is null)
             {
                 return ValidationProblem("برای پرداخت چکی، مشخصات چک الزامی است.");
+            }
+
+            var chequeError = ChequeDetailsValidator.Validate(request.Cheque)
+                ?? await CashBoxExistsAsync(request.Cheque.CashBoxId, ct);
+            if (chequeError is not null)
+            {
+                return ValidationProblem(chequeError);
             }
 
             dbContext.PaymentCheques.Add(new PaymentCheque
@@ -747,6 +759,11 @@ public sealed class PoliciesController(
             return ValidationProblem("این بیمه‌نامه پیش‌پرداختی ندارد.");
         }
 
+        if (!PaymentDateValidator.IsValid(request.PaidOn))
+        {
+            return ValidationProblem(PaymentDateValidator.ErrorMessage);
+        }
+
         var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
             p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == policy.DownPayment, ct);
         if (existing is not null)
@@ -775,6 +792,13 @@ public sealed class PoliciesController(
             if (request.Cheque is null)
             {
                 return ValidationProblem("برای پیش‌پرداخت چکی، مشخصات چک الزامی است.");
+            }
+
+            var chequeError = ChequeDetailsValidator.Validate(request.Cheque)
+                ?? await CashBoxExistsAsync(request.Cheque.CashBoxId, ct);
+            if (chequeError is not null)
+            {
+                return ValidationProblem(chequeError);
             }
 
             dbContext.PaymentCheques.Add(new PaymentCheque
@@ -1060,6 +1084,14 @@ public sealed class PoliciesController(
             policy.NetPremium, policy.ServiceFee, policy.TotalReceivable, policy.DownPayment, policy.Marketer?.FullName,
             installments, endorsements, commissions, timeline));
     }
+
+    /// <summary>CLAUDE.md rule 11 — a cheque's CashBoxId must point at a real cash box inside the
+    /// caller's agency. RLS scopes the lookup; an invisible box reads as "not found", never as an
+    /// FK violation the user can't act on.</summary>
+    private async Task<string?> CashBoxExistsAsync(Guid cashBoxId, CancellationToken ct) =>
+        await dbContext.CashBoxes.AsNoTracking().AnyAsync(c => c.Id == cashBoxId, ct)
+            ? null
+            : "صندوق انتخاب‌شده یافت نشد.";
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {

@@ -39,8 +39,13 @@ function onlyDigits(v: string, maxLen: number): string {
 
 /** docs/TASK-25-IDENTITY-VEHICLE.md §5 — structured plate input: two digits, a letter dropdown
  * (never free text), three digits, and the "ایران" code, with auto-advance between fields and a
- * border color driven by plate type. */
-export function PlateField({ value, onChange }: { value: PlateParts; onChange: (v: PlateParts) => void }) {
+ * border color driven by plate type. `inline` puts the type selector and the plate fields on one
+ * row — the lookup page wants that; the wizard's stacked label-above-input stays the default. */
+export function PlateField({
+  value,
+  onChange,
+  inline = false,
+}: { value: PlateParts; onChange: (v: PlateParts) => void; inline?: boolean }) {
   const letterRef = useRef<HTMLSelectElement>(null);
   const threeRef = useRef<HTMLInputElement>(null);
   const iranRef = useRef<HTMLInputElement>(null);
@@ -57,78 +62,102 @@ export function PlateField({ value, onChange }: { value: PlateParts; onChange: (
     });
   }
 
+  const plateInputs = (
+    <>
+      <input
+        value={fa(value.twoDigit)}
+        onChange={(e) => {
+          const digits = onlyDigits(e.target.value, 2);
+          onChange({ ...value, twoDigit: digits });
+          if (digits.length === 2) {
+            letterRef.current?.focus();
+          }
+        }}
+        placeholder="۵۵"
+        className={`w-12 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
+      />
+      <select
+        ref={letterRef}
+        value={value.letter}
+        onChange={(e) => {
+          onChange({ ...value, letter: e.target.value });
+          if (e.target.value) {
+            threeRef.current?.focus();
+          }
+        }}
+        className={`w-20 rounded-[8px] border-2 ${type.border} bg-(--fld) px-1 py-2 text-center text-[14px] text-(--ice) outline-none`}
+      >
+        <option value=""></option>
+        {allowedLetters.map((l) => (
+          <option key={l} value={l}>
+            {l}
+          </option>
+        ))}
+      </select>
+      <input
+        ref={threeRef}
+        value={fa(value.threeDigit)}
+        onChange={(e) => {
+          const digits = onlyDigits(e.target.value, 3);
+          onChange({ ...value, threeDigit: digits });
+          if (digits.length === 3) {
+            iranRef.current?.focus();
+          }
+        }}
+        placeholder="۵۵۵"
+        className={`w-16 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
+      />
+      <div className="flex flex-col items-center justify-center rounded-[8px] bg-blue-900/40 px-2 text-[10.5px] leading-tight text-blue-200">
+        <span>I.R.</span>
+        <span>IRAN</span>
+      </div>
+      <input
+        ref={iranRef}
+        value={fa(value.iranCode)}
+        onChange={(e) => onChange({ ...value, iranCode: onlyDigits(e.target.value, 2) })}
+        placeholder="۵۵"
+        className={`w-12 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
+      />
+    </>
+  );
+
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">شماره پلاک</label>
-      <div className="mb-1.5">
-        <select
-          value={value.plateType}
-          onChange={(e) => setPlateType(Number(e.target.value))}
-          className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12px] text-(--ice) outline-none focus:border-(--mint)"
-        >
-          {PLATE_TYPES.map((t) => (
-            <option key={t.code} value={t.code}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex items-stretch justify-end gap-1.5" dir="rtl">
-        <input
-          value={fa(value.twoDigit)}
-          onChange={(e) => {
-            const digits = onlyDigits(e.target.value, 2);
-            onChange({ ...value, twoDigit: digits });
-            if (digits.length === 2) {
-              letterRef.current?.focus();
-            }
-          }}
-          placeholder="۵۵"
-          className={`w-12 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
-        />
-        <select
-          ref={letterRef}
-          value={value.letter}
-          onChange={(e) => {
-            onChange({ ...value, letter: e.target.value });
-            if (e.target.value) {
-              threeRef.current?.focus();
-            }
-          }}
-          className={`w-20 rounded-[8px] border-2 ${type.border} bg-(--fld) px-1 py-2 text-center text-[14px] text-(--ice) outline-none`}
-        >
-          <option value=""></option>
-          {allowedLetters.map((l) => (
-            <option key={l} value={l}>
-              {l}
-            </option>
-          ))}
-        </select>
-        <input
-          ref={threeRef}
-          value={fa(value.threeDigit)}
-          onChange={(e) => {
-            const digits = onlyDigits(e.target.value, 3);
-            onChange({ ...value, threeDigit: digits });
-            if (digits.length === 3) {
-              iranRef.current?.focus();
-            }
-          }}
-          placeholder="۵۵۵"
-          className={`w-16 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
-        />
-        <div className="flex flex-col items-center justify-center rounded-[8px] bg-blue-900/40 px-2 text-[9px] leading-tight text-blue-200">
-          <span>I.R.</span>
-          <span>IRAN</span>
+      {inline ? (
+        <div className="flex items-center justify-end gap-1.5" dir="rtl">
+          <select
+            value={value.plateType}
+            onChange={(e) => setPlateType(Number(e.target.value))}
+            title="نوع پلاک"
+            className="max-w-32 rounded-[8px] border border-(--edge-2) bg-(--fld) px-1.5 py-2 text-[11px] text-(--ice) outline-none focus:border-(--mint)"
+          >
+            {PLATE_TYPES.map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-stretch justify-end gap-1.5">{plateInputs}</div>
         </div>
-        <input
-          ref={iranRef}
-          value={fa(value.iranCode)}
-          onChange={(e) => onChange({ ...value, iranCode: onlyDigits(e.target.value, 2) })}
-          placeholder="۵۵"
-          className={`w-12 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
-        />
-      </div>
+      ) : (
+        <>
+          <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شماره پلاک</label>
+          <div className="mb-1.5">
+            <select
+              value={value.plateType}
+              onChange={(e) => setPlateType(Number(e.target.value))}
+              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            >
+              {PLATE_TYPES.map((t) => (
+                <option key={t.code} value={t.code}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-stretch justify-end gap-1.5" dir="rtl">{plateInputs}</div>
+        </>
+      )}
     </div>
   );
 }

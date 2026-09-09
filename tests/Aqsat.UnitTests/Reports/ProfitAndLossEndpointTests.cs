@@ -135,4 +135,50 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(accrualAfter.NetProfit, accrualAfter.ByMarketer.Sum(r => r.NetProfit));
         Assert.Contains(accrualAfter.ByMarketer, r => r.GroupLabel == "بازاریاب سود و زیان");
     }
+
+    [Fact]
+    public async Task ByMonth_groups_by_Jalali_month_in_chronological_order()
+    {
+        await using var seedContext = TestDbContextFactory.Create();
+        var fixture = await DevSeeder.SeedAuthFixtureAsync(seedContext);
+        await InsuranceLineSeeder.EnsureSeededAsync(seedContext);
+        var salisLineId = await seedContext.InsuranceLines
+            .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
+
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(fixture.DualAgencyManagerMobile, DevSeeder.SeededUserPassword));
+        loginResponse.EnsureSuccessStatusCode();
+        var token = (await loginResponse.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-PNLM-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری روند ماهانه", null, null,
+            Vehicle: new VehicleInput("۹۹ب۹۹۸", null, null, null, null, null),
+            Property: null,
+            today, today, today.AddYears(1),
+            NetPremium: 5_000_000m, ServiceFee: 0m, MarketerId: null, PreviousInsurer: null, IsRenewal: false,
+            AgencyCommissionPercent: 10m));
+        policyResponse.EnsureSuccessStatusCode();
+
+        var result = await client.GetFromJsonAsync<PnlResultDto>(
+            $"/api/reports/pnl?from={Iso(today.AddMonths(-3))}&to={Iso(today)}&basis=Accrual");
+        Assert.NotNull(result);
+
+        var keys = result!.ByMonth.Select(r => int.Parse(r.GroupKey)).ToList();
+        Assert.Equal(keys.OrderBy(k => k), keys);
+
+        var pc = new PersianCalendar();
+        var date = today.ToDateTime(TimeOnly.MinValue);
+        var jalaliMonth = pc.GetMonth(date);
+        var jalaliYear = pc.GetYear(date);
+        Assert.Contains(result.ByMonth, r =>
+            r.GroupKey == (jalaliYear * 12 + jalaliMonth - 1).ToString() &&
+            r.GroupLabel == $"{JalaliMonthNames[jalaliMonth - 1]} {jalaliYear}");
+    }
+
+    private static readonly string[] JalaliMonthNames =
+        ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
 }

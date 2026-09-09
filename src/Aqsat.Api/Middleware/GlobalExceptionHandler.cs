@@ -55,7 +55,19 @@ public sealed class GlobalExceptionHandler(
     {
         logger.LogWarning(exception, "Concurrency conflict on {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
 
-        var entry = exception.Entries.Single();
+        // A payment allocating across several installments can conflict on more than one tracked
+        // entry at once — Single() would throw here and turn a proper 409 into a 500. The user's
+        // own row is the one they Modified/Deleted; Added entries (FK violations surfaced as
+        // concurrency exceptions) have no "yours vs theirs" diff to show anyway.
+        var entry = exception.Entries.FirstOrDefault(e => e.State is EntityState.Modified or EntityState.Deleted)
+                    ?? exception.Entries.FirstOrDefault();
+        if (entry is null)
+        {
+            await WriteProblemAsync(httpContext, StatusCodes.Status409Conflict,
+                "این رکورد همزمان توسط کاربر دیگری تغییر کرده است.", cancellationToken);
+            return;
+        }
+
         var current = await entry.GetDatabaseValuesAsync(cancellationToken);
 
         var problemDetails = new ProblemDetails
@@ -91,6 +103,19 @@ public sealed class GlobalExceptionHandler(
 
         httpContext.Response.StatusCode = problemDetails.Status.Value;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+    }
+
+    private static async Task WriteProblemAsync(
+        HttpContext httpContext, int statusCode, string title, CancellationToken cancellationToken)
+    {
+        httpContext.Response.StatusCode = statusCode;
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = statusCode,
+            Type = "https://httpstatuses.com/409",
+            Title = title,
+            Instance = httpContext.Request.Path,
+        }, cancellationToken);
     }
 
     private const string ChangedMarker = "(تغییر کرده)";

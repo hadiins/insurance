@@ -992,7 +992,7 @@ namespace Aqsat.Infrastructure.Migrations
                     b.Property<decimal?>("LoanTotalAmountToman")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("PolicyId")
+                    b.Property<Guid?>("PolicyId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("RawSuccess")
@@ -1132,6 +1132,145 @@ namespace Aqsat.Infrastructure.Migrations
                     b.HasIndex("AgencyId", "NationalIdHash");
 
                     b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.CustomerCreditLimit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LimitToman")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("SetAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("SetByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("AgencyId");
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("AgencyId", "CustomerId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("CustomerCreditLimits");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.CustomerPaymentLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastSentAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(43)
+                        .HasColumnType("nvarchar(43)");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("AgencyId");
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("AgencyId", "CustomerId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0 AND [Status] = 1");
+
+                    b.HasIndex("AgencyId", "Token")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("CustomerPaymentLinks");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.CustomerPortalInvitation", b =>
@@ -2047,6 +2186,85 @@ namespace Aqsat.Infrastructure.Migrations
                     b.ToTable("InsurerRemittanceLines");
                 });
 
+            modelBuilder.Entity("Aqsat.Domain.ManualReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte?>("FinalDecision")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<byte>("RecommendedDecision")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("AgencyId");
+
+                    b.HasIndex("AssessmentId");
+
+                    b.HasIndex("AssignedToUserId");
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("AgencyId", "Status", "CreatedAt")
+                        .IsDescending();
+
+                    b.ToTable("ManualReviews");
+                });
+
             modelBuilder.Entity("Aqsat.Domain.Marketer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2182,6 +2400,489 @@ namespace Aqsat.Infrastructure.Migrations
                     b.ToTable("MarketerRates");
                 });
 
+            modelBuilder.Entity("Aqsat.Domain.Monitoring.AlertOccurrence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<double>("ObservedValue")
+                        .HasColumnType("float");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("StartedAt");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("AlertOccurrences");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.Monitoring.AlertRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<byte>("Comparator")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastNotifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte>("Metric")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Severity")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("SmsNotify")
+                        .HasColumnType("bit");
+
+                    b.Property<double>("Threshold")
+                        .HasColumnType("float");
+
+                    b.Property<int>("WindowMinutes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.ToTable("AlertRules");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.Monitoring.EndpointStat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Errors")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("MinuteUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SlowCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalMs")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("MinuteUtc");
+
+                    b.HasIndex("MinuteUtc", "Path")
+                        .IsUnique();
+
+                    b.ToTable("EndpointStats");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.Monitoring.MetricSample", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<int>("ClientErrors")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("CpuPercent")
+                        .HasColumnType("float");
+
+                    b.Property<int?>("DbProbeMs")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("DiskFreeGb")
+                        .HasColumnType("float");
+
+                    b.Property<int>("Errors")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HealthStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LatencyP50Ms")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LatencyP95Ms")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LatencyP99Ms")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("MinuteUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("ProcessMemoryMb")
+                        .HasColumnType("float");
+
+                    b.Property<double>("ProcessUpMinutes")
+                        .HasColumnType("float");
+
+                    b.Property<int>("Requests")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("ThreadCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("MinuteUtc")
+                        .IsUnique();
+
+                    b.ToTable("MetricSamples");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.Monitoring.SecurityEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Severity")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("Type");
+
+                    b.HasIndex("Type", "IpAddress", "OccurredAt");
+
+                    b.ToTable("SecurityEvents");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.NetworkRiskPlateIndex", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("NationalIdHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("PlateNormalized")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("SyncedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("PlateNormalized");
+
+                    b.HasIndex("AgencyId", "PlateNormalized")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("NetworkRiskPlateIndex");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.NetworkRiskProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset>("CalculatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Decision")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxDaysOverdue")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("NationalIdHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(900)");
+
+                    b.Property<decimal>("OnTimeRatePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int>("OverdueCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReturnedChequeCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("RiskLevel")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SettledInstallmentCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenureMonths")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("NationalIdHash");
+
+                    b.HasIndex("AgencyId", "NationalIdHash")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("NetworkRiskProfiles");
+                });
+
             modelBuilder.Entity("Aqsat.Domain.OrgSettings", b =>
                 {
                     b.Property<Guid>("OrganizationId")
@@ -2217,6 +2918,9 @@ namespace Aqsat.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("MaxOpenTabs")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentLinkTtlDays")
                         .HasColumnType("int");
 
                     b.Property<string>("PaymentProvider")
@@ -2576,6 +3280,47 @@ namespace Aqsat.Infrastructure.Migrations
                     b.ToTable("PaymentCheques");
                 });
 
+            modelBuilder.Entity("Aqsat.Domain.PaymentLinkTokenIndex", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<Guid>("LinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(43)
+                        .HasColumnType("nvarchar(43)");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("AgencyId", "Token");
+
+                    b.ToTable("PaymentLinkTokenIndex");
+                });
+
             modelBuilder.Entity("Aqsat.Domain.PlatformPaymentSettings", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2637,6 +3382,52 @@ namespace Aqsat.Infrastructure.Migrations
                     SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
 
                     b.ToTable("PlatformPaymentSettings");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.PlatformSignupSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<bool>("AllowAgencySignup")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.ToTable("PlatformSignupSettings");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.Policy", b =>
@@ -3269,6 +4060,340 @@ namespace Aqsat.Infrastructure.Migrations
                     b.HasIndex("AgencyId", "Status");
 
                     b.ToTable("RenewalWatches");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AssessmentVersion")
+                        .HasColumnType("int");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset>("CalculatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("CreditExposureToman")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("CreditLimitIsOverride")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("CreditLimitToman")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CurrentDebtToman")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Decision")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FactorsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxDaysOverdue")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModelVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<decimal>("OnTimeRatePercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OverdueAmountToman")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("OverdueCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ProbabilityOfDefault")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ReturnedChequeCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("RiskLevel")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ScoreSource")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("SettledInstallmentCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("TenureMonths")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TriggeredRulesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("AgencyId");
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("AgencyId", "CustomerId", "CalculatedAt")
+                        .IsDescending();
+
+                    b.ToTable("RiskAssessments");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskNetworkSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.ToTable("RiskNetworkSettings");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskSettings", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ApproveMinScore")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("BaseCreditLimitToman")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("BouncedChequeHighThreshold")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("CreditLimitUtilizationWarningPercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CriticalMultiplier")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CurrentDebtWeight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CustomerTenureWeight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("DebtGrowthWarningPercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("DeclineBelowScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("HighMinScore")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("HighMultiplier")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("InsuranceBehaviorWeight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte>("IssuanceGateMode")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("LatePaymentWeight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("LowMinScore")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LowMultiplier")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("MaxLateDaysHighThreshold")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MediumMinScore")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MediumMultiplier")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OnTimeRatePositivePercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaymentHistoryWeight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReturnedChequesWeight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("ScoreDropWarningPoints")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SevereOverdueDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VeryLowMinScore")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("VeryLowMultiplier")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("OrganizationId");
+
+                    b.ToTable("RiskSettings");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskWarning", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BizId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BizId"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
+                    b.HasIndex("AgencyId");
+
+                    b.HasIndex("AssessmentId");
+
+                    b.HasIndex("BizId")
+                        .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("BizId"));
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("AgencyId", "IsRead", "CreatedAt")
+                        .IsDescending();
+
+                    b.ToTable("RiskWarnings");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.Role", b =>
@@ -3934,12 +5059,33 @@ namespace Aqsat.Infrastructure.Migrations
                     b.HasOne("Aqsat.Domain.Policy", "Policy")
                         .WithMany()
                         .HasForeignKey("PolicyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Customer");
 
                     b.Navigation("Policy");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.CustomerCreditLimit", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.CustomerPaymentLink", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.CustomerPortalInvitation", b =>
@@ -4113,6 +5259,32 @@ namespace Aqsat.Infrastructure.Migrations
                     b.Navigation("Policy");
                 });
 
+            modelBuilder.Entity("Aqsat.Domain.ManualReview", b =>
+                {
+                    b.HasOne("Aqsat.Domain.RiskAssessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Aqsat.Domain.AppUser", "AssignedToUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Aqsat.Domain.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("AssignedToUser");
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("Aqsat.Domain.Marketer", b =>
                 {
                     b.HasOne("Aqsat.Domain.AppUser", "AppUser")
@@ -4140,6 +5312,47 @@ namespace Aqsat.Infrastructure.Migrations
                     b.Navigation("InsuranceLine");
 
                     b.Navigation("Marketer");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.Monitoring.AlertOccurrence", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Monitoring.AlertRule", "Rule")
+                        .WithMany()
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rule");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.NetworkRiskPlateIndex", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Organization", "Agency")
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Agency");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.NetworkRiskProfile", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Organization", "Agency")
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Aqsat.Domain.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Agency");
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.OrgSettings", b =>
@@ -4328,6 +5541,47 @@ namespace Aqsat.Infrastructure.Migrations
                     b.Navigation("Marketer");
 
                     b.Navigation("Policy");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskAssessment", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskSettings", b =>
+                {
+                    b.HasOne("Aqsat.Domain.Organization", "Organization")
+                        .WithOne()
+                        .HasForeignKey("Aqsat.Domain.RiskSettings", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Aqsat.Domain.RiskWarning", b =>
+                {
+                    b.HasOne("Aqsat.Domain.RiskAssessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Aqsat.Domain.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("Aqsat.Domain.RolePermission", b =>

@@ -33,10 +33,12 @@ public sealed record RequestDangerZoneOtpResponse(bool Sent);
 /// so it can never clobber concurrent edits to the operational parameters.</summary>
 public sealed record AgencyPaymentGatewayDto(
     string Name, string Code, string PaymentProvider, bool CustomerPortalEnabled,
-    bool HasAgentMerchantId, string? AgentMerchantIdMasked, int PortalInvitationTtlHours);
+    bool HasAgentMerchantId, string? AgentMerchantIdMasked, int PortalInvitationTtlHours,
+    int PaymentLinkTtlDays = 60);
 
 public sealed record UpdateAgencyPaymentGatewayRequest(
-    string PaymentProvider, bool CustomerPortalEnabled, string? AgentMerchantId, int PortalInvitationTtlHours);
+    string PaymentProvider, bool CustomerPortalEnabled, string? AgentMerchantId, int PortalInvitationTtlHours,
+    int PaymentLinkTtlDays = 60);
 
 /// <summary>«تنظیمات پنل پیامکی» — the agency's own api.ir key for sending SMS. SmsApiKey is only
 /// returned masked, and null/whitespace on PUT keeps the stored one (the same write-only contract

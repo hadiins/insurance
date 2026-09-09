@@ -7,6 +7,7 @@ using Aqsat.Application.Platform;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -280,6 +281,14 @@ public sealed class PlatformUpdatesController(
 
             scopedMaintenanceMode.Activate(TimeSpan.FromMinutes(15));
             await hub.Clients.Group(PlatformHub.AllUsersGroup).SendAsync("MaintenanceModeChanged", new { active = true }, ct);
+
+            // Taking the whole platform down for an update is exactly the kind of action the
+            // security dashboard's feed exists for — no agency scope is attached to it, so the
+            // AuditEntry pipeline never sees it.
+            await scope.ServiceProvider.GetRequiredService<SecurityEventWriter>().WriteAsync(
+                SecurityEventType.SensitiveSettingChanged, SecuritySeverity.Warning,
+                $"حالت تعمیرات برای اجرای به‌روزرسانی نسخهٔ {package.Version} فعال شد",
+                cancellationToken: ct);
 
             var manifest = new UpdaterManifest(package.Version, package.ImageTag, package.Sha256, package.SignatureBase64);
             var start = await scopedUpdaterClient.StartUpdateAsync(manifest, ct);

@@ -4,6 +4,8 @@ import { useTabKey } from "../shell/TabContext";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
+import { EmptyState } from "../../components/EmptyState";
+import { Table, Td, Th, Tr } from "../../components/Table";
 
 type Mode = "payments" | "statement";
 
@@ -83,7 +85,7 @@ export function CustomerLookupPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">{title}</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">{sub}</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{sub}</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -97,7 +99,7 @@ export function CustomerLookupPage() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
           placeholder="نام، کد ملی، موبایل یا پلاک خودرو…"
-          className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint)"
+          className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
         />
         <button
           type="button"
@@ -110,9 +112,13 @@ export function CustomerLookupPage() {
 
       {customers !== null && !selected && (
         <div>
-          <div className="mb-2 text-[11px] text-(--ice-3)">{fa(customers.length)} نتیجه</div>
+          <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(customers.length)} نتیجه</div>
           {customers.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">مشتری‌ای یافت نشد.</div>
+            <EmptyState
+              icon="🔍"
+              title="مشتری‌ای یافت نشد."
+              description="عبارت جستجو را تغییر دهید و دوباره امتحان کنید."
+            />
           ) : (
             <div className="space-y-1.5">
               {customers.map((c) => (
@@ -146,65 +152,65 @@ export function CustomerLookupPage() {
           {mode === "statement" ? (
             <>
               <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
-                <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">جمع بدهی</div>
-                <div className="text-[19px] font-extrabold text-(--ice)">{money(selected.aggregateBalance)}</div>
+                <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">جمع بدهی</div>
+                <div className="text-[20px] font-extrabold text-(--ice)">{money(selected.aggregateBalance)}</div>
               </div>
               {selected.policies.length === 0 ? (
-                <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">بیمه‌نامه‌ای ندارد.</div>
+                <EmptyState
+                  icon="📄"
+                  title="بیمه‌نامه‌ای ندارد."
+                  description="این مشتری هنوز بیمه‌نامه‌ای در سیستم ندارد."
+                />
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr>
-                        {["بیمه‌نامه", "رشته", "وضعیت", "مبلغ کل", "مانده"].map((h) => (
-                          <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selected.policies.map((p) => (
-                        <tr key={p.policyId} className="border-t border-(--edge) first:border-t-0">
-                          <td className="px-3 py-2.5 text-[13px] font-semibold">{p.policyNumber}</td>
-                          <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.insuranceLineNameFa}</td>
-                          <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.status}</td>
-                          <td className="px-3 py-2.5 text-[13px]">{money(p.totalReceivable)}</td>
-                          <td className="px-3 py-2.5 text-[13px] font-bold">{money(p.balance)}</td>
-                        </tr>
+                <Table>
+                  <thead>
+                    <tr>
+                      {["بیمه‌نامه", "رشته", "وضعیت", "مبلغ کل", "مانده"].map((h) => (
+                        <Th key={h}>{h}</Th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.policies.map((p) => (
+                      <Tr key={p.policyId}>
+                        <Td className="py-2.5 font-semibold">{p.policyNumber}</Td>
+                        <Td className="py-2.5 text-(--ice-3)">{p.insuranceLineNameFa}</Td>
+                        <Td className="py-2.5 text-(--ice-3)">{p.status}</Td>
+                        <Td className="py-2.5">{money(p.totalReceivable)}</Td>
+                        <Td className="py-2.5 font-bold">{money(p.balance)}</Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </Table>
               )}
             </>
           ) : selected.payments.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13px] text-(--ice-3)">پرداختی ثبت نشده.</div>
+            <EmptyState
+              icon="💳"
+              title="پرداختی ثبت نشده."
+              description="برای این مشتری هنوز پرداختی در سیستم ثبت نشده است."
+            />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    {["تاریخ", "مبلغ", "روش", "شمارهٔ پیگیری", "بابت"].map((h) => (
-                      <th key={h} className="border-b border-(--edge) px-3 py-2.5 text-right text-[10.5px] font-medium tracking-wider text-(--ice-3)">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {selected.payments.map((p) => (
-                    <tr key={p.id} className="border-t border-(--edge) first:border-t-0">
-                      <td className="px-3 py-2.5 text-[13px]">{toJalaliDisplay(p.paidOn)}</td>
-                      <td className="px-3 py-2.5 text-[13px] font-bold">{money(p.amount)}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.method}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.referenceNo ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-[13px] text-(--ice-3)">{p.allocatedTo.join("، ")}</td>
-                    </tr>
+            <Table>
+              <thead>
+                <tr>
+                  {["تاریخ", "مبلغ", "روش", "شمارهٔ پیگیری", "بابت"].map((h) => (
+                    <Th key={h}>{h}</Th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </tr>
+              </thead>
+              <tbody>
+                {selected.payments.map((p) => (
+                  <Tr key={p.id}>
+                    <Td className="py-2.5">{toJalaliDisplay(p.paidOn)}</Td>
+                    <Td className="py-2.5 font-bold">{money(p.amount)}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{p.method}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{p.referenceNo ?? "—"}</Td>
+                    <Td className="py-2.5 text-(--ice-3)">{p.allocatedTo.join("، ")}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
           )}
         </div>
       )}

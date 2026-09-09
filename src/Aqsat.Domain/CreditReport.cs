@@ -4,9 +4,11 @@ using Aqsat.Domain.Enums;
 namespace Aqsat.Domain;
 
 /// <summary>
-/// The structured credit report retrieved from api.ir (UnpaidCheque + ActiveLoans) the moment a
-/// policy-verification invitation's inquiry fee is paid — the representative reviews this before
-/// approving or rejecting the installment policy (owner decision 2026-09-01).
+/// The structured credit report retrieved from api.ir (UnpaidCheque + ActiveLoans) the moment an
+/// inquiry fee is paid — either in a policy-verification chain (reviewed before approving the
+/// installment policy, owner decision 2026-09-01) or via a standalone portal link issued from the
+/// customer file (PolicyId=null). A standalone report is reused by the issuance wizard within the
+/// 30-day cache window (CLAUDE.md rule 26) by copying it onto the new policy.
 ///
 /// Structured numbers only, never free text about a person (CLAUDE.md rule 8): api.ir also
 /// returns the person's name in ActiveLoansRes and it is deliberately NOT stored here. Every field
@@ -16,8 +18,10 @@ namespace Aqsat.Domain;
 /// </summary>
 public class CreditReport : AgencyOwnedEntity
 {
-    public Guid PolicyId { get; set; }
-    public Policy Policy { get; set; } = default!;
+    /// <summary>Null for a standalone report (customer-file portal link); the wizard reuse path
+    /// copies such reports onto a policy with the original RetrievedAtUtc preserved.</summary>
+    public Guid? PolicyId { get; set; }
+    public Policy? Policy { get; set; }
 
     public Guid CustomerId { get; set; }
     public Customer Customer { get; set; } = default!;

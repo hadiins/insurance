@@ -2,27 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
+import { CreditReportCard, type CreditReportDto } from "../../components/CreditReportCard";
 
 /// Wizard step 3.5 (owner decision 2026-09-01) — the operator side of the issuance-verification
 /// chain: start it (the customer gets the portal link by SMS), watch the stage, read the api.ir
 /// credit report, approve or reject (reject cancels the policy), then hand off to the down-payment
 /// step. Stages advance on the customer's phone, so the view polls until it reaches a terminal
-/// stage or one that needs an operator decision.
-interface CreditReportDto {
-  chequeCount: number | null;
-  chequeSumAmountToman: number | null;
-  chequeSumBouncedAmountToman: number | null;
-  activeLoansCount: number | null;
-  loanTotalAmountToman: number | null;
-  loanDebtTotalAmountToman: number | null;
-  loanPastExpiredTotalAmountToman: number | null;
-  loanDeferredTotalAmountToman: number | null;
-  loanSuspiciousTotalAmountToman: number | null;
-  loanDishonoredAmountToman: number | null;
-  rawSuccess: boolean;
-  retrievedAtUtc: string;
-}
-
+/// stage or one that needs an operator decision. When the customer already has a fresh report
+/// (≤30 days, standalone or from a previous policy — owner decision 2026-09-03), starting the
+/// chain reuses it: the stage begins at ReportReady with a zero fee and no new inquiry.
 interface PolicyVerificationDto {
   invitationId: string | null;
   token: string | null;
@@ -121,7 +109,7 @@ export function PolicyVerificationStep({
   }
 
   if (loading) {
-    return <div className="text-[13px] text-(--ice-3)">در حال بارگذاری وضعیت اعتبارسنجی…</div>;
+    return <div className="text-[13.5px] text-(--ice-3)">در حال بارگذاری وضعیت اعتبارسنجی…</div>;
   }
 
   return (
@@ -153,7 +141,11 @@ export function PolicyVerificationStep({
             </div>
             {dto.inquiryFeeToman != null && (
               <div className="text-[11.5px] text-(--ice-3)">
-                کارمزد استعلام: <span className="tabular-nums">{money(dto.inquiryFeeToman)}</span> تومان
+                {dto.inquiryFeeToman === 0
+                  ? "بدون کارمزد (استعلام قبلی)"
+                  : <>
+                      کارمزد استعلام: <span className="tabular-nums">{money(dto.inquiryFeeToman)}</span> تومان
+                    </>}
               </div>
             )}
             {dto.expiresAtUtc && (
@@ -170,19 +162,24 @@ export function PolicyVerificationStep({
           ) : (
             <>
               <div className="mb-3.5 flex flex-wrap items-center gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2">
-                <span className="text-[11px] text-(--ice-3)">لینک پورتال مشتری:</span>
+                <span className="text-[11.5px] text-(--ice-3)">لینک پورتال مشتری:</span>
                 <span dir="ltr" className="truncate text-[11.5px] text-(--ice-2)">
                   {window.location.origin}/portal/{dto.token}
                 </span>
                 <button
                   type="button"
                   onClick={copyLink}
-                  className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-1 text-[11px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
+                  className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-1 text-[11.5px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
                 >
                   {copied ? "کپی شد" : "کپی"}
                 </button>
-                {dto.smsSent === false && (
-                  <span className="text-[11px] text-(--ember)">پیامک ارسال نشد — لینک را دستی به مشتری بدهید.</span>
+                {dto.smsSent === false && dto.inquiryFeeToman !== 0 && (
+                  <span className="text-[11.5px] text-(--ember)">پیامک ارسال نشد — لینک را دستی به مشتری بدهید.</span>
+                )}
+                {dto.inquiryFeeToman === 0 && (
+                  <span className="text-[11.5px] text-(--ice-3)">
+                    لینک قرارداد پس از تأیید شما برای مشتری پیامک میشود.
+                  </span>
                 )}
               </div>
 
@@ -209,36 +206,14 @@ export function PolicyVerificationStep({
                 </div>
               )}
 
-              {dto.creditReport && (
-                <div className="mb-3.5 rounded-[12px] border border-(--edge-2) bg-(--fld) p-4">
-                  <div className="mb-2.5 flex items-center justify-between gap-2">
-                    <div className="text-[12.5px] font-bold text-(--ice)">گزارش اعتباری</div>
-                    <div className="text-[11px] text-(--ice-3)">
-                      {fa(toJalaliDateTimeDisplay(dto.creditReport.retrievedAtUtc))}
-                    </div>
-                  </div>
-                  {!dto.creditReport.rawSuccess && (
-                    <div className="mb-2.5 rounded-[8px] border border-(--ember)/30 bg-(--ember)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--ember)">
-                      استعلام در حالت آزمایشی (sandbox) اجرا شده و دادهٔ واقعی ندارد.
-                    </div>
-                  )}
-                  <div className="mb-3 text-[12px] font-semibold text-(--ice-2)">چک برگشتی</div>
-                  <div className="mb-3 grid grid-cols-3 gap-2 text-[12px]">
-                    <ReportCell label="تعداد" value={dto.creditReport.chequeCount} />
-                    <ReportCell label="مجموع مبلغ" value={dto.creditReport.chequeSumAmountToman} isMoney />
-                    <ReportCell label="مجموع برگشتی" value={dto.creditReport.chequeSumBouncedAmountToman} isMoney />
-                  </div>
-                  <div className="mb-3 text-[12px] font-semibold text-(--ice-2)">تسهیلات فعال بانکی</div>
-                  <div className="grid grid-cols-3 gap-2 text-[12px]">
-                    <ReportCell label="تعداد" value={dto.creditReport.activeLoansCount} />
-                    <ReportCell label="مبلغ کل" value={dto.creditReport.loanTotalAmountToman} isMoney />
-                    <ReportCell label="بدهی جاری" value={dto.creditReport.loanDebtTotalAmountToman} isMoney />
-                    <ReportCell label="سررسید گذشته" value={dto.creditReport.loanPastExpiredTotalAmountToman} isMoney />
-                    <ReportCell label="معوق" value={dto.creditReport.loanDeferredTotalAmountToman} isMoney />
-                    <ReportCell label="مشکوک" value={dto.creditReport.loanSuspiciousTotalAmountToman} isMoney />
-                  </div>
+              {dto.inquiryFeeToman === 0 && dto.creditReport && dto.stage !== "Completed" && (
+                <div className="mb-3.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--mint)">
+                  استعلام قبلی مشتری ({fa(toJalaliDateTimeDisplay(dto.creditReport.retrievedAtUtc))}) بازیافت شد —
+                  کارمزد و استعلام مجدد لازم نیست.
                 </div>
               )}
+
+              {dto.creditReport && <CreditReportCard report={dto.creditReport} />}
 
               {dto.stage === "ReportReady" && (
                 <div className="flex flex-wrap gap-2">
@@ -319,16 +294,6 @@ export function PolicyVerificationStep({
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function ReportCell({ label, value, isMoney = false }: { label: string; value: number | null; isMoney?: boolean }) {
-  const display = value === null ? "—" : isMoney ? money(value) : fa(value);
-  return (
-    <div className="rounded-[8px] bg-(--pane) px-2.5 py-2">
-      <div className="mb-0.5 text-[10px] tracking-wider text-(--ice-3)">{label}</div>
-      <div className="tabular-nums font-semibold text-(--ice)">{display}</div>
     </div>
   );
 }

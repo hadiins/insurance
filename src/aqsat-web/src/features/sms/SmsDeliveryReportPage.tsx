@@ -28,7 +28,7 @@ export function SmsDeliveryReportPage() {
   return (
     <div>
       <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">گزارش تحویل پیامک</h2>
-      <div className="mb-4.5 text-xs text-(--ice-3)">جمع کل پیامک‌های ارسالی این نمایندگی</div>
+      <div className="mb-4.5 text-[12.5px] text-(--ice-3)">جمع کل پیامک‌های ارسالی این نمایندگی</div>
 
       {error && (
         <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
@@ -56,8 +56,8 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
   const valueColor = tone === "ember" ? "text-(--ember)" : tone === "mint" ? "text-(--mint)" : "text-(--ice)";
   return (
     <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
-      <div className="mb-1 text-[10px] tracking-[0.16em] text-(--ice-3)">{label}</div>
-      <div className={`text-[19px] font-extrabold tracking-tight ${valueColor}`}>{value}</div>
+      <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
+      <div className={`text-[20px] font-extrabold tracking-tight ${valueColor}`}>{value}</div>
     </div>
   );
 }

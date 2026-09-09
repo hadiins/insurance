@@ -45,7 +45,7 @@ export function PolicyNumberField({
 }: Props) {
   return (
     <div className="col-span-2">
-      <label className="mb-1.5 block text-[11px] tracking-wider text-(--ice-3)">شمارهٔ بیمه‌نامه</label>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ بیمه‌نامه</label>
 
       {manualEntry ? (
         <div>
@@ -59,7 +59,7 @@ export function PolicyNumberField({
           <button
             type="button"
             onClick={() => onToggleManual(false)}
-            className="mt-1.5 text-[11px] text-(--ice-3) underline decoration-dotted hover:text-(--ice-2)"
+            className="mt-1.5 text-[11.5px] text-(--ice-3) underline decoration-dotted hover:text-(--ice-2)"
           >
             بازگشت به حالت خودکار
           </button>
@@ -67,7 +67,7 @@ export function PolicyNumberField({
       ) : (
         <div className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5">
           {disabled ? (
-            <div className="text-[12px] text-(--ice-3)">ابتدا نوع بیمه‌نامه و تاریخ صدور را انتخاب کنید.</div>
+            <div className="text-[12.5px] text-(--ice-3)">ابتدا نوع بیمه‌نامه و تاریخ صدور را انتخاب کنید.</div>
           ) : (
             <>
               <div className="flex items-center gap-1.5 text-[13.5px] tabular-nums" dir="ltr">
@@ -89,7 +89,7 @@ export function PolicyNumberField({
                   className="w-24 rounded-[6px] border border-(--mint)/40 bg-(--pane) px-2 py-1 text-center text-(--mint) outline-none focus:border-(--mint)"
                 />
               </div>
-              <div className="mt-1 flex gap-1.5 text-[10px] text-(--ice-3)" dir="ltr">
+              <div className="mt-1 flex gap-1.5 text-[10.5px] text-(--ice-3)" dir="ltr">
                 <span className="w-[52px] text-center">رشته</span>
                 <span className="w-[1px]" />
                 <span className="w-[68px] text-center">نمایندگی</span>
@@ -115,7 +115,7 @@ export function PolicyNumberField({
                     </div>
                   )}
                   {composedNumber && (
-                    <div className="mt-2 text-[12px] text-(--mint)">
+                    <div className="mt-2 text-[12.5px] text-(--mint)">
                       ✅ <span className="tabular-nums" dir="ltr">{composedNumber}</span>
                     </div>
                   )}
@@ -126,7 +126,7 @@ export function PolicyNumberField({
           <button
             type="button"
             onClick={() => onToggleManual(true)}
-            className="mt-2.5 block text-[11px] text-(--ice-3) underline decoration-dotted hover:text-(--ice-2)"
+            className="mt-2.5 block text-[11.5px] text-(--ice-3) underline decoration-dotted hover:text-(--ice-2)"
           >
             ورود دستی شمارهٔ کامل
           </button>
