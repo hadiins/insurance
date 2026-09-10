@@ -76,7 +76,7 @@ public class AgencyCommissionEndpointTests : IClassFixture<WebApplicationFactory
         var firstInstallmentId = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId).OrderBy(i => i.SeqNo).Select(i => i.Id).FirstAsync();
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            firstInstallmentId, 4_000_000m, issueDate, "Cash", null));
+            firstInstallmentId, 4_000_000m, issueDate, "نقدی", null));
         paymentResponse.EnsureSuccessStatusCode();
         var paymentResult = await paymentResponse.Content.ReadFromJsonAsync<PaymentResultDto>();
 
@@ -132,7 +132,7 @@ public class AgencyCommissionEndpointTests : IClassFixture<WebApplicationFactory
 
         var response = await client.PostAsJsonAsync(
             $"/api/policies/{policy.Id}/record-full-payment",
-            new RecordFullPaymentRequest(5_000_000m, today, "Cash", null));
+            new RecordFullPaymentRequest(5_000_000m, today, "نقدی", null));
         response.EnsureSuccessStatusCode();
 
         var entry = await seedContext.AgencyCommissionEntries.AsNoTracking().SingleAsync(e => e.PolicyId == policy.Id);
@@ -148,7 +148,7 @@ public class AgencyCommissionEndpointTests : IClassFixture<WebApplicationFactory
         // Idempotent resubmission must not create a second slice or a second payment.
         var secondResponse = await client.PostAsJsonAsync(
             $"/api/policies/{policy.Id}/record-full-payment",
-            new RecordFullPaymentRequest(5_000_000m, today, "Cash", null));
+            new RecordFullPaymentRequest(5_000_000m, today, "نقدی", null));
         secondResponse.EnsureSuccessStatusCode();
         Assert.Equal(1, await seedContext.Payments.AsNoTracking().CountAsync(p => p.InstallmentIdHint == policy.Id));
         Assert.Equal(1, await seedContext.AgencyCommissionEntries.AsNoTracking().CountAsync(e => e.PolicyId == policy.Id));

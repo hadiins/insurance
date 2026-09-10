@@ -74,6 +74,8 @@ type SortKey = "name" | "code" | "users" | "policies" | "sms" | "inquiries" | "i
 export function AgenciesManagementPage() {
   const [summary, setSummary] = useState<AgencyPlatformSummaryDto | null>(null);
   const [filters, setFilters] = useState<AgencyFilterOptionsDto | null>(null);
+  // B10 — a failed filter-options load must not look like "no provinces exist" (rule 15/16).
+  const [filtersError, setFiltersError] = useState<string | null>(null);
   const [pageData, setPageData] = useState<AgencyListPageDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
@@ -132,15 +134,21 @@ export function AgenciesManagementPage() {
       .catch((err) => setListError(err instanceof ApiError ? err.message : "خطا در بارگذاری نمایندگی‌ها"));
   }, [province, city, insurer, status, search, sortBy, sortDir, page]);
 
+  const loadFilters = useCallback(() => {
+    setFiltersError(null);
+    api
+      .get<AgencyFilterOptionsDto>("/platform/agencies/filters")
+      .then(setFilters)
+      .catch((err) =>
+        setFiltersError(err instanceof ApiError ? err.message : "خطا در بارگذاری گزینه‌های فیلتر"));
+  }, []);
+
   useEffect(() => {
     api
       .get<AgencyPlatformSummaryDto>("/platform/agencies/summary")
       .then(setSummary)
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در بارگذاری خلاصه"));
-    api
-      .get<AgencyFilterOptionsDto>("/platform/agencies/filters")
-      .then(setFilters)
-      .catch(() => setFilters({ provinces: [], cities: [], insurers: [] }));
+    loadFilters();
     api
       .get<RiskNetworkSettingsDto>("/risk/network/settings")
       .then(setRiskNetwork)
@@ -426,6 +434,14 @@ export function AgenciesManagementPage() {
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
+          {filtersError && (
+            <span className="flex items-center gap-1.5 text-[12px] text-(--ember)">
+              {filtersError}
+              <button type="button" onClick={loadFilters} className="rounded-md border border-(--edge) px-2 py-0.5 hover:bg-(--hover)">
+                تلاش مجدد
+              </button>
+            </span>
+          )}
           <select value={city} onChange={(e) => applyFilter(setCity, e.target.value)} className={`${inputClass} w-40`}>
             <option value="">همهٔ شهرها</option>
             {(filters?.cities ?? []).map((c) => (

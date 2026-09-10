@@ -128,6 +128,39 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
         Assert.Equal(CollateralStatus.Bounced, stillBounced.Status);
     }
 
+    [Fact]
+    public async Task A_free_text_payment_method_is_rejected()
+    {
+        // B16 — Payment.Method is a report-grouping column; only the four labels the receipt form
+        // pairs with a PaymentMethod choice are acceptable from a client.
+        var (client, installmentId, _, _, _) = await SeedChequeTargetAsync();
+
+        var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
+            installmentId, 500_000m, DateOnly.FromDateTime(DateTime.UtcNow), "هر متنی که کلاینت فرستاد", null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
+        Assert.Contains("روش پرداخت", problem!.Title);
+    }
+
+    [Fact]
+    public async Task A_batch_payment_request_over_the_cap_is_rejected_whole()
+    {
+        // B13 — one SaveChanges per item; an unbounded array would hold the request thread and its
+        // DB connection for as long as thousands of payments take.
+        var (client, installmentId, _, _, _) = await SeedChequeTargetAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var items = Enumerable.Range(0, 201)
+            .Select(_ => new RecordPaymentRequest(installmentId, 1m, today, "نقدی", null))
+            .ToList();
+
+        var response = await client.PostAsJsonAsync("/api/payments/batch", items);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
+        Assert.Contains("۲۰۰", problem!.Title);
+    }
+
     /// <summary>Customer + vehicle + cash box + single-installment policy, the exact shape a
     /// cheque receipt needs; the live seed context comes back for post-call assertions.</summary>
     private async Task<(HttpClient Client, Guid InstallmentId, Guid CashBoxId, AppDbContext SeedContext, DevSeeder.SeededAuthFixture Fixture)> SeedChequeTargetAsync()

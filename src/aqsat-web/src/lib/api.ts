@@ -1,5 +1,4 @@
 import { emitDataChanged } from "./dataEvents";
-import { clearPersistedWorkspace } from "./sessionStorage";
 
 const TOKEN_KEY = "aqsat_token";
 const ORG_KEY = "aqsat_active_org";
@@ -35,6 +34,15 @@ export class ApiError extends Error {
  * without a hard page reload (which would lose in-memory tab state elsewhere). */
 export const AUTH_CLEARED_EVENT = "aqsat:auth-cleared";
 
+/** B12 — marks "the workspace currently on disk was left by an expired session"; read by
+ * authStore.login (via lib/sessionExpiry) to decide whether its owner is the one resuming. */
+export const SESSION_EXPIRED_KEY = "aqsat_session_expired";
+
+/** B11 — a hung backend (IIS accepted the connection but never answers) would otherwise spin
+ * forever. Uploads (FormData) get a much longer leash: they carry real bytes. */
+const REQUEST_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 300_000;
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   const token = getToken();
@@ -49,15 +57,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.body instanceof FormData ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS,
+  );
+
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, { ...options, headers });
-  } catch {
+    response = await fetch(`/api${path}`, { ...options, headers, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, "پاسخی از سرور در مهلت مقرر دریافت نشد. لطفاً دوباره تلاش کنید.");
+    }
     // fetch() itself throws only for a connectivity failure (server unreachable, DNS, CORS) —
     // never for a non-2xx HTTP response, which is handled below instead. Distinguishing this from
     // a generic server error is the whole point: "the backend isn't running" is diagnosable, an
     // unlabeled "خطای غیرمنتظره" is not.
     throw new ApiError(0, "امکان برقراری ارتباط با سرور نیست. از اجرا بودن سرویس backend مطمئن شوید.");
+  } finally {
+    clearTimeout(timeout);
   }
 
   // The login endpoint's own 401 means "wrong mobile/password", not "your session expired" — only
@@ -65,9 +84,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (response.status === 401 && path !== "/auth/login") {
     setToken(null);
     setActiveOrgId(null);
-    // A new login must start from a clean workspace — another user (or a stale
-    // draft from before the session expired) must not inherit these tabs/drafts.
-    clearPersistedWorkspace();
+    // B12 — the tabs/drafts are NOT wiped here anymore. The session keys above are what gate
+    // data access; the workspace stays so the same user can log back in and resume (the banner
+    // in lib/sessionExpiry warns 10 minutes before this happens). authStore.login wipes it if a
+    // DIFFERENT mobile shows up.
+    sessionStorage.setItem(SESSION_EXPIRED_KEY, "1");
     window.dispatchEvent(new Event(AUTH_CLEARED_EVENT));
     throw new ApiError(401, "نشست شما منقضی شده است.");
   }

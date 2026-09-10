@@ -419,26 +419,35 @@ function JobsPanel({ jobs, error, onRetry }: { jobs: HangfireStatsDto | null; er
 }
 
 export function AlertList({ alerts, onChanged }: { alerts: AlertOccurrenceDto[]; onChanged: () => void }) {
+  // B17 — ack/resolve are user-initiated clicks, not polls: swallowing the error made the button
+  // look dead. Rule 15 — the failure must be visible with a retry path (the button itself).
+  const [actionError, setActionError] = useState<string | null>(null);
+
   async function ack(id: string) {
+    setActionError(null);
     try {
       await api.put(`/monitoring/alerts/${id}/ack`);
       onChanged();
-    } catch {
-      /* the list refresh keeps the previous state visible; the next poll retries */
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "ثبت «دیده شد» ناموفق بود؛ دوباره تلاش کنید.");
     }
   }
 
   async function resolve(id: string) {
+    setActionError(null);
     try {
       await api.put(`/monitoring/alerts/${id}/resolve`);
       onChanged();
-    } catch {
-      /* same as above */
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "رسیدگی به هشدار ناموفق بود؛ دوباره تلاش کنید.");
     }
   }
 
   return (
     <Table>
+      {actionError && (
+        <caption className="mb-2 text-right text-[12px] text-(--ember)">{actionError}</caption>
+      )}
       <thead>
         <tr>
           <Th>هشدار</Th>

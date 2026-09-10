@@ -92,7 +92,7 @@ public class MarketerCommissionEndpointTests : IClassFixture<WebApplicationFacto
                 .FirstAsync();
 
             var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-                installmentId, installment.Amount, issueDate, "Cash", null));
+                installmentId, installment.Amount, issueDate, "نقدی", null));
             paymentResponse.EnsureSuccessStatusCode();
         }
 

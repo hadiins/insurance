@@ -139,6 +139,66 @@ public class PolicyIssuanceEndpointTests : IClassFixture<WebApplicationFactory<P
         Assert.True(customer.IsProfileComplete);
     }
 
+    [Fact]
+    public async Task Structured_plate_parts_with_non_digit_content_are_rejected()
+    {
+        // B15 — the plate parts used to be digit-NORMALIZED but never digit-VALIDATED: "ab" would
+        // land in PlateTwoDigit and poison every plate search keyed on the parts.
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری پلاک", null, null,
+            Vehicle: new VehicleInput(
+                null, null, null, null, null, null,
+                PlateType: 1, PlateTwoDigit: "ab", PlateLetter: "ب", PlateThreeDigit: "345", PlateIranCode: "11"),
+            Property: null,
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1),
+            9_000_000m, 500_000m, null, null, false));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
+        Assert.Contains("عدد", problem!.Title);
+    }
+
+    [Fact]
+    public async Task A_partial_structured_plate_is_rejected()
+    {
+        // Without all four parts the composed plate is silently dropped altogether — Vehicle.Plate
+        // stays null while the agent believes they entered a plate.
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری پلاک ناقص", null, null,
+            Vehicle: new VehicleInput(
+                null, null, null, null, null, null,
+                PlateType: 1, PlateTwoDigit: "12", PlateLetter: "ب", PlateThreeDigit: "345", PlateIranCode: null),
+            Property: null,
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1),
+            9_000_000m, 500_000m, null, null, false));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
+        Assert.Contains("ناقص", problem!.Title);
+    }
+
+    [Fact]
+    public async Task An_oversized_policy_number_is_rejected_up_front_not_as_a_sql_truncation_500()
+    {
+        // B14 — PolicyNumber's column is nvarchar(40); without the contract cap a longer value
+        // reached SQL Server and blew up as a raw 500.
+        var (client, salisLineId, _) = await SeedAsync();
+
+        var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            new string('9', 100), salisLineId, null, "مشتری شمارهٔ بلند", null, null,
+            Vehicle: null, Property: null,
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1),
+            9_000_000m, 500_000m, null, null, false));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
+        Assert.Equal("درخواست ارسالی نامعتبر است.", problem!.Title);
+    }
+
     private async Task<(HttpClient Client, Guid SalisLineId, Guid AtashLineId)> SeedAsync()
     {
         await using var seedContext = TestDbContextFactory.Create();

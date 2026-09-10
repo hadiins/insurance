@@ -90,7 +90,7 @@ public class EditInstallmentShiftFollowingTests : IClassFixture<WebApplicationFa
             // installment (§3.4), which would settle seq 1 instead of seq 3.
             var settledDue = original[2].DueDate;
             var payment = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-                original[2].Id, original[2].Amount, DateOnly.FromDateTime(DateTime.UtcNow), "Cash", null,
+                original[2].Id, original[2].Amount, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null,
                 Allocations: [new AllocationLineRequest(original[2].Id, original[2].Amount)]));
             payment.EnsureSuccessStatusCode();
 

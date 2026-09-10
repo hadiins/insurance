@@ -136,14 +136,16 @@ public class SmsReminderJobTests
         // A fixed "today" this test owns outright — the shared database keeps every other test's
         // seeded installments, so real-time dates would pick those up too.
         var today = new DateOnly(2026, 6, 15);
-        var (customerId, installmentId) = await SeedOneDueInstallmentAsync(context, fixture.AgencyAId, today);
+        var (customerId, installmentId, policyNumber) = await SeedOneDueInstallmentAsync(context, fixture.AgencyAId, today);
 
         var sender = new RecordingSmsSender();
         var job = CreateJob(context, sender, new MutableTimeProvider(AtMidnightUtc(today)));
         await job.RunAsync();
 
-        // One SMS carrying the /pay/{token} link, and the link row behind it.
-        var text = Assert.Single(sender.SentTexts);
+        // One SMS carrying the /pay/{token} link, and the link row behind it. Scoped to this
+        // test's own policy: the reminder job is platform-wide, so a concurrently-running test's
+        // due installment in the shared DB can legitimately add an SMS to the same sender.
+        var text = Assert.Single(sender.SentTexts.Where(t => t.Contains(policyNumber)));
         var link = Assert.Single(await context.CustomerPaymentLinks.AsNoTracking()
             .Where(l => l.CustomerId == customerId && l.Status == PaymentLinkStatus.Active).ToListAsync());
         Assert.Contains($"/pay/{link.Token}", text);
@@ -159,7 +161,7 @@ public class SmsReminderJobTests
         AgencyContext.Current = fixture.AgencyAId;
         var job2 = CreateJob(context, sender, new MutableTimeProvider(AtMidnightUtc(today.AddDays(4))));
         await job2.RunAsync();
-        Assert.Contains($"/pay/{link.Token}", Assert.Single(sender.SentTexts));
+        Assert.Contains($"/pay/{link.Token}", Assert.Single(sender.SentTexts.Where(t => t.Contains(policyNumber))));
         var linksAfter = await context.CustomerPaymentLinks.AsNoTracking()
             .Where(l => l.CustomerId == customerId && !l.IsDeleted).ToListAsync();
         Assert.Single(linksAfter);
@@ -180,15 +182,15 @@ public class SmsReminderJobTests
         // No OrgSettings row at all — a fresh agency's defaults: portal off.
 
         var today = new DateOnly(2026, 7, 20);
-        await SeedOneDueInstallmentAsync(context, fixture.AgencyAId, today);
+        var (customerId, _, policyNumber) = await SeedOneDueInstallmentAsync(context, fixture.AgencyAId, today);
 
         var sender = new RecordingSmsSender();
         var job = CreateJob(context, sender, new MutableTimeProvider(AtMidnightUtc(today)));
         await job.RunAsync();
 
-        var text = Assert.Single(sender.SentTexts);
+        var text = Assert.Single(sender.SentTexts.Where(t => t.Contains(policyNumber)));
         Assert.DoesNotContain("/pay/", text);
-        Assert.Equal(0, await context.CustomerPaymentLinks.CountAsync());
+        Assert.Equal(0, await context.CustomerPaymentLinks.CountAsync(l => l.CustomerId == customerId));
     }
 
     [Fact]
@@ -210,7 +212,7 @@ public class SmsReminderJobTests
     private static DateTimeOffset AtMidnightUtc(DateOnly date) =>
         new(date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
-    private static async Task<(Guid CustomerId, Guid InstallmentId)> SeedOneDueInstallmentAsync(
+    private static async Task<(Guid CustomerId, Guid InstallmentId, string PolicyNumber)> SeedOneDueInstallmentAsync(
         AppDbContext context, Guid agencyId, DateOnly today)
     {
         var thirdPartyLineId = context.InsuranceLines
@@ -253,7 +255,7 @@ public class SmsReminderJobTests
         };
         context.Installments.Add(installment);
         await context.SaveChangesAsync();
-        return (customer.Id, installment.Id);
+        return (customer.Id, installment.Id, policy.PolicyNumber);
     }
 
     private sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider

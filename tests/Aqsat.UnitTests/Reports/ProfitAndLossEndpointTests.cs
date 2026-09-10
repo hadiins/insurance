@@ -105,7 +105,7 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
             .Select(i => i.Id)
             .FirstAsync();
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            firstInstallmentId, 4_000_000m, today, "Cash", null));
+            firstInstallmentId, 4_000_000m, today, "نقدی", null));
         paymentResponse.EnsureSuccessStatusCode();
 
         // --- Snapshot 2, accrual: full commission income was already recognised at issuance;

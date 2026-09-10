@@ -62,7 +62,7 @@ public class OpenInstallmentsEndpointTests : IClassFixture<WebApplicationFactory
         // payment-date guard correctly refuses future PaidOn values.
         var due = schedule!.Installments.OrderBy(i => i.SeqNo).ToList();
         var payResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentIds[0], due[0].Amount, today, "Cash", null));
+            installmentIds[0], due[0].Amount, today, "نقدی", null));
         payResponse.EnsureSuccessStatusCode();
 
         var custResponse = await client.GetAsync($"/api/customers?search={Uri.EscapeDataString("مشتری پرداخت مستقل")}");

@@ -62,7 +62,7 @@ public class InsurerRemittanceEndpointTests : IClassFixture<WebApplicationFactor
         var installmentId = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId).Select(i => i.Id).FirstAsync();
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 2_000_000m, today, "Cash", null));
+            installmentId, 2_000_000m, today, "نقدی", null));
         paymentResponse.EnsureSuccessStatusCode();
 
         var pendingBefore = await client.GetFromJsonAsync<List<PendingRemittanceRow>>("/api/insurer-remittances/pending");

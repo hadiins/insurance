@@ -70,13 +70,13 @@ public class CollectionsReportEndpointTests : IClassFixture<WebApplicationFactor
 
         // Installment 1: settled on the due date itself — on time (deadline is a few days later).
         var pay1 = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentIds[0], due[0].Amount, due[0].DueDate, "Cash", null));
+            installmentIds[0], due[0].Amount, due[0].DueDate, "نقدی", null));
         pay1.EnsureSuccessStatusCode();
 
         // Installment 2: settled 10 days after its own due date — the standard 3-day settlement
         // deadline makes this late no matter how holidays shift it.
         var pay2 = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentIds[1], due[1].Amount, due[1].DueDate.AddDays(10), "Cash", null));
+            installmentIds[1], due[1].Amount, due[1].DueDate.AddDays(10), "نقدی", null));
         pay2.EnsureSuccessStatusCode();
 
         // Installment 3 stays open/unpaid — its due date is a full month out, so it can never be

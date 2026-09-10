@@ -34,4 +34,10 @@ public enum PaymentMethod : byte
         /// <summary>An installment paid by the customer through the public /pay/{token} portal —
         /// recorded automatically by InstallmentPaymentLinkService, never chosen by an operator.</summary>
         public const string OnlineInstallment = "قسط (پورتال)";
+
+        /// <summary>The only free-text Method values an operator's receipt form may send — one label
+        /// per PaymentMethod choice. Reports group on this column, so a foreign/legacy client string
+        /// would silently corrupt every method breakdown.</summary>
+        public static readonly IReadOnlySet<string> OperatorMethodLabels =
+            new HashSet<string>(["نقدی", "واریز بانکی", "چک", "پوز مستقیم بیمه‌گر"]);
     }

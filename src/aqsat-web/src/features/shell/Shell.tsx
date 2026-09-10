@@ -10,6 +10,7 @@ import { ThemePalettePicker } from "./ThemePalettePicker";
 import { Toast } from "./Toast";
 import { NotificationBell } from "./NotificationBell";
 import { MaintenanceBanner } from "../platform/MaintenanceBanner";
+import { SessionExpiryBanner } from "./SessionExpiryBanner";
 
 export function Shell() {
   const tabs = useTabsStore((s) => s.tabs);
@@ -55,6 +56,7 @@ export function Shell() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <MaintenanceBanner />
+      <SessionExpiryBanner />
       <div className="flex flex-none items-center gap-3.5 border-b border-(--edge) bg-(--slate) px-4 py-2.5">
         <img src="/credix-logo.png" alt="Credix" className="brand-logo-light h-[23px] w-auto" />
         <img src="/credix-logo-light.png" alt="Credix" className="brand-logo-dark h-[23px] w-auto" />

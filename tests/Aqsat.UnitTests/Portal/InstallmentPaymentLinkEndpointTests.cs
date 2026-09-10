@@ -238,7 +238,7 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
         // MANUAL — the agent records the identical receipt for the other customer.
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var record = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            manualInstallment.Id, 1_000_000m, today, "Cash", null));
+            manualInstallment.Id, 1_000_000m, today, "نقدی", null));
         record.EnsureSuccessStatusCode();
 
         await using var verify = TestDbContextFactory.Create();

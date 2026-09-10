@@ -77,7 +77,7 @@ public class CustomerAndPolicyFileEndpointTests : IClassFixture<WebApplicationFa
             .Where(i => i.PolicyId == firstPolicy.PolicyId).OrderBy(i => i.SeqNo).Select(i => i.Id).FirstAsync();
 
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            firstInstallmentId, 4_000_000m, today, "Cash", "REF-1"));
+            firstInstallmentId, 4_000_000m, today, "نقدی", "REF-1"));
         paymentResponse.EnsureSuccessStatusCode();
 
         var policyFile = await client.GetFromJsonAsync<PolicyFileDto>($"/api/policies/{firstPolicy.PolicyId}/file");

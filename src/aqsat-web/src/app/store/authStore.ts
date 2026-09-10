@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api, ApiError, getActiveOrgId, getToken, setActiveOrgId, setToken } from "../../lib/api";
 import { clearPersistedWorkspace } from "../../lib/sessionStorage";
+import { clearSessionIdentity, isSessionExpiredResume, lastLoginMobile, rememberSession } from "../../lib/sessionExpiry";
 
 export interface OrganizationMembership {
   organizationId: string;
@@ -42,6 +43,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (mobile, password) => {
     set({ error: null });
     const response = await api.post<LoginResponse>("/auth/login", { mobile, password });
+    // B12 — an expired session deliberately left the workspace in place for its owner to resume;
+    // a DIFFERENT mobile logging in instead must never inherit those tabs and drafts.
+    if (isSessionExpiredResume() && lastLoginMobile() !== mobile) {
+      clearPersistedWorkspace();
+    }
+    rememberSession(mobile, response.expiresInMinutes);
     setToken(response.token);
     await get().loadMe();
   },
@@ -50,6 +57,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     setToken(null);
     setActiveOrgId(null);
     clearPersistedWorkspace();
+    clearSessionIdentity();
     set({ user: null, status: "ready", error: null });
   },
 

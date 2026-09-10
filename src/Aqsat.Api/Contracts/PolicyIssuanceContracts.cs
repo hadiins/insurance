@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Aqsat.Api.Contracts;
 
 public sealed record InsuranceLineDto(
@@ -5,14 +7,23 @@ public sealed record InsuranceLineDto(
 
 /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §5 — Plate is kept for the rare free-text/legacy path,
 /// but the issuance form's plate component always sends the four structured parts, from which
-/// PlateNormalized is derived server-side (never trusted from the client as a single string).</summary>
+/// PlateNormalized is derived server-side (never trusted from the client as a single string).
+/// Length caps mirror the Vehicle columns (B14) — an oversized value otherwise reaches SQL Server
+/// as a truncation 500 instead of a Persian 400.</summary>
 public sealed record VehicleInput(
-    string? Plate, string? Vin, string? Chassis, string? Make, string? Model, int? Year,
-    byte? PlateType = null, string? PlateTwoDigit = null, string? PlateLetter = null,
-    string? PlateThreeDigit = null, string? PlateIranCode = null,
-    string? EngineNumber = null, string? VehicleType = null, int? ManufactureYear = null);
+    [MaxLength(20)] string? Plate,
+    [MaxLength(30)] string? Vin,
+    [MaxLength(30)] string? Chassis,
+    [MaxLength(60)] string? Make,
+    [MaxLength(60)] string? Model, int? Year,
+    byte? PlateType = null, [MaxLength(2)] string? PlateTwoDigit = null, [MaxLength(10)] string? PlateLetter = null,
+    [MaxLength(3)] string? PlateThreeDigit = null, [MaxLength(2)] string? PlateIranCode = null,
+    [MaxLength(30)] string? EngineNumber = null, [MaxLength(80)] string? VehicleType = null, int? ManufactureYear = null);
 
-public sealed record PropertySubjectInput(string Address, string? PostalCode, string? Type, decimal? Value);
+/// <summary>Length caps mirror the PropertySubject columns (B14).</summary>
+public sealed record PropertySubjectInput(
+    [MaxLength(400)] string Address, [MaxLength(10)] string? PostalCode,
+    [MaxLength(60)] string? Type, decimal? Value);
 
 /// <summary>
 /// Deliberately excludes DownPayment/InstallmentCount — schedule generation is a separate step
@@ -20,13 +31,15 @@ public sealed record PropertySubjectInput(string Address, string? PostalCode, st
 /// duplicated. Field order in the frontend form follows docs/PHASE-1-SPEC.md §5, verbatim: line ->
 /// customer -> insured subject -> premium -> service fee -> (down payment/schedule happens next).
 /// </summary>
+/// <summary>Length caps mirror the Policy/Customer columns (B14) — the guards in PoliciesController
+/// catch empty/duplicate numbers, but an oversized string otherwise fails as a SQL truncation 500.</summary>
 public sealed record CreatePolicyRequest(
-    string PolicyNumber,
+    [MaxLength(40)] string PolicyNumber,
     Guid InsuranceLineId,
     Guid? CustomerId,
-    string? CustomerFullName,
-    string? CustomerMobile,
-    string? CustomerNationalId,
+    [MaxLength(120)] string? CustomerFullName,
+    [MaxLength(15)] string? CustomerMobile,
+    [MaxLength(30)] string? CustomerNationalId,
     VehicleInput? Vehicle,
     PropertySubjectInput? Property,
     DateOnly IssueDate,
@@ -35,7 +48,7 @@ public sealed record CreatePolicyRequest(
     decimal NetPremium,
     decimal ServiceFee,
     Guid? MarketerId,
-    string? PreviousInsurer,
+    [MaxLength(120)] string? PreviousInsurer,
     bool IsRenewal,
     /// <summary>What the insurer pays the agency — docs/TASKS.md Task 15's P&amp;L income line.
     /// Optional: a policy can be issued before this rate is known and backfilled later.</summary>
@@ -59,7 +72,7 @@ public sealed record CreatePolicyRequest(
     /// <summary>Which insurer this policy was issued through — multi-insurer agencies need it to
     /// split the pending-remittance liability per insurer. Omitted → the agency's own insurer
     /// (Organization.InsurerName).</summary>
-    string? InsurerName = null);
+    [MaxLength(120)] string? InsurerName = null);
 
 public sealed record CreatePolicyResultDto(Guid PolicyId, string PolicyNumber, Guid CustomerId);
 

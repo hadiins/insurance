@@ -9,6 +9,7 @@ using Aqsat.Infrastructure.Payments;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -37,6 +38,13 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
     public async Task<ActionResult<IReadOnlyList<BatchPaymentResultItem>>> Batch(
         IReadOnlyList<RecordPaymentRequest> items, CancellationToken ct)
     {
+        // One SaveChanges per item — an unbounded array would hold a request thread (and its DB
+        // connection) for as long as it takes to record thousands of payments.
+        if (items.Count is 0 or > 200)
+        {
+            return ValidationProblem("هر درخواست دسته‌ای باید بین ۱ تا ۲۰۰ پرداخت داشته باشد.");
+        }
+
         var results = new List<BatchPaymentResultItem>();
         foreach (var item in items)
         {
@@ -70,6 +78,13 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
         if (!PaymentDateValidator.IsValid(request.PaidOn))
         {
             return (null, PaymentDateValidator.ErrorMessage);
+        }
+
+        // B16 — Method is free text that reports group on; only the four labels the receipt form
+        // pairs with a PaymentMethod choice are acceptable from a client.
+        if (!WellKnownPaymentMethods.OperatorMethodLabels.Contains(request.Method))
+        {
+            return (null, "روش پرداخت نامعتبر است.");
         }
 
         // Idempotency pre-check (CLAUDE.md rule 24) — the common sequential-duplicate case.
@@ -225,7 +240,7 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
         {
             await dbContext.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
             DetachPendingChanges(dbContext.ChangeTracker);
 
@@ -235,6 +250,18 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             if (raced is not null)
             {
                 return (raced, null);
+            }
+
+            // The generic database message is a dead end for the operator — name the two failure
+            // shapes a user can actually act on (rule 15) instead of one blanket message.
+            if (ex.InnerException is SqlException { Number: 547 })
+            {
+                return (null, "صندوق یا حساب بانکی انتخاب‌شده یافت نشد؛ مقادیر را بازبینی کنید.");
+            }
+
+            if (ex.InnerException is SqlException { Number: 8152 or 2628 })
+            {
+                return (null, "طول یکی از مقادیر ارسالی بیش از حد مجاز است.");
             }
 
             return (null, "خطای پایگاه‌داده هنگام ثبت پرداخت.");

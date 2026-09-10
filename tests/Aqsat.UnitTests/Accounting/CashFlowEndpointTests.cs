@@ -95,7 +95,7 @@ public class CashFlowEndpointTests : IClassFixture<WebApplicationFactory<Program
         var firstInstallmentId = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId && i.SeqNo == 1).Select(i => i.Id).FirstAsync();
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            firstInstallmentId, 4_000_000m, today, "Cash", null,
+            firstInstallmentId, 4_000_000m, today, "نقدی", null,
             MethodType: PaymentMethod.Cash, CashBoxId: boxA.Id));
         paymentResponse.EnsureSuccessStatusCode();
 

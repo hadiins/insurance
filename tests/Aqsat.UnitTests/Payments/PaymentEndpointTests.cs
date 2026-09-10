@@ -35,7 +35,7 @@ public class PaymentEndpointTests : IClassFixture<WebApplicationFactory<Program>
         var (policy, installments) = await SeedPolicyWithInstallmentsAsync(seedContext, fixture.AgencyAId, [1_000_000m, 1_000_000m]);
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installments[0].Id, 1_500_000m, DateOnly.FromDateTime(DateTime.UtcNow), "Cash", null));
+            installments[0].Id, 1_500_000m, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null));
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<PaymentResultDto>();
 
@@ -62,7 +62,7 @@ public class PaymentEndpointTests : IClassFixture<WebApplicationFactory<Program>
         var (policy, installments) = await SeedPolicyWithInstallmentsAsync(seedContext, fixture.AgencyAId, [1_000_000m]);
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installments[0].Id, 600_000m, DateOnly.FromDateTime(DateTime.UtcNow), "Cash", null));
+            installments[0].Id, 600_000m, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null));
         response.EnsureSuccessStatusCode();
 
         AgencyContext.Current = fixture.AgencyAId;
@@ -77,7 +77,7 @@ public class PaymentEndpointTests : IClassFixture<WebApplicationFactory<Program>
     {
         var (fixture, seedContext, client) = await SeedAsync();
         var (policy, installments) = await SeedPolicyWithInstallmentsAsync(seedContext, fixture.AgencyAId, [1_000_000m]);
-        var request = new RecordPaymentRequest(installments[0].Id, 400_000m, DateOnly.FromDateTime(DateTime.UtcNow), "Cash", null);
+        var request = new RecordPaymentRequest(installments[0].Id, 400_000m, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null);
 
         var firstResponse = await client.PostAsJsonAsync("/api/payments", request);
         firstResponse.EnsureSuccessStatusCode();
@@ -105,7 +105,7 @@ public class PaymentEndpointTests : IClassFixture<WebApplicationFactory<Program>
         var (policy, installments) = await SeedPolicyWithInstallmentsAsync(seedContext, fixture.AgencyAId, [1_000_000m]);
 
         var recordResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installments[0].Id, 1_000_000m, DateOnly.FromDateTime(DateTime.UtcNow), "Cash", null));
+            installments[0].Id, 1_000_000m, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null));
         recordResponse.EnsureSuccessStatusCode();
         var recorded = await recordResponse.Content.ReadFromJsonAsync<PaymentResultDto>();
 

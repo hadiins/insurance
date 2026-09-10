@@ -71,7 +71,7 @@ public class PolicyReceiptStatusEndpointTests : IClassFixture<WebApplicationFact
         var firstInstallmentId = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId).OrderBy(i => i.SeqNo).Select(i => i.Id).FirstAsync();
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            firstInstallmentId, 1_500_000m, today, "Cash", null));
+            firstInstallmentId, 1_500_000m, today, "نقدی", null));
         paymentResponse.EnsureSuccessStatusCode();
 
         var afterSettlement = await client.GetFromJsonAsync<PolicyReceiptStatusDto>($"/api/policies/{policy.PolicyId}/receipt-status");

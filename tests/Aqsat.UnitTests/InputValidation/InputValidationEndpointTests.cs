@@ -106,7 +106,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     {
         var (client, installmentId) = await SeedScheduledPolicyAsync();
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1), "Cash", null));
+            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1), "نقدی", null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
@@ -118,7 +118,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     {
         var (client, installmentId) = await SeedScheduledPolicyAsync();
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-3), "Cash", null));
+            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-3), "نقدی", null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
@@ -130,7 +130,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     {
         var (client, installmentId) = await SeedScheduledPolicyAsync();
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow), "Cash", null));
+            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

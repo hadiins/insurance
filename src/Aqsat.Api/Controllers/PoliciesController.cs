@@ -116,6 +116,12 @@ public sealed class PoliciesController(
             return ValidationProblem("حق بیمه باید مثبت باشد.");
         }
 
+        var plateError = request.Vehicle is null ? null : VehiclePlateValidator.Validate(request.Vehicle);
+        if (plateError is not null)
+        {
+            return ValidationProblem(plateError);
+        }
+
         // TotalReceivable = NetPremium + ServiceFee feeds every installment/P&L calculation — a
         // negative or larger-than-premium fee is always a typo (field order mixup with the premium
         // box), and it corrupts the schedule silently if it lands.
@@ -440,6 +446,12 @@ public sealed class PoliciesController(
         if (!PaymentDateValidator.IsValid(request.PaidOn))
         {
             return ValidationProblem(PaymentDateValidator.ErrorMessage);
+        }
+
+        // Same B16 rule as the installment receipt form — Method feeds report groupings.
+        if (!WellKnownPaymentMethods.OperatorMethodLabels.Contains(request.Method))
+        {
+            return ValidationProblem("روش پرداخت نامعتبر است.");
         }
 
         var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);

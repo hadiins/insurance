@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Aqsat.Domain.Enums;
 
 namespace Aqsat.Api.Contracts;
@@ -14,12 +15,13 @@ public sealed record AllocationLineRequest(Guid InstallmentId, decimal Amount);
 public sealed record ChequeDetailsRequest(
     string ChequeNumber, string BankName, DateOnly DueDate, string PresenterName, Guid CashBoxId);
 
+/// <summary>Method/ReferenceNo caps mirror the Payment columns (B14): nvarchar(30)/nvarchar(60).</summary>
 public sealed record RecordPaymentRequest(
     Guid InstallmentIdHint,
     decimal Amount,
     DateOnly PaidOn,
-    string Method,
-    string? ReferenceNo,
+    [MaxLength(30)] string Method,
+    [MaxLength(60)] string? ReferenceNo,
     IReadOnlyList<AllocationLineRequest>? Allocations = null,
     PaymentMethod? MethodType = null,
     Guid? CashBoxId = null,
@@ -41,8 +43,8 @@ public sealed record BatchPaymentResultItem(Guid InstallmentIdHint, PaymentResul
 public sealed record RecordFullPaymentRequest(
     decimal Amount,
     DateOnly PaidOn,
-    string Method,
-    string? ReferenceNo,
+    [MaxLength(30)] string Method,
+    [MaxLength(60)] string? ReferenceNo,
     PaymentMethod? MethodType = null,
     Guid? CashBoxId = null,
     Guid? BankAccountId = null,

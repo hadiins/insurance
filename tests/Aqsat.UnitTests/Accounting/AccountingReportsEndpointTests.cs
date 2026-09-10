@@ -219,7 +219,7 @@ public class AccountingReportsEndpointTests : IClassFixture<WebApplicationFactor
 
         // Explicit allocation so the 500,000 lands on the −10-day installment, not the oldest.
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installments[1].Id, 500_000m, today, "Cash", null,
+            installments[1].Id, 500_000m, today, "نقدی", null,
             [new AllocationLineRequest(installments[1].Id, 500_000m)]));
         paymentResponse.EnsureSuccessStatusCode();
 
