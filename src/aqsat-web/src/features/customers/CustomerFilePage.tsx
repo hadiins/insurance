@@ -241,7 +241,7 @@ export function CustomerFilePage() {
           <div className="mb-4.5 grid grid-cols-4 gap-3">
             <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مانده کل</div>
-              <div className={`text-[20px] font-extrabold tracking-tight ${file.aggregateBalance > 0 ? "text-(--ember)" : "text-(--mint)"}`}>
+              <div className={`text-[20px] font-extrabold tracking-tight ${file.aggregateBalance > 0 ? "text-(--ember)" : "text-(--moss)"}`}>
                 {money(file.aggregateBalance)}
               </div>
             </div>
@@ -306,7 +306,7 @@ export function CustomerFilePage() {
                       <Td className="py-2.75 text-(--ice-3)">{p.insuranceLineNameFa}</Td>
                       <Td className="py-2.75 text-(--ice-3)">{p.status}</Td>
                       <Td className="py-2.75">{money(p.totalReceivable)}</Td>
-                      <Td className={`py-2.75 font-bold ${p.balance > 0 ? "text-(--ember)" : "text-(--mint)"}`}>
+                      <Td className={`py-2.75 font-bold ${p.balance > 0 ? "text-(--ember)" : "text-(--moss)"}`}>
                         {money(p.balance)}
                       </Td>
                     </Tr>

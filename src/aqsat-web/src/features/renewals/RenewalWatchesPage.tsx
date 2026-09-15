@@ -38,10 +38,10 @@ const STATUS_LABEL: Record<RenewalWatchDto["status"], string> = {
   Lost: "از دست رفت",
 };
 
-const STATUS_TONE: Record<RenewalWatchDto["status"], "mint" | "amber" | "ember"> = {
+const STATUS_TONE: Record<RenewalWatchDto["status"], "mint" | "moss" | "amber" | "ember"> = {
   Watching: "mint",
   Notified: "amber",
-  Converted: "mint",
+  Converted: "moss",
   Lost: "ember",
 };
 

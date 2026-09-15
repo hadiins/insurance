@@ -1,7 +1,8 @@
-type Tone = "mint" | "ember" | "amber" | "neutral";
+type Tone = "mint" | "moss" | "ember" | "amber" | "neutral";
 
 const TONE_LIGHT: Record<Tone, string> = {
   mint: "bg-(--mint)/12 text-(--mint)",
+  moss: "bg-(--moss)/12 text-(--moss)",
   ember: "bg-(--ember)/13 text-(--ember)",
   amber: "bg-(--amber)/13 text-(--amber)",
   neutral: "bg-(--ice-3)/12 text-(--ice-3)",
@@ -9,6 +10,7 @@ const TONE_LIGHT: Record<Tone, string> = {
 
 const TONE_SOLID: Record<Tone, string> = {
   mint: "bg-(--mint) text-(--on-mint)",
+  moss: "bg-(--moss) text-(--on-mint)",
   ember: "bg-(--ember) text-white",
   amber: "bg-(--amber) text-white",
   neutral: "bg-(--ice-3) text-white",

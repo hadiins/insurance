@@ -52,10 +52,10 @@ const STATUS_LABEL: Record<CollateralDto["status"], string> = {
   Bounced: "برگشتی",
 };
 
-const STATUS_TONE: Record<CollateralDto["status"], "mint" | "amber" | "ember"> = {
+const STATUS_TONE: Record<CollateralDto["status"], "mint" | "moss" | "amber" | "ember"> = {
   Held: "mint",
   AtBank: "amber",
-  Cleared: "mint",
+  Cleared: "moss",
   Bounced: "ember",
 };
 

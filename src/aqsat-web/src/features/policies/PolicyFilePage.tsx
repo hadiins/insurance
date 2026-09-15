@@ -82,9 +82,9 @@ const STATUS_LABEL: Record<string, string> = {
   PendingConfirmation: "در انتظار تأیید مشتری",
 };
 
-const STATUS_TONE: Record<string, "mint" | "amber" | "ember"> = {
+const STATUS_TONE: Record<string, "mint" | "moss" | "amber" | "ember"> = {
   Active: "mint",
-  Settled: "mint",
+  Settled: "moss",
   Cancelled: "ember",
   PendingConfirmation: "amber",
 };

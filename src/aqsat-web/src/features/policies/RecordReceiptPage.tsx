@@ -218,7 +218,7 @@ export function RecordReceiptPage() {
               )}
 
               {status.isScheduled && status.openInstallments.length === 0 && (!status.downPayment || status.downPaymentReceived) && (
-                <div className="mt-3 text-[12.5px] font-semibold text-(--mint)">این بیمه‌نامه تسویه شده است.</div>
+                <div className="mt-3 text-[12.5px] font-semibold text-(--moss)">این بیمه‌نامه تسویه شده است.</div>
               )}
 
               {!status.isInstallment && !status.isFullyPaid && (
@@ -226,7 +226,7 @@ export function RecordReceiptPage() {
               )}
 
               {!status.isInstallment && status.isFullyPaid && (
-                <div className="mt-3 text-[12.5px] font-semibold text-(--mint)">این بیمه‌نامه تسویه شده است.</div>
+                <div className="mt-3 text-[12.5px] font-semibold text-(--moss)">این بیمه‌نامه تسویه شده است.</div>
               )}
             </>
           )}

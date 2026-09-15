@@ -7,12 +7,12 @@ import { HEALTH_LABELS, type MonitoringOverviewDto } from "./monitoringTypes";
 export function HealthBanner({ overview }: { overview: MonitoringOverviewDto }) {
   const tone =
     overview.healthStatus === "ok"
-      ? "border-(--mint)/40 bg-(--mint)/8"
+      ? "border-(--moss)/40 bg-(--moss)/8"
       : overview.healthStatus === "down"
         ? "border-(--ember)/40 bg-(--ember)/8"
         : "border-(--amber)/40 bg-(--amber)/8";
   const dot =
-    overview.healthStatus === "ok" ? "bg-(--mint)" : overview.healthStatus === "down" ? "bg-(--ember)" : "bg-(--amber)";
+    overview.healthStatus === "ok" ? "bg-(--moss)" : overview.healthStatus === "down" ? "bg-(--ember)" : "bg-(--amber)";
 
   return (
     <div className={`flex flex-wrap items-center gap-x-8 gap-y-3 rounded-2xl border p-4.5 ${tone}`}>

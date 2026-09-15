@@ -72,7 +72,7 @@ export function MarketerPanelPage() {
           </div>
           <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
             <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">پرداخت‌شده</div>
-            <div className="text-[20px] font-extrabold text-(--mint)">{money(commissions.paid)}</div>
+            <div className="text-[20px] font-extrabold text-(--moss)">{money(commissions.paid)}</div>
           </div>
         </div>
       )}
@@ -95,7 +95,7 @@ export function MarketerPanelPage() {
                 <tr key={c.customerId} className="border-t border-(--edge)">
                   <td className="px-3 py-2.5 text-[13.5px] font-semibold">{c.fullName}</td>
                   <td className="px-3 py-2.5 text-[13.5px]">
-                    <StatusBadge tone={c.isOverdue ? "ember" : "mint"}>{c.isOverdue ? "معوق" : "به‌روز"}</StatusBadge>
+                    <StatusBadge tone={c.isOverdue ? "ember" : "moss"}>{c.isOverdue ? "معوق" : "به‌روز"}</StatusBadge>
                   </td>
                 </tr>
               ))}

@@ -33,9 +33,9 @@ const STATUS_LABEL: Record<PolicyListItemDto["status"], string> = {
   PendingConfirmation: "در انتظار تأیید",
 };
 
-const STATUS_TONE: Record<PolicyListItemDto["status"], "mint" | "amber" | "ember"> = {
+const STATUS_TONE: Record<PolicyListItemDto["status"], "mint" | "moss" | "amber" | "ember"> = {
   Active: "mint",
-  Settled: "mint",
+  Settled: "moss",
   Cancelled: "ember",
   PendingConfirmation: "amber",
 };

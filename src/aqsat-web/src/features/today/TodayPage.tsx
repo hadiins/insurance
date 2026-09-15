@@ -167,7 +167,7 @@ export function TodayPage() {
         >
           <div>
             <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">سود و زیان این ماه (تعهدی)</div>
-            <div className={`text-[20px] font-extrabold ${pnl.netProfit >= 0 ? "text-(--mint)" : "text-(--ember)"}`}>
+            <div className={`text-[20px] font-extrabold ${pnl.netProfit >= 0 ? "text-(--moss)" : "text-(--ember)"}`}>
               {money(pnl.netProfit)}
             </div>
           </div>

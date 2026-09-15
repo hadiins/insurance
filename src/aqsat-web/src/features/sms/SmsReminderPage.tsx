@@ -241,7 +241,7 @@ export function SmsReminderPage() {
           <div className="mt-3.5 grid grid-cols-3 gap-2 text-center text-[11.5px]">
             <div className="rounded-[8px] border border-(--edge-2) p-2">
               <div className="text-(--ice-3)">ارسال‌شده</div>
-              <div className="font-bold text-(--mint)">{fa(sendResult.sentCount)}</div>
+              <div className="font-bold text-(--moss)">{fa(sendResult.sentCount)}</div>
             </div>
             <div className="rounded-[8px] border border-(--edge-2) p-2">
               <div className="text-(--ice-3)">ناموفق/رد‌شده</div>
@@ -271,7 +271,7 @@ export function SmsReminderPage() {
                 {entry.policyNumber ?? "—"} {entry.seqNo ? `— قسط ${fa(entry.seqNo)}` : ""}
               </span>
               <span className="text-(--ice-3)">{entry.mobile}</span>
-              <span className={entry.status === "Sent" ? "text-(--mint)" : "text-(--ember)"}>
+              <span className={entry.status === "Sent" ? "text-(--moss)" : "text-(--ember)"}>
                 {STATUS_LABEL[entry.status] ?? entry.status}
               </span>
             </div>

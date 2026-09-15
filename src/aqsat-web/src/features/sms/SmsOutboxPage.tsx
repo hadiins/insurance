@@ -72,7 +72,7 @@ export function SmsOutboxPage() {
                     </Td>
                     <Td className="py-2.5 text-(--ice-3)">{RECIPIENT_LABEL[entry.recipientType] ?? entry.recipientType}</Td>
                     <Td className="py-2.5 text-(--ice-3)">{fa(entry.mobile)}</Td>
-                    <Td className={`py-2.5 ${entry.status === "Sent" ? "text-(--mint)" : "text-(--ember)"}`}>
+                    <Td className={`py-2.5 ${entry.status === "Sent" ? "text-(--moss)" : "text-(--ember)"}`}>
                       {STATUS_LABEL[entry.status] ?? entry.status}
                     </Td>
                   </Tr>

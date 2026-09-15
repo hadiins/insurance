@@ -439,7 +439,7 @@ export function MarketersPage() {
                     </div>
                     <div className="rounded-[8px] border border-(--edge-2) p-2">
                       <div className="text-(--ice-3)">پرداخت‌شده</div>
-                      <div className="font-bold text-(--mint)">{money(commissions.paid)}</div>
+                      <div className="font-bold text-(--moss)">{money(commissions.paid)}</div>
                     </div>
                   </div>
                 )}
