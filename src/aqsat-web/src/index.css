@@ -2,6 +2,19 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* Self-hosted Vazirmatn (public/fonts) — see index.html for why it must not come
+ * from Google Fonts. One variable file covers the full 100-900 range. */
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  /* Dual source: older engines only enable variations through the explicit
+   * "woff2-variations" hint, newer ones that dropped it fall through to plain woff2. */
+  src: url("/fonts/Vazirmatn-Variable.woff2") format("woff2-variations"),
+    url("/fonts/Vazirmatn-Variable.woff2") format("woff2");
+}
+
 /*
  * Theme = palette (data-palette) x mode (data-theme). Every palette block defines ALL tokens for
  * its mode, and every dark block is attribute-paired with its light block — a dark block can
@@ -289,6 +302,13 @@ body {
   color: var(--ice);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Tactile press feedback: every enabled button answers a click with a physical
+ * 1% push. Static transform only (no transition, no animation) so it stays
+ * crisp and needs no prefers-reduced-motion guard. */
+button:not(:disabled):active {
+  transform: scale(0.98);
 }
 
 /* color-scheme covers modern browsers; this keeps <option> rows readable even where the popup

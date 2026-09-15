@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { NAV } from "../../app/navConfig";
+import { versionLabel } from "../../app/version";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useAuthStore } from "../../app/store/authStore";
 import type { NavItem } from "../../app/types";
@@ -108,7 +109,8 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="flex flex-none gap-1.5 border-t border-(--edge) p-2">
+      <div className="flex flex-none items-center gap-1.5 border-t border-(--edge) p-2">
+        {!collapsed && <span className="flex-none pe-1 text-[10.5px] text-(--ice-3)">{versionLabel()}</span>}
         <button
           type="button"
           onClick={toggleCollapsed}

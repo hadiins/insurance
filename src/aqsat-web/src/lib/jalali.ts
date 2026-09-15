@@ -49,6 +49,17 @@ export function todayJalaliParts(): { jy: number; jm: number; jd: number } {
   return toJalaali(now.getFullYear(), now.getMonth() + 1, now.getDate());
 }
 
+const JALALI_MONTHS = [
+  "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+  "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
+];
+
+/** Persian-digit "۲۴ شهریور ۱۴۰۵" — today's Jalali date for the shell header and login page. */
+export function todayJalaliLongDisplay(): string {
+  const { jy, jm, jd } = todayJalaliParts();
+  return `${fa(jd)} ${JALALI_MONTHS[jm - 1]} ${fa(jy)}`;
+}
+
 export function jalaliPartsToIso(jy: number, jm: number, jd: number): string {
   const { gy, gm, gd } = toGregorian(jy, jm, jd);
   return `${gy.toString().padStart(4, "0")}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`;

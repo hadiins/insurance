@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useAuthStore } from "../../app/store/authStore";
+import { todayJalaliLongDisplay } from "../../lib/jalali";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 import { Stage } from "./Stage";
@@ -60,6 +61,7 @@ export function Shell() {
       <div className="flex flex-none items-center gap-3.5 border-b border-(--edge) bg-(--slate) px-4 py-2.5">
         <img src="/credix-logo.png" alt="Credix" className="brand-logo-light h-[23px] w-auto" />
         <img src="/credix-logo-light.png" alt="Credix" className="brand-logo-dark h-[23px] w-auto" />
+        <span className="hidden text-[11.5px] text-(--ice-3) sm:inline">{todayJalaliLongDisplay()}</span>
         <span className="flex-1" />
 
         <NotificationBell />
