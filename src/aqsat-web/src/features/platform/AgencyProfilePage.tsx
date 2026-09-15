@@ -4,6 +4,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
+import { Field } from "../../components/form";
 
 interface AgencyMonthlyTrendDto {
   year: number;
@@ -271,14 +272,6 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
-      {children}
-    </div>
-  );
-}
 
 const inputClass =
   "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";

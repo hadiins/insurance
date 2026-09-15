@@ -8,6 +8,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EmptyState } from "../../components/EmptyState";
+import { FILTER_SELECT } from "../../components/form";
 
 interface ChequesFilterPayload {
   status?: string;
@@ -109,7 +110,7 @@ export function ChequesListPage() {
         <select
           value={sourceFilter}
           onChange={(e) => setSourceFilter(e.target.value as "" | "Collateral" | "Payment")}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className={FILTER_SELECT}
         >
           <option value="">همهٔ انواع</option>
           <option value="Collateral">وثیقهٔ صیادی</option>
@@ -118,7 +119,7 @@ export function ChequesListPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className={FILTER_SELECT}
         >
           <option value="">همهٔ وضعیت‌ها</option>
           {(["Held", "AtBank", "Cleared", "Bounced"] as const).map((s) => (

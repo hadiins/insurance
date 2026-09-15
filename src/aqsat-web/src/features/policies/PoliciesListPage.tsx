@@ -8,6 +8,7 @@ import { fa, money } from "../../lib/persian";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { FILTER_SELECT } from "../../components/form";
 
 interface PolicyListFilterPayload {
   status?: string;
@@ -148,7 +149,7 @@ export function PoliciesListPage() {
         <select
           value={status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className={FILTER_SELECT}
         >
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -159,7 +160,7 @@ export function PoliciesListPage() {
         <select
           value={installmentFilter}
           onChange={(e) => setFilters({ ...filters, installment: e.target.value })}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className={FILTER_SELECT}
         >
           {INSTALLMENT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>

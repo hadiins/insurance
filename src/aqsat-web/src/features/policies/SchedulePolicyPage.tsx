@@ -6,6 +6,7 @@ import { MoneyInput } from "../../components/MoneyInput";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { INPUT_CLASS } from "../../components/form";
 
 interface CashBoxDto {
   id: string;
@@ -263,7 +264,7 @@ export function SchedulePolicyPage() {
                       onChange={(e) => setInstallmentCount(toLatinDigits(e.target.value).replace(/[^\d]/g, ""))}
                       placeholder="۹"
                       inputMode="numeric"
-                      className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+                      className={`${INPUT_CLASS} tabular-nums`}
                     />
                   </div>
                   <div>
@@ -334,7 +335,7 @@ export function SchedulePolicyPage() {
                                 <select
                                   value={receiveMethodType}
                                   onChange={(e) => setReceiveMethodType(e.target.value as MethodType)}
-                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                  className={INPUT_CLASS}
                                 >
                                   <option value="Cash">نقدی</option>
                                   <option value="BankTransfer">واریز بانکی</option>
@@ -350,7 +351,7 @@ export function SchedulePolicyPage() {
                                   <select
                                     value={receiveBankAccountId}
                                     onChange={(e) => setReceiveBankAccountId(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className={INPUT_CLASS}
                                   >
                                     <option value="">انتخاب کنید…</option>
                                     {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -369,7 +370,7 @@ export function SchedulePolicyPage() {
                                   <select
                                     value={receiveCashBoxId}
                                     onChange={(e) => setReceiveCashBoxId(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className={INPUT_CLASS}
                                   >
                                     <option value="">انتخاب کنید…</option>
                                     {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -390,7 +391,7 @@ export function SchedulePolicyPage() {
                                 <input
                                   value={receiveReferenceNo}
                                   onChange={(e) => setReceiveReferenceNo(e.target.value)}
-                                  className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                  className={INPUT_CLASS}
                                 />
                               </div>
                             </div>
@@ -403,7 +404,7 @@ export function SchedulePolicyPage() {
                                     value={chequeNumber}
                                     onChange={(e) => setChequeNumber(e.target.value)}
                                     dir="ltr"
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className={INPUT_CLASS}
                                   />
                                 </div>
                                 <div>
@@ -411,7 +412,7 @@ export function SchedulePolicyPage() {
                                   <input
                                     value={chequeBankName}
                                     onChange={(e) => setChequeBankName(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className={INPUT_CLASS}
                                   />
                                 </div>
                                 <div>
@@ -423,7 +424,7 @@ export function SchedulePolicyPage() {
                                   <input
                                     value={chequePresenterName}
                                     onChange={(e) => setChequePresenterName(e.target.value)}
-                                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                                    className={INPUT_CLASS}
                                   />
                                 </div>
                               </div>

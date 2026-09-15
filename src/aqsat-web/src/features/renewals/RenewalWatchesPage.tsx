@@ -8,6 +8,7 @@ import { JalaliDateField } from "../../components/JalaliDateField";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EmptyState } from "../../components/EmptyState";
+import { INPUT_INLINE_SM } from "../../components/form";
 
 interface InsuranceLineDto {
   id: string;
@@ -159,18 +160,18 @@ export function RenewalWatchesPage() {
             value={prospectName}
             onChange={(e) => setProspectForm({ ...prospectForm, prospectName: e.target.value })}
             placeholder="نام مشتری احتمالی"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <input
             value={prospectMobile}
             onChange={(e) => setProspectForm({ ...prospectForm, prospectMobile: e.target.value })}
             placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <select
             value={lineId}
             onChange={(e) => setProspectForm({ ...prospectForm, lineId: e.target.value })}
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
+            className={INPUT_INLINE_SM}
           >
             <option value="">رشتهٔ بیمه…</option>
             {lines?.map((l) => (
@@ -183,12 +184,12 @@ export function RenewalWatchesPage() {
             value={currentInsurer}
             onChange={(e) => setProspectForm({ ...prospectForm, currentInsurer: e.target.value })}
             placeholder="بیمه‌گر فعلی"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <JalaliDateField
             value={expiryDate}
             onChange={(iso) => setProspectForm({ ...prospectForm, expiryDate: iso })}
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
+            className={INPUT_INLINE_SM}
           />
         </div>
         <div className="flex items-center gap-3">

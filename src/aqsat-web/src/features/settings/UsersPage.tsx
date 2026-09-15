@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { INPUT_INLINE_SM } from "../../components/form";
 
 interface OrgUserDto {
   membershipId: string;
@@ -92,25 +93,25 @@ export function UsersPage() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="نام کامل"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <input
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
             placeholder="شمارهٔ همراه"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
             placeholder="رمز عبور"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <select
             value={roleId}
             onChange={(e) => setRoleId(e.target.value)}
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
+            className={INPUT_INLINE_SM}
           >
             {roles?.map((r) => (
               <option key={r.id} value={r.id}>

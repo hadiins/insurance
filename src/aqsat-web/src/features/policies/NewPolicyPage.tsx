@@ -9,6 +9,7 @@ import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./Plate
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { addOneJalaliYear, toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
 import { MoneyInput } from "../../components/MoneyInput";
+import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
 import { PolicyVerificationStep } from "./PolicyVerificationStep";
 import type { CreditReportDto } from "../../components/CreditReportCard";
 import { useNetworkRiskLookup } from "../risk/riskApi";
@@ -130,14 +131,6 @@ const METHOD_LABELS: Record<MethodType, string> = {
   PosDirect: "پوز مستقیم بیمه‌گر",
 };
 
-const INPUT_CLASS =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
-
-const BTN_PRIMARY =
-  "rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
-
-const BTN_SECONDARY =
-  "rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)";
 interface FormState {
   customerFirstName: string;
   customerLastName: string;

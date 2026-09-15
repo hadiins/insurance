@@ -4,17 +4,9 @@ import { fa, money } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
 import { useAssessCustomer, useCreditLimit, useCustomerRisk, useRiskHistory, useSetCreditLimit } from "./riskApi";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES, type RiskAssessmentDto } from "./riskTypes";
-
-const BTN_PRIMARY =
-  "rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
-
-const BTN_SECONDARY =
-  "rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)";
-
-const INPUT_CLASS =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** The whole «اعتبار و ریسک» view of one customer (docs Phase 2A §7/§25/§26) — used both by the
  * customer file's tab and the standalone assessment page. Loading / error / empty states are all

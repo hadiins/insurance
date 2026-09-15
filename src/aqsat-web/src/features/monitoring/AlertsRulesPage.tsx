@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { Field } from "../../components/form";
 import { AlertList } from "./MonitoringDashboardPage";
 import {
   ALERT_COMPARATOR_LABELS,
@@ -365,11 +366,3 @@ export function AlertsRulesPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="text-[11.5px] text-(--ice-3)">{label}</div>
-      {children}
-    </div>
-  );
-}

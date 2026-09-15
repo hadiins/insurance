@@ -11,6 +11,7 @@ import { MoneyInput } from "../../components/MoneyInput";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EmptyState } from "../../components/EmptyState";
+import { FILTER_SELECT, INPUT_INLINE_SM } from "../../components/form";
 
 interface CollateralFilterPayload {
   type?: string;
@@ -174,12 +175,12 @@ export function CollateralPage() {
             value={policyId}
             onChange={(e) => setForm({ ...form, policyId: e.target.value })}
             placeholder="شناسهٔ بیمه‌نامه"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           />
           <select
             value={type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
+            className={INPUT_INLINE_SM}
           >
             <option value="ChequeSayadi">چک صیادی</option>
             <option value="PromissoryNote">سفته</option>
@@ -189,13 +190,13 @@ export function CollateralPage() {
               value={sayadId}
               onChange={(e) => setForm({ ...form, sayadId: e.target.value })}
               placeholder="شناسهٔ صیادی"
-              className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className={INPUT_INLINE_SM}
             />
           )}
           <select
             value={bankName}
             onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={INPUT_INLINE_SM}
           >
             <option value="">بانک…</option>
             {banks.filter((b) => b.isActive).map((b) => (
@@ -208,12 +209,12 @@ export function CollateralPage() {
             value={amount}
             onChange={(v) => setForm({ ...form, amount: v })}
             placeholder="مبلغ"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+            className={`${INPUT_INLINE_SM} tabular-nums`}
           />
           <JalaliDateField
             value={dueDate}
             onChange={(iso) => setForm({ ...form, dueDate: iso })}
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice)"
+            className={INPUT_INLINE_SM}
           />
         </div>
         <button
@@ -229,7 +230,7 @@ export function CollateralPage() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice)"
+          className={FILTER_SELECT}
         >
           <option value="">همهٔ انواع</option>
           <option value="ChequeSayadi">چک صیادی</option>
@@ -238,7 +239,7 @@ export function CollateralPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice)"
+          className={FILTER_SELECT}
         >
           <option value="">همهٔ وضعیت‌ها</option>
           {(["Held", "AtBank", "Cleared", "Bounced"] as const).map((s) => (

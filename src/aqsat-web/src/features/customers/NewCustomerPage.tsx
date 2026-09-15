@@ -3,6 +3,7 @@ import { useTabKey } from "../shell/TabContext";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { api, ApiError } from "../../lib/api";
 import { fa, isValidNationalId, toLatinDigits } from "../../lib/persian";
+import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
 
 interface CustomerLookupProfileDto {
   id: string;
@@ -42,15 +43,6 @@ const EMPTY: FormState = {
   postalCode: "",
   address: "",
 };
-
-const INPUT_CLASS =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
-
-const BTN_PRIMARY =
-  "rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
-
-const BTN_SECONDARY =
-  "rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)";
 
 /** Owner decision 2026-09-03 — registering a brand-new customer BEFORE any policy exists, so a
  * pre-issuance credit-check portal link can be sent on the very first visit. After creation the

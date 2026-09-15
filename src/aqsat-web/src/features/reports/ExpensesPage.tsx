@@ -7,6 +7,7 @@ import { JalaliDateField } from "../../components/JalaliDateField";
 import { MoneyInput } from "../../components/MoneyInput";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { INPUT_CLASS } from "../../components/form";
 
 interface ExpenseCategoryDto {
   id: string;
@@ -181,7 +182,7 @@ export function ExpensesPage() {
             <input
               value={title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className={INPUT_CLASS}
             />
           </div>
           <div>
@@ -190,7 +191,7 @@ export function ExpensesPage() {
           </div>
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ</label>
-            <JalaliDateField value={date} onChange={(iso) => setForm({ ...form, date: iso })} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={date} onChange={(iso) => setForm({ ...form, date: iso })} className={INPUT_CLASS} />
           </div>
         </div>
         <div className="mb-3.5 grid grid-cols-4 gap-3">
@@ -199,7 +200,7 @@ export function ExpensesPage() {
             <select
               value={categoryId}
               onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className={INPUT_CLASS}
             >
               <option value="">انتخاب کنید…</option>
               {categories.filter((c) => c.isActive).map((c) => (
@@ -214,7 +215,7 @@ export function ExpensesPage() {
             <select
               value={methodType}
               onChange={(e) => setForm({ ...form, methodType: e.target.value as MethodType })}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className={INPUT_CLASS}
             >
               <option value="Cash">نقدی</option>
               <option value="BankTransfer">واریز بانکی</option>
@@ -226,7 +227,7 @@ export function ExpensesPage() {
               <select
                 value={cashBoxId}
                 onChange={(e) => setForm({ ...form, cashBoxId: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                className={INPUT_CLASS}
               >
                 <option value="">انتخاب کنید…</option>
                 {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -242,7 +243,7 @@ export function ExpensesPage() {
               <select
                 value={bankAccountId}
                 onChange={(e) => setForm({ ...form, bankAccountId: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                className={INPUT_CLASS}
               >
                 <option value="">انتخاب کنید…</option>
                 {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -268,11 +269,11 @@ export function ExpensesPage() {
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={from} onChange={setFrom} className={INPUT_CLASS} />
           </div>
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={to} onChange={setTo} className={INPUT_CLASS} />
           </div>
         </div>
         <button

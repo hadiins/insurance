@@ -5,20 +5,14 @@ import { fa, money } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import {
+  BTN_DANGER,
+  BTN_PRIMARY_SM as BTN_PRIMARY,
+  BTN_SECONDARY_SM as BTN_SECONDARY,
+  INPUT_CLASS_SM as INPUT_CLASS,
+} from "../../components/form";
 import { useAssignReview, useDecideReview, useManualReviews, useRequestMoreInfo, useReviewers } from "./riskApi";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES, type ManualReviewDto } from "./riskTypes";
-
-const BTN_PRIMARY =
-  "rounded-[10px] border border-(--mint) bg-(--mint) px-3.5 py-1.5 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
-
-const BTN_DANGER =
-  "rounded-[10px] border border-(--ember)/60 bg-(--ember)/10 px-3.5 py-1.5 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/20 disabled:cursor-not-allowed disabled:opacity-50";
-
-const BTN_SECONDARY =
-  "rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-3.5 py-1.5 text-[11.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice) disabled:cursor-not-allowed disabled:opacity-50";
-
-const INPUT_CLASS =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 type StatusFilter = "" | "Pending" | "InReview" | "RequestMoreInfo" | "Approved" | "Rejected";
 

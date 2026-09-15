@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
+import { INPUT_CLASS_SM } from "../../components/form";
 
 interface InsuranceLineDto {
   id: string;
@@ -229,7 +230,7 @@ export function MarketersPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="نام بازاریاب"
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className={INPUT_CLASS_SM}
             />
           </div>
           <div className="mb-3 flex gap-2">
@@ -237,7 +238,7 @@ export function MarketersPage() {
               value={newMobile}
               onChange={(e) => setNewMobile(e.target.value)}
               placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className={INPUT_CLASS_SM}
             />
           </div>
           <button

@@ -10,6 +10,7 @@ import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { FILTER_SELECT } from "../../components/form";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
 import { EditInstallmentDialog, type EditInstallmentTarget } from "./EditInstallmentDialog";
 
@@ -190,7 +191,7 @@ export function InstallmentsWorklistPage() {
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className={FILTER_SELECT}
         >
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -220,7 +221,7 @@ export function InstallmentsWorklistPage() {
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             placeholder="شمارهٔ بیمه‌نامه، نام، موبایل، کد ملی، پلاک"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className={`w-full ${FILTER_SELECT}`}
           />
         </div>
         {hasActiveFilters && (

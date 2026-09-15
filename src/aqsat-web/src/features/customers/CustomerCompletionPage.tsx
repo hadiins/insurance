@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { FILTER_SELECT } from "../../components/form";
 
 interface CustomerIncompleteRowDto {
   id: string;
@@ -123,7 +124,7 @@ export function CustomerCompletionPage() {
             setFilter(e.target.value as Filter);
             setPage(1);
           }}
-          className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className={FILTER_SELECT}
         >
           {FILTER_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>

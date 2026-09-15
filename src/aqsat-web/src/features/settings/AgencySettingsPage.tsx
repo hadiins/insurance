@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { MoneyInput } from "../../components/MoneyInput";
+import { Field, INPUT_CLASS } from "../../components/form";
 
 interface AgencySettingsDto {
   code: string;
@@ -371,14 +372,4 @@ function DangerZone({ code }: { code: string }) {
   );
 }
 
-const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
-      {children}
-    </div>
-  );
-}
+const inputClass = INPUT_CLASS;

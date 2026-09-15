@@ -4,6 +4,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { MoneyInput } from "../../components/MoneyInput";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
 
 interface CashBoxDto {
   id: string;
@@ -195,7 +196,7 @@ export function RecordPaymentDialog({
                 <MoneyInput
                   value={amount}
                   onChange={setAmount}
-                  className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+                  className={`mb-3.5 ${INPUT_CLASS} tabular-nums`}
                 />
 
                 <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
@@ -203,7 +204,7 @@ export function RecordPaymentDialog({
                   <JalaliDateField
                     value={paidOn}
                     onChange={setPaidOn}
-                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+                    className={`${INPUT_CLASS} tabular-nums`}
                   />
                 </div>
 
@@ -211,7 +212,7 @@ export function RecordPaymentDialog({
                 <select
                   value={methodType}
                   onChange={(e) => setMethodType(e.target.value as MethodType)}
-                  className="mb-3.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                  className={`mb-3.5 ${INPUT_CLASS}`}
                 >
                   <option value="Cash">نقدی</option>
                   <option value="BankTransfer">واریز بانکی</option>
@@ -225,7 +226,7 @@ export function RecordPaymentDialog({
                     <select
                       value={bankAccountId}
                       onChange={(e) => setBankAccountId(e.target.value)}
-                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                      className={`mb-4.5 ${INPUT_CLASS}`}
                     >
                       <option value="">انتخاب کنید…</option>
                       {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -245,7 +246,7 @@ export function RecordPaymentDialog({
                     <select
                       value={cashBoxId}
                       onChange={(e) => setCashBoxId(e.target.value)}
-                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                      className={`mb-4.5 ${INPUT_CLASS}`}
                     >
                       <option value="">انتخاب کنید…</option>
                       {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -267,7 +268,7 @@ export function RecordPaymentDialog({
                       value={referenceNo}
                       onChange={(e) => setReferenceNo(e.target.value)}
                       dir="ltr"
-                      className="mb-4.5 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                      className={`mb-4.5 ${INPUT_CLASS}`}
                     />
                   </>
                 )}
@@ -280,7 +281,7 @@ export function RecordPaymentDialog({
                         value={chequeNumber}
                         onChange={(e) => setChequeNumber(e.target.value)}
                         dir="ltr"
-                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                        className={INPUT_CLASS}
                       />
                     </div>
                     <div>
@@ -288,7 +289,7 @@ export function RecordPaymentDialog({
                       <select
                         value={chequeBankName}
                         onChange={(e) => setChequeBankName(e.target.value)}
-                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                        className={INPUT_CLASS}
                       >
                         <option value="">انتخاب کنید…</option>
                         {banks.filter((b) => b.isActive).map((b) => (
@@ -307,7 +308,7 @@ export function RecordPaymentDialog({
                       <input
                         value={chequePresenterName}
                         onChange={(e) => setChequePresenterName(e.target.value)}
-                        className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                        className={INPUT_CLASS}
                       />
                     </div>
                   </div>
@@ -318,14 +319,14 @@ export function RecordPaymentDialog({
                     type="button"
                     onClick={submit}
                     disabled={submitting}
-                    className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={BTN_PRIMARY}
                   >
                     {submitting ? "در حال ثبت…" : "ثبت پرداخت"}
                   </button>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+                    className={BTN_SECONDARY}
                   >
                     انصراف
                   </button>

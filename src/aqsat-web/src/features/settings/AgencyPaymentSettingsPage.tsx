@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { Field, INPUT_CLASS as inputClass } from "../../components/form";
 
 /** Mirrors AgencyPaymentGatewayDto — the agency's own gateway, receiving ONLY its customers'
  * down payments and installments into the agency's own account. Inquiry fees are collected
@@ -182,14 +183,4 @@ export function AgencyPaymentSettingsPage() {
   );
 }
 
-const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
-      {children}
-    </div>
-  );
-}

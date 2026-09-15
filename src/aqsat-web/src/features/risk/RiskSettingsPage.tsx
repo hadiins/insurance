@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRiskSettings, useUpdateRiskSettings } from "./riskApi";
 import { fa, money } from "../../lib/persian";
+import { INPUT_CLASS as BASE_INPUT_CLASS } from "../../components/form";
 import type { RiskSettingsDto } from "./riskTypes";
 
-const INPUT_CLASS =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13px] text-(--ice) outline-none focus:border-(--mint) tabular-nums";
+const INPUT_CLASS = `${BASE_INPUT_CLASS} tabular-nums`;
 
 const GATE_MODES: { value: RiskSettingsDto["issuanceGateMode"]; label: string; description: string }[] = [
   { value: "Informational", label: "فقط اطلاع‌رسانی", description: "امتیاز و سطح ریسک نمایش داده می‌شود اما صدور بیمه‌نامه بلاک نمی‌شود." },

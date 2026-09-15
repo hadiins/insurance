@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { JalaliDateField } from "../../components/JalaliDateField";
+import { INPUT_CLASS } from "../../components/form";
 
 interface InsuranceLineDto {
   id: string;
@@ -138,7 +139,7 @@ export function SmsReminderPage() {
             <JalaliDateField
               value={filter.dueFrom}
               onChange={(v) => setFilter((f) => ({ ...f, dueFrom: v }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className={INPUT_CLASS}
             />
           </div>
           <div>
@@ -146,7 +147,7 @@ export function SmsReminderPage() {
             <JalaliDateField
               value={filter.dueTo}
               onChange={(v) => setFilter((f) => ({ ...f, dueTo: v }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className={INPUT_CLASS}
             />
           </div>
           <div>
@@ -154,7 +155,7 @@ export function SmsReminderPage() {
             <select
               value={filter.status}
               onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className={INPUT_CLASS}
             >
               <option value="">همه</option>
               <option value="Unpaid">پرداخت‌نشده</option>
@@ -166,7 +167,7 @@ export function SmsReminderPage() {
             <select
               value={filter.insuranceLineId}
               onChange={(e) => setFilter((f) => ({ ...f, insuranceLineId: e.target.value }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className={INPUT_CLASS}
             >
               <option value="">همه</option>
               {lines?.map((l) => (
@@ -181,7 +182,7 @@ export function SmsReminderPage() {
             <select
               value={filter.marketerId}
               onChange={(e) => setFilter((f) => ({ ...f, marketerId: e.target.value }))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className={INPUT_CLASS}
             >
               <option value="">همه</option>
               {marketers?.map((m) => (
@@ -197,7 +198,7 @@ export function SmsReminderPage() {
               <input
                 value={filter.minAmount}
                 onChange={(e) => setFilter((f) => ({ ...f, minAmount: e.target.value }))}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+                className={INPUT_CLASS}
               />
             </div>
             <div>
@@ -205,7 +206,7 @@ export function SmsReminderPage() {
               <input
                 value={filter.maxAmount}
                 onChange={(e) => setFilter((f) => ({ ...f, maxAmount: e.target.value }))}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+                className={INPUT_CLASS}
               />
             </div>
           </div>
