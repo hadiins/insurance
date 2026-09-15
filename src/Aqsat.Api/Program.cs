@@ -54,13 +54,28 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // The test suite wipes its tables on every assembly load, so a WebApplicationFactory-hosted
-    // instance must never connect to the developer's real database — route it to the dedicated
-    // test database (kept in sync with TestDbContextFactory) unless CI points elsewhere.
+    // instance must never connect to the developer's real database. AQSAT_TEST_CONNECTION must
+    // point it at a dedicated database — there is deliberately no default connection string
+    // (with credentials) baked into the source.
     if (isTestHost)
     {
-        builder.Configuration["ConnectionStrings:Default"] =
-            Environment.GetEnvironmentVariable("AQSAT_TEST_CONNECTION")
-            ?? "Server=localhost;Database=AqsatTest;User Id=sa;Password=4Q45BPLZyL8yOWdqCglj;TrustServerCertificate=True;MultipleActiveResultSets=true";
+        var testConnection = Environment.GetEnvironmentVariable("AQSAT_TEST_CONNECTION");
+        if (string.IsNullOrWhiteSpace(testConnection))
+        {
+            throw new InvalidOperationException(
+                "AQSAT_TEST_CONNECTION is not set — the test host refuses to guess a database. " +
+                "Point it at a dedicated test database, e.g. (PowerShell): " +
+                "$env:AQSAT_TEST_CONNECTION = 'Server=localhost;Database=AqsatTest;User Id=sa;Password=<yours>;TrustServerCertificate=True;MultipleActiveResultSets=true'");
+        }
+
+        builder.Configuration["ConnectionStrings:Default"] = testConnection;
+
+        // Deterministic TEST-ONLY credentials for the throwaway test host. They sign tokens and
+        // hash fields inside this process alone and are never valid in any deployed environment —
+        // which is why they can live in source, unlike real keys.
+        builder.Configuration["Jwt:Key"] =
+            "test-host-signing-key-never-valid-outside-dotnet-test-0123456789abcdef";
+        builder.Configuration["Encryption:NationalIdKey"] = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
     }
 
     builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -144,7 +159,13 @@ try
         }
     });
 
-    builder.Services.AddHealthChecks();
+    // A /health that only proves the process is listening is a false green: the app is useless
+    // without its database, and the docker/compose healthcheck (and any uptime monitor) should
+    // stop routing traffic to a replica that lost SQL Server. The probe opens a real connection
+    // and runs SELECT 1 — deliberately not EntityFrameworkCore's AddDbContextCheck, which would
+    // add a package dependency for the same one-liner.
+    builder.Services.AddHealthChecks()
+        .AddCheck<Aqsat.Api.DatabaseHealthCheck>("database", tags: ["ready"]);
 
     // docs/TASKS.md Task 19 — hardening. Global per-IP window protects the whole API from a runaway
     // client or scraper; "login" is far tighter since it's the one unauthenticated, password-
@@ -183,20 +204,39 @@ try
                 Window = TimeSpan.FromMinutes(1),
             }));
 
+        // The owner bootstrap is the single most privileged unauthenticated write in the system.
+        // A successful call is only ever needed ONCE per install, so an hourly budget tighter
+        // than "login" costs nothing legitimate while making brute-forcing the shared secret
+        // from one address hopeless.
+        options.AddPolicy("bootstrap", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = isTestHost ? int.MaxValue : 5,
+                Window = TimeSpan.FromHours(1),
+            }));
+
         // Every 429 lands on the platform owner's security dashboard — rate-limit abuse is an attack
         // signal (token guessing, scraping, brute force upstream of the login counter), not noise.
         // Resolved from the rejected request's own scope; a failure to record is logged inside the
-        // writer and never turns into a 500 on top of the 429.
+        // writer and never turns into a 500 on top of the 429. The 429 itself must not become an
+        // amplification vector: a flood of blocked requests would otherwise write one SecurityEvent
+        // row each (a DB write per rejected request), so at most one event per (policy, IP) is
+        // recorded per minute — the dashboard counts occurrences, it doesn't need every single one.
         options.OnRejected = async (context, cancellationToken) =>
         {
             var policy = context.HttpContext.GetEndpoint()?.Metadata
                 .GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "global";
-            await context.HttpContext.RequestServices.GetRequiredService<SecurityEventWriter>()
-                .WriteAsync(
-                    SecurityEventType.RateLimitRejection,
-                    SecuritySeverity.Warning,
-                    $"درخواست بیش از حد مجاز (سقف policy «{policy}») از این نشانی رد شد: {context.HttpContext.Request.Path}",
-                    cancellationToken: cancellationToken);
+            var rejectionKey = $"{policy}|{context.HttpContext.Connection.RemoteIpAddress}";
+            if (Aqsat.Api.SecurityEventThrottle.ShouldRecord(rejectionKey))
+            {
+                await context.HttpContext.RequestServices.GetRequiredService<SecurityEventWriter>()
+                    .WriteAsync(
+                        SecurityEventType.RateLimitRejection,
+                        SecuritySeverity.Warning,
+                        $"درخواست‌های بیش از حد مجاز (سقف policy «{policy}») از این نشانی رد شد: {context.HttpContext.Request.Path}",
+                        cancellationToken: cancellationToken);
+            }
             await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
             {
                 Status = StatusCodes.Status429TooManyRequests,
@@ -215,6 +255,15 @@ try
     });
 
     var app = builder.Build();
+
+    // The portal payment gateway is still the built-in MOCK — every "payment" it reports is
+    // simulated and no real money moves. Acceptable in Development; in Production it means the
+    // system can mark installments settled that were never actually paid, so say it loudly on
+    // every start until a real gateway (ZarinPal, see IPaymentGateway registration) is wired in.
+    if (app.Environment.IsProduction())
+    {
+        Log.Fatal("درگاه پرداخت پورتال مشتریان هنوز Mock است — پرداخت‌های ثبت‌شده واقعی نیستند و هیچ مبلغی واریز نمی‌شود. تا اتصال درگاه واقعی، این وضعیت را نادیده نگیرید.");
+    }
 
     // Must run before anything that reads RemoteIpAddress (rate limiting partitions, audit IP
     // attribution). Only proxies in KnownProxies are trusted; the default is loopback only, so a
@@ -256,7 +305,15 @@ try
     app.UseDefaultFiles();
     app.UseStaticFiles();
 
-    app.UseCors(ViteDevCorsPolicy);
+    // CORS exists for the Vite dev server (localhost:5173) calling this API cross-origin. The
+    // production topology serves the built SPA from this same origin's wwwroot, where no CORS
+    // headers are needed — so the permissive dev policy is never applied outside Development.
+    // Leaving it on in production would just be an extra (harmless-looking) Allow-Origin header
+    // begging to be widened by mistake someday.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseCors(ViteDevCorsPolicy);
+    }
 
     app.UseRateLimiter();
 
@@ -294,32 +351,46 @@ try
             // from scratch — the "wipe all previous data" move between hosting generations where
             // the SQL server is only reachable from inside the host network (no out-of-band wipe
             // possible). MUST be removed from configuration after the first successful start:
-            // leaving it on wipes again on every app-pool recycle.
+            // leaving it on wipes again on every app-pool recycle. A Production environment
+            // refuses outright unless the operator ALSO sets
+            // Deployment:AllowProductionDatabaseReset — one env var that says "yes, I really mean
+            // to erase every agency's data" — so a stray flag in a copied .env can't do it alone.
             if (app.Configuration.GetValue("Deployment:ResetDatabaseOnStartup", false))
             {
-                try
+                var environmentName = app.Environment.EnvironmentName;
+                if (environmentName == "Production"
+                    && !app.Configuration.GetValue("Deployment:AllowProductionDatabaseReset", false))
                 {
-                    using var resetScope = app.Services.CreateScope();
-                    var cs = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
-                        resetScope.ServiceProvider.GetRequiredService<AppDbContext>().Database.GetDbConnection().ConnectionString);
-                    var databaseName = cs.InitialCatalog;
-                    cs.InitialCatalog = "master";
-                    await using var master = new Microsoft.Data.SqlClient.SqlConnection(cs.ConnectionString);
-                    await master.OpenAsync();
-                    // SINGLE_USER with ROLLBACK IMMEDIATE kills every other connection first —
-                    // a plain DROP fails as long as anything (a previous app instance, a stray
-                    // Hangfire server) still holds a connection to the database.
-                    await using var quarantine = master.CreateCommand();
-                    quarantine.CommandText = $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE";
-                    await quarantine.ExecuteNonQueryAsync();
-                    await using var drop = master.CreateCommand();
-                    drop.CommandText = $"DROP DATABASE [{databaseName}]";
-                    await drop.ExecuteNonQueryAsync();
-                    Log.Warning("Deployment:ResetDatabaseOnStartup was set — database {Database} dropped; migrations will recreate it empty.", databaseName);
+                    Log.Fatal(
+                        "Deployment:ResetDatabaseOnStartup is set in the Production environment — refused. " +
+                        "Set Deployment:AllowProductionDatabaseReset=true as well if erasing all production data is truly intended.");
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log.Error(ex, "Deployment:ResetDatabaseOnStartup failed — continuing against the existing database.");
+                    try
+                    {
+                        using var resetScope = app.Services.CreateScope();
+                        var cs = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
+                            resetScope.ServiceProvider.GetRequiredService<AppDbContext>().Database.GetDbConnection().ConnectionString);
+                        var databaseName = cs.InitialCatalog;
+                        cs.InitialCatalog = "master";
+                        await using var master = new Microsoft.Data.SqlClient.SqlConnection(cs.ConnectionString);
+                        await master.OpenAsync();
+                        // SINGLE_USER with ROLLBACK IMMEDIATE kills every other connection first —
+                        // a plain DROP fails as long as anything (a previous app instance, a stray
+                        // Hangfire server) still holds a connection to the database.
+                        await using var quarantine = master.CreateCommand();
+                        quarantine.CommandText = $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE";
+                        await quarantine.ExecuteNonQueryAsync();
+                        await using var drop = master.CreateCommand();
+                        drop.CommandText = $"DROP DATABASE [{databaseName}]";
+                        await drop.ExecuteNonQueryAsync();
+                        Log.Warning("Deployment:ResetDatabaseOnStartup was set — database {Database} dropped; migrations will recreate it empty.", databaseName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Deployment:ResetDatabaseOnStartup failed — continuing against the existing database.");
+                    }
                 }
             }
 

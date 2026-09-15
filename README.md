@@ -20,9 +20,24 @@ dotnet run --project src/Aqsat.Api --urls http://localhost:5027
 cd src/aqsat-web && npm install && npm run dev
 ```
 
-Run the test suite with `dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj` — it exercises
-real SQL Server (LocalDB), including Row-Level Security, so it will not pass against an in-memory
-provider.
+Dev-only secrets (connection string, `Jwt:Key`, `Encryption:NationalIdKey`,
+`Platform:BootstrapSecret`) are **not** in the repo — set them once via user-secrets:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost;Database=Aqsat;User Id=sa;Password=<yours>;TrustServerCertificate=True;MultipleActiveResultSets=true" --project src/Aqsat.Api
+dotnet user-secrets set "Jwt:Key" "$(openssl rand -base64 48)" --project src/Aqsat.Api
+dotnet user-secrets set "Encryption:NationalIdKey" "$(openssl rand -base64 32)" --project src/Aqsat.Api
+dotnet user-secrets set "Platform:BootstrapSecret" "<one-time-secret>" --project src/Aqsat.Api
+```
+
+Run the test suite with `AQSAT_TEST_CONNECTION` pointing at a dedicated test database — it
+exercises real SQL Server, including Row-Level Security, so it will not pass against an
+in-memory provider, and it wipes its tables on every run (never point it at your real database):
+
+```bash
+$env:AQSAT_TEST_CONNECTION = 'Server=localhost;Database=AqsatTest;User Id=sa;Password=<yours>;TrustServerCertificate=True;MultipleActiveResultSets=true'
+dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj
+```
 
 ## Deployment
 
@@ -51,7 +66,18 @@ expired ones during the retention sweep. Fix ownership/permissions once, right a
 
 ```bash
 docker compose -f docker-compose.prod.yml exec -u root sqlserver \
-  bash -c "mkdir -p /var/opt/mssql/backup && chown mssql:mssql /var/opt/mssql/backup && chmod 0777 /var/opt/mssql/backup"
+  bash -c "mkdir -p /var/opt/mssql/backup && chown mssql:mssql /var/opt/mssql/backup && chmod 0770 /var/opt/mssql/backup"
+```
+
+**Also first run only:** create the least-privilege login the app connects as — `sa` stays for
+emergency/break-glass use and the container healthcheck only, never in the app's connection
+string:
+
+```bash
+docker compose -f docker-compose.prod.yml exec sqlserver /opt/mssql-tools18/bin/sqlcmd -C \
+  -U sa -P "$SA_PASSWORD" -Q "CREATE LOGIN [$(grep DB_USER .env | cut -d= -f2)] WITH PASSWORD='$(grep DB_PASSWORD .env | cut -d= -f2)';"
+docker compose -f docker-compose.prod.yml exec sqlserver /opt/mssql-tools18/bin/sqlcmd -C \
+  -U sa -P "$SA_PASSWORD" -Q "CREATE DATABASE [Aqsat]; ALTER AUTHORIZATION ON DATABASE::Aqsat TO [$(grep DB_USER .env | cut -d= -f2)];"
 ```
 
 `sqlserver`'s port is **not** published to the host — only the `api` container can reach it, over
@@ -62,7 +88,8 @@ domain) in front of it for anything beyond local testing.
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `SA_PASSWORD` | yes | SQL Server `sa` password — also becomes the connection string's password |
+| `SA_PASSWORD` | yes | SQL Server `sa` password — used only by the container healthcheck and the one-time setup below; the app never connects as `sa` |
+| `DB_USER` / `DB_PASSWORD` | yes | The least-privilege login `api` and `updater` connect as — owns the `Aqsat` database only, no server-level privileges |
 | `JWT_KEY` | yes | Signs auth tokens. Generate with `openssl rand -base64 48`; rotating it invalidates every active session |
 | `NATIONAL_ID_KEY` | yes | AES key encrypting `Customer.NationalId`/`Marketer.NationalId` at rest (CLAUDE.md rule 12). **Losing this key makes every stored national ID permanently unrecoverable** — back it up somewhere other than the DB backup itself |
 | `API_IR_KEY` | no | api.ir API key. Leave unset and every call routes to `/api/Sandbox/Echo` (CLAUDE.md's "ask before calling a paid endpoint outside Sandbox") |

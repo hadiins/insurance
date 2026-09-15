@@ -18,11 +18,16 @@ namespace Aqsat.Api.Controllers;
 /// current stage with its stage-gated content (contract text + installment schedule only after
 /// the agency approves), approve-contract is the customer's sign-off, pay-down-payment is the
 /// chain's final hop through the agency's own gateway.
+///
+/// Every response carries the customer's identity, balances, or policy numbers behind a bearer
+/// URL — no browser, shared proxy, or intermediary cache may ever store one: no-store on the
+/// whole controller.
 /// </summary>
 [ApiController]
 [Route("api/portal")]
 [AllowAnonymous]
 [EnableRateLimiting("portal")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class PortalPublicController(
     PortalInvitationService portalService,
     PolicyVerificationService verificationService,

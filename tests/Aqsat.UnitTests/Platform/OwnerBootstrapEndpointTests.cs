@@ -2,9 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
+using Aqsat.Domain.Enums;
 using Aqsat.UnitTests.DataModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace Aqsat.UnitTests.Platform;
@@ -44,6 +46,13 @@ public class OwnerBootstrapEndpointTests : IClassFixture<WebApplicationFactory<P
         var wrongSecretResponse = await client.PostAsJsonAsync(
             "/api/platform/bootstrap-owner", new BootstrapOwnerRequest("wrong-secret", "مالک آزمایشی", mobile, "Owner-Pass1"));
         Assert.Equal(HttpStatusCode.Unauthorized, wrongSecretResponse.StatusCode);
+
+        // The rejected attempt is a security signal, not just a log line — the owner's dashboard
+        // feed must carry it (keyed by this test's unique mobile to stay isolated in the shared DB).
+        var suspiciousEvent = await seedContext.SecurityEvents.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Mobile == mobile && e.Type == SecurityEventType.SuspiciousActivity);
+        Assert.NotNull(suspiciousEvent);
+        Assert.Equal(SecuritySeverity.Warning, suspiciousEvent.Severity);
 
         var statusBefore = await client.GetFromJsonAsync<BootstrapStatusDto>("/api/platform/bootstrap-owner/status");
         if (!statusBefore!.Available)

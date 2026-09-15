@@ -75,7 +75,7 @@ public class FanavaranImportServiceTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Encryption:NationalIdKey"] = "iNR6AVHkisOPGbBreM0PpHSNmUoom7d0EFVWgcwEdJk=",
+                ["Encryption:NationalIdKey"] = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
             })
             .Build();
         return new AesFieldEncryptor(configuration);

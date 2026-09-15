@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Dev-only secrets (connection string, Jwt:Key, Encryption:NationalIdKey, Platform:BootstrapSecret)
+         live in the local user-secrets store, loaded only in the Development environment. -->
+    <UserSecretsId>aqsat-api-dev-secrets</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

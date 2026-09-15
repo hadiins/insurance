@@ -48,6 +48,7 @@ internal static class TestDatabaseCleanup
             "DELETE FROM PortalInvitationTokenIndex; DELETE FROM ApiIrCallLogs; " +
             "DELETE FROM AlertOccurrences; DELETE FROM AlertRules; DELETE FROM SecurityEvents; " +
             "DELETE FROM EndpointStats; DELETE FROM MetricSamples; " +
+            "DELETE FROM UpdateStageLogs; DELETE FROM UpdateRuns; DELETE FROM UpdatePackages; " +
             "EXEC sp_MSforeachtable 'ALTER TABLE ? CHECK CONSTRAINT ALL'; " +
             "ALTER SECURITY POLICY AgencyAccessPolicy WITH (STATE = ON);");
     }

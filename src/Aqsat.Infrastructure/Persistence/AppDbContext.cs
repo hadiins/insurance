@@ -164,8 +164,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
                 // Every IAuditableEntity implemented so far derives from AgencyOwnedEntity — this
                 // is a real constraint of the design, not an incidental cast; see IAuditableEntity's
                 // own doc comment on why entities without a natural AgencyId (e.g. Payment) don't
-                // implement it.
-                var agencyId = ((AgencyOwnedEntity)entry.Entity).AgencyId;
+                // implement it. The guard exists so that a FUTURE entity violating the constraint
+                // fails with a nameable, fixable error instead of a bare InvalidCastException.
+                var agencyId = entry.Entity is AgencyOwnedEntity owned
+                    ? owned.AgencyId
+                    : throw new InvalidOperationException(
+                        $"{entry.Entity.GetType().Name} implements IAuditableEntity but not AgencyOwnedEntity — " +
+                        "every auditable entity must carry an AgencyId (CLAUDE.md rule 2/28), or its audit rows would have no scope.");
                 var entityId = ((Entity)entry.Entity).Id;
 
                 AuditEntries.Add(new AuditEntry

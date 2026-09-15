@@ -58,6 +58,11 @@ public sealed class InstallmentPaymentLinkService(
 
         link = new CustomerPaymentLink
         {
+            // Client-side key — the RLS-exempt PaymentLinkTokenIndex row below references it by
+            // Id in this same SaveChanges, and there is no FK relationship for EF's temp-value
+            // fixup to ride on: a database-generated key would leave the index row pointing at
+            // an empty Guid (same reasoning as the Payment key in PayInstallmentAsync).
+            Id = SequentialGuidGenerator.Next(),
             AgencyId = agencyId,
             CustomerId = customerId,
             Token = GenerateToken(),
@@ -84,8 +89,11 @@ public sealed class InstallmentPaymentLinkService(
         catch (DbUpdateException)
         {
             // Two reminder runs raced the one-active-link unique index — the other run's link won.
+            // Re-fetch it TRACKED: an AsNoTracking entity mutated and saved is a silent no-op
+            // (SaveChanges sees nothing changed), which would return the caller a link whose
+            // expiry/LastSentAt never actually refreshed.
             DetachPendingChanges(dbContext.ChangeTracker);
-            link = await dbContext.CustomerPaymentLinks.AsNoTracking()
+            link = await dbContext.CustomerPaymentLinks
                 .FirstAsync(
                     l => l.CustomerId == customerId && l.Status == PaymentLinkStatus.Active && !l.IsDeleted, ct);
             link.ExpiresAtUtc = now.AddDays(ttlDays);
@@ -197,7 +205,14 @@ public sealed class InstallmentPaymentLinkService(
                 throw new PortalInvitationException(result.FailureReason ?? "پرداخت ناموفق بود. لطفاً دوباره تلاش کنید.");
             }
 
+            // A gateway that reports no amount falls back to the asked amount, but a NON-POSITIVE
+            // reported amount is a protocol violation, not an under-capture — letting it through
+            // would record a zero/negative Payment and corrupt the balance math.
             var settledAmount = result.PaidAmountToman ?? amount;
+            if (settledAmount <= 0)
+            {
+                throw new PortalInvitationException("مبلغ پرداخت دریافتی از درگاه نامعتبر است. لطفاً با نمایندگی تماس بگیرید.");
+            }
             var occurredAt = DateTimeOffset.UtcNow;
             var payment = new Payment
             {
@@ -378,26 +393,18 @@ public sealed class InstallmentPaymentLinkService(
             throw new PortalInvitationException("لینک یافت نشد یا اعتبار آن به پایان رسیده است.");
         }
 
-        var previousAgency = Aqsat.Infrastructure.Persistence.AgencyContext.Current;
-        Aqsat.Infrastructure.Persistence.AgencyContext.Current = agencyId;
+        using var agencyScope = Aqsat.Infrastructure.Persistence.AgencyContext.BeginScope(agencyId);
+        await dbContext.Database.OpenConnectionAsync(ct);
         try
         {
-            await dbContext.Database.OpenConnectionAsync(ct);
-            try
-            {
-                var link = await dbContext.CustomerPaymentLinks
-                    .FirstOrDefaultAsync(l => l.Token == token, ct)
-                    ?? throw new PortalInvitationException("لینک یافت نشد یا اعتبار آن به پایان رسیده است.");
-                return await work(link, agencyId);
-            }
-            finally
-            {
-                await dbContext.Database.CloseConnectionAsync();
-            }
+            var link = await dbContext.CustomerPaymentLinks
+                .FirstOrDefaultAsync(l => l.Token == token, ct)
+                ?? throw new PortalInvitationException("لینک یافت نشد یا اعتبار آن به پایان رسیده است.");
+            return await work(link, agencyId);
         }
         finally
         {
-            Aqsat.Infrastructure.Persistence.AgencyContext.Current = previousAgency;
+            await dbContext.Database.CloseConnectionAsync();
         }
     }
 

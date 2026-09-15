@@ -2,15 +2,19 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
+using Aqsat.Application.Payments;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure;
+using Aqsat.Infrastructure.Payments;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Portal;
 using Aqsat.Infrastructure.Seed;
 using Aqsat.UnitTests.DataModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aqsat.UnitTests.Portal;
 
@@ -439,5 +443,98 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
 
         var status = await anonymous.GetAsync($"/api/portal/links/customer/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.Unauthorized, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task EnsureLinkAsyncs_token_index_row_points_at_the_real_stored_link_id()
+    {
+        // Regression: the RLS-exempt PaymentLinkTokenIndex row is added with LinkId = link.Id
+        // BEFORE SaveChanges, while link.Id is store-generated (NEWSEQUENTIALID) — the FK can only
+        // land correctly through EF's temp-value fixup. Asserted against the DATABASE's two
+        // rows, not the in-memory object where a placeholder Guid would hide the bug.
+        var (_, fixture) = await LoginManagerAsync();
+        await using var context = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        var customerId = await SeedInstallmentPolicyAsync(context, fixture.AgencyAId, "مشتری ایندکس", "09123334464");
+
+        var service = new InstallmentPaymentLinkService(context, [new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance)]);
+        var link = await service.EnsureLinkAsync(customerId, Guid.NewGuid());
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        var storedLink = await verify.CustomerPaymentLinks.AsNoTracking().SingleAsync(l => l.Token == link.Token);
+        var indexRow = await verify.PaymentLinkTokenIndex.AsNoTracking().SingleAsync(t => t.Token == link.Token);
+        Assert.NotEqual(Guid.Empty, storedLink.Id);
+        Assert.Equal(storedLink.Id, indexRow.LinkId);
+    }
+
+    [Fact]
+    public async Task EnsureLinkAsync_on_an_existing_link_persists_the_expiry_refresh()
+    {
+        // Regression: re-using the active link must PERSIST the rolling expiry and LastSentAtUtc.
+        // (The race-path twin of this code in the DbUpdateException catch used to re-fetch with
+        // AsNoTracking — a mutation that SaveChanges silently ignores; both paths now mutate a
+        // TRACKED entity, which this test proves end-to-end for the shared mechanics.)
+        var (_, fixture) = await LoginManagerAsync();
+        await using var context = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        var customerId = await SeedInstallmentPolicyAsync(context, fixture.AgencyAId, "مشتری تمدید", "09123334466");
+        var (_, token) = await CreateLinkDirectAsync(fixture.AgencyAId, customerId, TimeSpan.FromDays(1));
+
+        await using var before = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        var beforeRow = await before.CustomerPaymentLinks.AsNoTracking().SingleAsync(l => l.Token == token);
+
+        await Task.Delay(50);
+        var service = new InstallmentPaymentLinkService(context, [new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance)]);
+        var refreshed = await service.EnsureLinkAsync(customerId, Guid.NewGuid());
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        var afterRow = await verify.CustomerPaymentLinks.AsNoTracking().SingleAsync(l => l.Token == token);
+        Assert.Equal(refreshed.Id, afterRow.Id);
+        Assert.True(afterRow.ExpiresAtUtc > beforeRow.ExpiresAtUtc,
+            $"expiry must roll forward: {afterRow.ExpiresAtUtc} vs {beforeRow.ExpiresAtUtc}");
+        Assert.True(afterRow.LastSentAtUtc > beforeRow.LastSentAtUtc,
+            $"LastSentAtUtc must be re-stamped: {afterRow.LastSentAtUtc} vs {beforeRow.LastSentAtUtc}");
+    }
+
+    [Fact]
+    public async Task A_gateway_reporting_a_nonpositive_amount_never_records_a_payment()
+    {
+        // Regression: a Succeeded=true result carrying PaidAmountToman <= 0 is a gateway protocol
+        // violation, not an under-capture — it must be refused before any Payment/Allocation row
+        // or installment balance math can see it.
+        var (_, fixture) = await LoginManagerAsync();
+        await using var context = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        var customerId = await SeedInstallmentPolicyAsync(context, fixture.AgencyAId, "مشتری مبلغ صفر", "09123334465");
+        var installmentId = await context.Installments.AsNoTracking()
+            .Where(i => i.Policy.CustomerId == customerId).OrderBy(i => i.SeqNo)
+            .Select(i => i.Id).FirstAsync();
+        var (_, token) = await CreateLinkDirectAsync(fixture.AgencyAId, customerId, TimeSpan.FromDays(30));
+
+        var service = new InstallmentPaymentLinkService(context, [new ZeroAmountGateway()]);
+        var ex = await Assert.ThrowsAsync<PortalInvitationException>(
+            () => service.PayInstallmentAsync(token, installmentId, "1.2.3.4"));
+        Assert.Contains("نامعتبر", ex.Message);
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = fixture.AgencyAId;
+        Assert.Equal(0, await verify.Payments.AsNoTracking().CountAsync(p => p.InstallmentIdHint == installmentId));
+        Assert.Equal(0, await verify.PaymentAllocations.AsNoTracking().CountAsync(a => a.InstallmentId == installmentId));
+        var installment = await verify.Installments.AsNoTracking().SingleAsync(i => i.Id == installmentId);
+        Assert.Equal(InstallmentStatus.Unpaid, installment.Status);
+        Assert.Equal(0m, installment.PaidAmount);
+    }
+
+    private sealed class ZeroAmountGateway : IPaymentGateway
+    {
+        public PaymentProvider Provider => PaymentProvider.Mock;
+
+        public Task<GatewayPaymentResult> ChargeAsync(
+            string paymentToken, string merchantId, decimal amountToman, string description,
+            string callbackUrl, CancellationToken ct = default)
+            => Task.FromResult(new GatewayPaymentResult(Succeeded: true, PaidAmountToman: 0m, FailureReason: null));
     }
 }

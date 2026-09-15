@@ -41,7 +41,7 @@ public class NetworkRiskEndpointTests : IClassFixture<WebApplicationFactory<Prog
             {
                 // Same key as appsettings.Development.json — the test host runs in Development, so
                 // hashes computed here match what the API's own encryptor produces.
-                ["Encryption:NationalIdKey"] = "iNR6AVHkisOPGbBreM0PpHSNmUoom7d0EFVWgcwEdJk=",
+                ["Encryption:NationalIdKey"] = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
             })
             .Build();
         return new AesFieldEncryptor(configuration);

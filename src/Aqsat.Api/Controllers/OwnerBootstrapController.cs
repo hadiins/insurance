@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using Aqsat.Api.Contracts;
@@ -19,13 +20,17 @@ namespace Aqsat.Api.Controllers;
 /// not any agency." Unauthenticated by necessity (no owner account exists yet to authenticate
 /// against), gated instead by a deploy-time shared secret and a "does an owner already exist" guard
 /// that makes it permanently a no-op once used — this is a bootstrap, not a general-purpose
-/// "create more owners" endpoint.
+/// "create more owners" endpoint. The whole creation runs in one serializable transaction so two
+/// concurrent attempts can't both pass the exists-check, and a mid-flight crash leaves nothing
+/// behind (no half-created owner-less user).
 /// </summary>
 [ApiController]
 [Route("api/platform/bootstrap-owner")]
 [AllowAnonymous]
+[EnableRateLimiting("bootstrap")]
 public sealed class OwnerBootstrapController(
-    AppDbContext dbContext, IPasswordHasher passwordHasher, JwtTokenService tokenService, IConfiguration configuration) : ControllerBase
+    AppDbContext dbContext, IPasswordHasher passwordHasher, JwtTokenService tokenService,
+    IConfiguration configuration, SecurityEventWriter securityEvents) : ControllerBase
 {
     [HttpGet("status")]
     public async Task<ActionResult<object>> Status(CancellationToken ct)
@@ -36,7 +41,6 @@ public sealed class OwnerBootstrapController(
     }
 
     [HttpPost]
-    [EnableRateLimiting("login")]
     public async Task<ActionResult<LoginResponse>> Bootstrap(BootstrapOwnerRequest request, CancellationToken ct)
     {
         var configuredSecret = configuration["Platform:BootstrapSecret"];
@@ -47,6 +51,15 @@ public sealed class OwnerBootstrapController(
 
         if (string.IsNullOrWhiteSpace(request.Secret) || !FixedTimeEquals(request.Secret, configuredSecret))
         {
+            // The wrong-secret attempt is itself a security signal on an unauthenticated endpoint
+            // that creates the most privileged account in the system — it belongs on the owner's
+            // dashboard feed, not only in the log file.
+            await securityEvents.WriteAsync(
+                SecurityEventType.SuspiciousActivity,
+                SecuritySeverity.Warning,
+                "تلاش برای راه‌اندازی حساب مالک با کد نادرست.",
+                mobile: string.IsNullOrWhiteSpace(request.Mobile) ? null : request.Mobile.Trim(),
+                cancellationToken: ct);
             return Unauthorized(new ProblemDetails { Status = StatusCodes.Status401Unauthorized, Title = "کد راه‌اندازی نادرست است." });
         }
 
@@ -62,6 +75,11 @@ public sealed class OwnerBootstrapController(
             return ValidationProblem("رمز عبور باید حداقل ۸ کاراکتر باشد.");
         }
 
+        // SERIALIZABLE + re-check inside: the exists-check and the insert are now one atomic unit.
+        // A plain read-committed check-then-insert lets two concurrent bootstraps both see "no
+        // owner" and both create one; serializable range-locks the read so the second transaction
+        // blocks until the first commits, then sees the new owner and refuses.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         if (await OwnerAlreadyExistsAsync(ct))
         {
             return Conflict(new ProblemDetails { Status = StatusCodes.Status409Conflict, Title = "یک حساب مالک از قبل ثبت شده است." });
@@ -78,7 +96,6 @@ public sealed class OwnerBootstrapController(
         {
             hq = new Organization { Level = OrganizationLevel.Headquarters, Code = "HQ", Name = "دفتر مرکزی", IsActive = true };
             dbContext.Organizations.Add(hq);
-            await dbContext.SaveChangesAsync(ct);
         }
 
         // The owner role is identified by HOLDING Platform.Owner, not by IsSystemRole alone —
@@ -94,9 +111,7 @@ public sealed class OwnerBootstrapController(
         {
             ownerRole = new Role { Name = "مالک نرم‌افزار", IsSystemRole = true };
             dbContext.Roles.Add(ownerRole);
-            await dbContext.SaveChangesAsync(ct);
             dbContext.RolePermissions.Add(new RolePermission { RoleId = ownerRole.Id, Permission = Permissions.PlatformOwner });
-            await dbContext.SaveChangesAsync(ct);
         }
 
         var user = new AppUser
@@ -107,10 +122,19 @@ public sealed class OwnerBootstrapController(
             IsActive = true,
         };
         dbContext.Users.Add(user);
-        await dbContext.SaveChangesAsync(ct);
-
         dbContext.UserOrgRoles.Add(new UserOrgRole { UserId = user.Id, OrganizationId = hq.Id, RoleId = ownerRole.Id });
+
+        // ONE SaveChanges inside the transaction — EF orders the inserts by dependency (HQ, role,
+        // permission, user, membership), and a failure at any point rolls the whole bootstrap back.
         await dbContext.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        await securityEvents.WriteAsync(
+            SecurityEventType.SensitiveSettingChanged,
+            SecuritySeverity.Critical,
+            $"حساب مالک پلتفرم راه‌اندازی شد (کاربر {request.Mobile.Trim()}).",
+            mobile: request.Mobile.Trim(),
+            cancellationToken: ct);
 
         var token = tokenService.CreateToken(user);
         return Ok(new LoginResponse(token, ExpiresInMinutes: 480));

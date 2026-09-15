@@ -38,7 +38,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Default: "Server=sqlserver;Database=Aqsat;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      # Dedicated least-privilege login, NOT sa — the app owns the Aqsat database only (migrations
+      # need DDL), never the whole server. See README "First run only" for the one-time CREATE LOGIN.
+      ConnectionStrings__Default: "Server=sqlserver;Database=Aqsat;User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
       Jwt__Key: ${JWT_KEY}
       Encryption__NationalIdKey: ${NATIONAL_ID_KEY}
       ApiIr__ApiKey: ${API_IR_KEY:-}
@@ -93,7 +95,7 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_URLS: http://+:8081
-      ConnectionStrings__Default: "Server=sqlserver;Database=Aqsat;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      ConnectionStrings__Default: "Server=sqlserver;Database=Aqsat;User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
       Backup__Directory: /var/opt/mssql/backup
       Updater__SharedToken: ${UPDATER_SHARED_TOKEN}
       Updater__SigningPublicKeyPem: ${UPDATER_SIGNING_PUBLIC_KEY_PEM}

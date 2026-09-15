@@ -158,7 +158,9 @@ public class PlatformUpdatesEndpointTests : IClassFixture<WebApplicationFactory<
         await using var seedContext = TestDbContextFactory.Create();
         var package = new UpdatePackage
         {
-            Version = $"1.{Random.Shared.Next(1000, 9999)}.0",
+            // Unique index on Version: the entropy must survive leftovers from an aborted run
+            // (the shared test database is only wiped once per assembly load).
+            Version = $"1.{Random.Shared.Next(100000, 999999)}.{Random.Shared.Next(1, 99)}",
             ReleaseNotesFa = "رفع اشکال آزمایشی",
             ImageTag = "registry.example.ir/aqsat-api:test",
             Sha256 = "sha256:" + new string('a', 64),

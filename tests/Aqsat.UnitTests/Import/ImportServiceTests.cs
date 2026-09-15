@@ -67,10 +67,12 @@ public class ImportServiceTests
 
     private static IFieldEncryptor BuildFieldEncryptor()
     {
+        // A TEST-ONLY key (base64 of bytes 0..31) — not the dev/production key, which lives in
+        // user-secrets, never in source.
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Encryption:NationalIdKey"] = "iNR6AVHkisOPGbBreM0PpHSNmUoom7d0EFVWgcwEdJk=",
+                ["Encryption:NationalIdKey"] = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
             })
             .Build();
         return new AesFieldEncryptor(configuration);

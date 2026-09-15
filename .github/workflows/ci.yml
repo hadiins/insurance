@@ -1,0 +1,53 @@
+# Continuous integration for pushes/PRs: the full test suite (needs a real SQL Server — RLS is
+# the product's core security boundary and cannot be exercised against an in-memory provider)
+# plus a secret-scan gate so a leaked credential fails the build instead of waiting for a tag.
+#
+# AQSAT_TEST_CONNECTION points the suite at the ephemeral job's service container — its sa
+# password is a throwaway value that only ever exists inside this ephemeral runner, which is why
+# it can live in source (unlike any real environment's credentials).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci-Sa-Password-9!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      AQSAT_TEST_CONNECTION: "Server=localhost;Database=AqsatTest;User Id=sa;Password=Ci-Sa-Password-9!;TrustServerCertificate=True;MultipleActiveResultSets=true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj --configuration Release
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Same tag-vs-SHA reasoning as release.yml documents: pin only SHAs you have verified
+      # upstream; a mistyped SHA is worse than a tag. Enable Dependabot to bump the tag.
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -31,12 +31,29 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci-Sa-Password-9!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # The suite refuses to run without this (it must never fall back to a hardcoded database),
+      # and the release workflow cannot release what it cannot test.
+      AQSAT_TEST_CONNECTION: "Server=localhost;Database=AqsatTest;User Id=sa;Password=Ci-Sa-Password-9!;TrustServerCertificate=True;MultipleActiveResultSets=true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj
+      - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj --configuration Release
 
   build-sign-register:
     needs: test

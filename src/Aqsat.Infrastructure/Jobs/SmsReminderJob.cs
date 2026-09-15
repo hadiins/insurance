@@ -37,7 +37,11 @@ public sealed class SmsReminderJob(
 
         foreach (var agencyId in agencyIds)
         {
-            AgencyContext.Current = agencyId;
+            // Scoped, restored after each agency: this loop reuses ONE DbContext whose pooled
+            // connection may be held open across iterations — the interceptor re-stamps the
+            // session context when the ambient agency changes, and the scope guarantees a
+            // later iteration (or whatever runs after RunAsync) never inherits a stale agency.
+            using var agencyScope = AgencyContext.BeginScope(agencyId);
 
             var orgSettings = await dbContext.OrgSettings.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.OrganizationId == agencyId, ct);
