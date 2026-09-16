@@ -18,8 +18,7 @@ public sealed class PlatformOtpService(ISmsSender smsSender, IMemoryCache cache)
     {
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
-        var text = $"کد تأیید به‌روزرسانی سامانه: {code}\nاین کد تا ۵ دقیقه معتبر است.";
-        var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
+        var sent = await smsSender.SendOtpAsync(mobile, code, agencyId, ct);
         if (!sent)
         {
             // No code is cached when nothing was actually sent — otherwise Verify would accept a

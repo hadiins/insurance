@@ -19,8 +19,7 @@ public sealed class AgencyOtpService(ISmsSender smsSender, IMemoryCache cache) :
     {
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
-        var text = $"کد تأیید عملیات حساس Credix: {code}\nاین کد تا ۵ دقیقه معتبر است.";
-        var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
+        var sent = await smsSender.SendOtpAsync(mobile, code, agencyId, ct);
         if (!sent)
         {
             return false;

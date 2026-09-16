@@ -113,10 +113,13 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         return success;
     }
 
-    public async Task<bool> SmsOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default)
+    public async Task<bool> SmsOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default)
     {
+        // api.ir's SmsOTP carries our own generated code (trust level 1) — unlike SendSms (bulk, trust
+        // level 5), which the account may not yet be granted. The caller owns generating/verifying the
+        // code; we only deliver it. The endpoint requires `code`, so it is part of the body.
         var (success, _) = await CallAsync<SendResponse>(
-            "/api/sw1/SmsOTP", new { mobile }, "SmsOTP", SmsOtpCost, isPaidEndpoint: true, agencyId, ct);
+            "/api/sw1/SmsOTP", new { mobile, code }, "SmsOTP", SmsOtpCost, isPaidEndpoint: true, agencyId, ct);
         return success;
     }
 

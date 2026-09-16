@@ -18,8 +18,7 @@ public sealed class SignupOtpService(ISmsSender smsSender, IMemoryCache cache) :
     {
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
-        var text = $"کد تأیید ثبت‌نام Credix: {code}\nاین کد تا ۵ دقیقه معتبر است.";
-        var sent = await smsSender.SendAsync(mobile, text, Guid.Empty, ct);
+        var sent = await smsSender.SendOtpAsync(mobile, code, Guid.Empty, ct);
         if (!sent)
         {
             return false;

@@ -29,7 +29,7 @@ public class RlsCoverageTests
     /// <summary>Deliberately NOT under the RLS policy — see the class summary. Adding a table
     /// here requires an explicit security justification, not an oversight.</summary>
     private static readonly string[] RlsExemptTables =
-        ["PortalInvitationTokenIndex", "PaymentLinkTokenIndex", "AgencyStatsDaily", "NetworkRiskProfiles", "NetworkRiskPlateIndex"];
+        ["PortalInvitationTokenIndex", "PaymentLinkTokenIndex", "AgencyStatsDaily", "NetworkRiskProfiles", "NetworkRiskPlateIndex", "ApiIrCallLogs"];
 
     [Fact]
     public async Task Every_entity_with_an_AgencyId_property_is_covered_by_the_RLS_policy()

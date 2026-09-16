@@ -628,7 +628,7 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         public Task<bool> SendSmsAsync(string mobile, string text, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult(true);
 
-        public Task<bool> SmsOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default) =>
+        public Task<bool> SmsOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult(true);
 
         public Task<bool> CallOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default) =>

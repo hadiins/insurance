@@ -40,7 +40,7 @@ public interface IApiIrClient
     /// <summary>Never cached — every call is a real (or sandboxed) send.</summary>
     Task<bool> SendSmsAsync(string mobile, string text, Guid agencyId, CancellationToken ct = default);
 
-    Task<bool> SmsOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default);
+    Task<bool> SmsOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default);
 
     Task<bool> CallOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default);
 
