@@ -4,7 +4,7 @@ import { fa } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES, type NetworkRiskResultDto, type RiskLevelKey } from "./riskTypes";
 
-const STAT_TILE = "rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5";
+const STAT_TILE = "rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2.5";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -23,7 +23,7 @@ export function NetworkRiskResultCard({ result }: { result: NetworkRiskResultDto
   const decision = RISK_DECISION_STYLES[result.decisionKey] ?? RISK_DECISION_STYLES.ManualReview;
 
   return (
-    <div className="rounded-[12px] border border-(--edge-2) bg-(--card) p-3.5">
+    <div className="rounded-(--r) border border-(--edge-2) bg-(--card) p-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <b className="text-[13.5px] text-(--ice)">{result.agencyName}</b>
@@ -93,7 +93,7 @@ export function NetworkRiskWizardSummary({ results }: { results: NetworkRiskResu
         <Dialog.Trigger asChild>
           <button
             type="button"
-            className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-3 py-1 text-[11.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+            className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-3 py-1 text-[11.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             نمایش جزئیات
           </button>
@@ -101,7 +101,7 @@ export function NetworkRiskWizardSummary({ results }: { results: NetworkRiskResu
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/55" />
           <Dialog.Content className="fixed inset-0 z-[60] grid place-items-center p-5">
-            <div className="flex max-h-[85vh] w-full max-w-[640px] flex-col rounded-2xl border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
+            <div className="flex max-h-[85vh] w-full max-w-[640px] flex-col rounded-(--r-lg) border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
               <Dialog.Title className="mb-3 text-[14.5px] font-bold text-(--ice)">
                 سابقهٔ شبکه‌ای این مشتری
               </Dialog.Title>
@@ -117,7 +117,7 @@ export function NetworkRiskWizardSummary({ results }: { results: NetworkRiskResu
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="mt-3 self-start rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-1.5 text-[12px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+                  className="mt-3 self-start rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-1.5 text-[12px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
                 >
                   بستن
                 </button>
@@ -149,7 +149,7 @@ export function NetworkRiskResults({
 
   if (error) {
     return (
-      <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+      <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
         {error}
         <button type="button" onClick={onRetry} className="ms-2 underline underline-offset-2">
           تلاش مجدد
@@ -164,7 +164,7 @@ export function NetworkRiskResults({
 
   if (!data.isEnabled) {
     return (
-      <div className="rounded-[10px] border border-(--amber)/30 bg-(--amber)/10 px-3 py-2.5 text-[12.5px] text-(--amber)">
+      <div className="rounded-(--r) border border-(--amber)/30 bg-(--amber)/10 px-3 py-2.5 text-[12.5px] text-(--amber)">
         استعلام شبکه‌ای ریسک فعلاً توسط مالک پلتفرم غیرفعال شده است. نتیجه‌ای از نمایندگی‌های دیگر نمایش داده
         نمی‌شود.
       </div>
@@ -173,7 +173,7 @@ export function NetworkRiskResults({
 
   if (data.results.length === 0) {
     return (
-      <div className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5 text-[12.5px] text-(--ice-3)">
+      <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2.5 text-[12.5px] text-(--ice-3)">
         سابقه‌ای برای این {data.queryKind === "plate" ? "پلاک" : "کد ملی"} در شبکهٔ نمایندگی‌ها ثبت نشده است.
       </div>
     );

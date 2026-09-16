@@ -72,7 +72,7 @@ export function ManualReviewsPage() {
       {reviews.isPending && <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>}
 
       {reviews.isError && (
-        <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {reviews.error instanceof ApiError ? reviews.error.message : "خطا در بارگذاری صف بررسی"}
           <button type="button" onClick={() => void reviews.refetch()} className="ms-2 underline">
             تلاش مجدد
@@ -158,7 +158,7 @@ function ReviewDetail({
     null;
 
   return (
-    <div className="mt-4 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+    <div className="mt-4 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
       <div className="flex flex-wrap items-center gap-2.5">
         <b className="text-[14px] text-(--ice)">{review.customerName}</b>
         <span className={`rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold ${level.chip}`}>
@@ -206,7 +206,7 @@ function ReviewDetail({
       )}
 
       {error && (
-        <div className="mt-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12px] text-(--ember)">{error}</div>
+        <div className="mt-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12px] text-(--ember)">{error}</div>
       )}
 
       <label className="mt-4 block">
@@ -245,7 +245,7 @@ function ReviewDetail({
             <select
               value={assignee}
               onChange={(e) => setAssignee(e.target.value)}
-              className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[11.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[11.5px] text-(--ice) outline-none focus:border-(--mint)"
             >
               <option value="">واگذاری به…</option>
               {reviewers.map((u) => (
@@ -274,7 +274,7 @@ function ReviewDetail({
 
 function MiniStat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="rounded-[12px] border border-(--edge-2) bg-(--fld) p-2.5">
+    <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) p-2.5">
       <div className="mb-0.5 text-[10px] tracking-[0.14em] text-(--ice-3)">{label}</div>
       <div className={`text-[14px] font-extrabold tabular-nums ${warn ? "text-(--ember)" : "text-(--ice)"}`}>{value}</div>
     </div>

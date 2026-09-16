@@ -124,7 +124,7 @@ export function AgencyProfilePage() {
       <div>
         <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">پروندهٔ نمایندگی</h2>
         {error ? (
-          <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+          <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
         ) : (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         )}
@@ -146,10 +146,10 @@ export function AgencyProfilePage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">کد {fa(profile.code)} — {profile.province ?? "بدون استان"}{profile.city ? ` / ${profile.city}` : ""}</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
       )}
       {saved && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">تغییرات ذخیره شد.</div>
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">تغییرات ذخیره شد.</div>
       )}
 
       <div className="mb-4.5 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
@@ -162,7 +162,7 @@ export function AgencyProfilePage() {
         <Fig label="درآمد استعلام (تومان)" value={money(profile.inquiryRevenueToman)} tone="mint" />
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">روند ۱۲ ماه اخیر</div>
         {chartData.length === 0 ? (
           <div className="py-6 text-center text-[12.5px] text-(--ice-3)">داده‌ای برای نمایش روند وجود ندارد.</div>
@@ -198,7 +198,7 @@ export function AgencyProfilePage() {
         )}
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">مشخصات نمایندگی</div>
         <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Field label="نام نمایندگی">
@@ -253,7 +253,7 @@ export function AgencyProfilePage() {
           type="button"
           onClick={save}
           disabled={busy || !formChanged}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-5 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال ذخیره…" : "ذخیرهٔ تغییرات"}
         </button>
@@ -264,7 +264,7 @@ export function AgencyProfilePage() {
 
 function Fig({ label, value, tone }: { label: string; value: string; tone?: "mint" }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-(--edge) bg-(--pane) px-3.5 pt-3 pb-2.5">
+    <div className="relative overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane) px-3.5 pt-3 pb-2.5">
       <span className={`absolute start-0 top-0 h-0.5 w-7.5 ${tone === "mint" ? "bg-(--mint)" : "bg-(--ice-3)/40"}`} />
       <div className="text-[10.5px] tracking-wider text-(--ice-3)">{label}</div>
       <div className="mt-1 text-[15px] font-bold text-(--ice)">{value}</div>
@@ -274,4 +274,4 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
 
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";

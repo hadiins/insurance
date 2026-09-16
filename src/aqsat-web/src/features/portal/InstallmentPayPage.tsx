@@ -31,9 +31,9 @@ interface PayResultDto {
 }
 
 const PRIMARY_BTN =
-  "w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
 const SECONDARY_BTN =
-  "flex-1 rounded-[10px] border border-(--edge-2) bg-transparent px-4 py-2.5 text-[13.5px] font-semibold text-(--ice-2) transition-colors hover:brightness-110";
+  "flex-1 rounded-(--r) border border-(--edge-2) bg-transparent px-4 py-2.5 text-[13.5px] font-semibold text-(--ice-2) transition-colors hover:brightness-110";
 
 export function InstallmentPayPage() {
   const token = window.location.pathname.split("/").pop() ?? "";
@@ -90,7 +90,7 @@ export function InstallmentPayPage() {
     if (notFound || error) {
       return (
         <div className="grid h-full place-items-center bg-(--void) px-6">
-          <div className="w-full max-w-md rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center">
+          <div className="w-full max-w-md rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6 text-center">
             <div className="mb-2 text-[13.5px] leading-relaxed text-(--ember)">{error}</div>
             <div className="text-[12.5px] text-(--ice-3)">لطفاً با نمایندگی خود تماس بگیرید.</div>
           </div>
@@ -102,18 +102,18 @@ export function InstallmentPayPage() {
 
   return (
     <div className="grid h-full place-items-center overflow-y-auto bg-(--void) px-6 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-(--edge) bg-(--pane) p-6">
+      <div className="w-full max-w-md rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6">
         <h1 className="mb-1 text-xl font-extrabold text-(--ice)">پرداخت آنلاین قسط</h1>
         <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{info.agencyName}</div>
 
         {error && (
-          <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+          <div className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
             {error}
           </div>
         )}
 
         {payResult && (
-          <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
+          <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
             <div className="mb-1 text-[14px] font-bold text-(--mint)">پرداخت با موفقیت انجام شد</div>
             <div className="text-[12.5px] tabular-nums text-(--ice-2)">
               قسط {fa(payResult.seqNo)} بیمه‌نامهٔ {payResult.policyNumber} — مبلغ{" "}
@@ -128,14 +128,14 @@ export function InstallmentPayPage() {
         {paying ? (
           renderGateway(paying, () => setPaying(null), pay, busy)
         ) : info.installments.length === 0 ? (
-          <div className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-4 text-center text-[13px] text-(--ice-2)">
+          <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-4 text-center text-[13px] text-(--ice-2)">
             {payResult
               ? "همهٔ اقساط شما تسویه شده است. ممنون از همراهی شما."
               : "قسط بازی برای پرداخت ندارید."}
           </div>
         ) : (
           <>
-            <div className="mb-3 rounded-[10px] bg-(--fld) px-3 py-2.5">
+            <div className="mb-3 rounded-(--r) bg-(--fld) px-3 py-2.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مشتری</div>
               <div className="text-[14px] font-semibold text-(--ice)">{info.customerDisplayName}</div>
             </div>
@@ -144,7 +144,7 @@ export function InstallmentPayPage() {
               {info.installments.map((i) => (
                 <div
                   key={i.id}
-                  className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5"
+                  className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2.5"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-[12.5px] text-(--ice-2)">
@@ -185,12 +185,12 @@ function renderGateway(
 ) {
   return (
     <>
-      <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[11.5px] text-(--ice-3)">
+      <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[11.5px] text-(--ice-3)">
         در حال انتقال به درگاه پرداخت… — قسط {fa(installment.seqNo)} بیمه‌نامهٔ {installment.policyNumber}
       </div>
       {/* Simulated PSP screen — the Mock gateway's "redirect". In production this is replaced
           by the real provider's hosted page; only the confirm click charges. */}
-      <div className="mb-4.5 rounded-[10px] border border-(--edge-2) bg-(--void) p-4">
+      <div className="mb-4.5 rounded-(--r) border border-(--edge-2) bg-(--void) p-4">
         <div className="mb-2 text-center text-[12.5px] font-bold tracking-[0.12em] text-(--ice-2)">
           درگاه پرداخت آزمایشی
         </div>
@@ -204,7 +204,7 @@ function renderGateway(
         <div className="mb-1 text-[10.5px] text-(--ice-3)">شمارهٔ کارت</div>
         <div
           dir="ltr"
-          className="mb-3 rounded-[8px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[13.5px] tabular-nums tracking-widest text-(--ice-3)"
+          className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[13.5px] tabular-nums tracking-widest text-(--ice-3)"
         >
           6037-99**-****-0000
         </div>
@@ -220,7 +220,7 @@ function renderGateway(
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="flex-1 rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال پرداخت…" : "پرداخت"}
         </button>

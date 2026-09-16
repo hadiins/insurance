@@ -135,7 +135,7 @@ export function CustomerCompletionPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -145,11 +145,11 @@ export function CustomerCompletionPage() {
       {!error && rows !== null && (
         <>
           {rows.length === 0 ? (
-            <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13.5px] text-(--ice-3)">
+            <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6 text-center text-[13.5px] text-(--ice-3)">
               {page === 1 ? "همهٔ پرونده‌ها کامل است." : "این صفحه رکوردی ندارد."}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-(--edge) bg-(--pane)">
+            <div className="overflow-x-auto rounded-(--r-lg) border border-(--edge) bg-(--pane)">
               <table className="w-full min-w-[900px] border-collapse">
                 <thead>
                   <tr>
@@ -204,7 +204,7 @@ export function CustomerCompletionPage() {
               type="button"
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-3 py-1.5 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-3 py-1.5 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-40"
             >
               قبلی
             </button>
@@ -213,7 +213,7 @@ export function CustomerCompletionPage() {
               type="button"
               disabled={rows.length < PAGE_SIZE}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-3 py-1.5 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-3 py-1.5 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-40"
             >
               بعدی
             </button>
@@ -245,7 +245,7 @@ function Cell({
         onBlur={onBlur}
         placeholder={placeholder}
         dir={dir}
-        className="w-full min-w-[110px] rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+        className="w-full min-w-[110px] rounded-(--r) border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
       />
     </td>
   );

@@ -27,7 +27,7 @@ interface BankDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** «صندوق و بانک‌ها» — agency-defined receipt destinations shown as a dropdown on every cash-receipt
  * form (down payment, installment payment, non-installment full payment). */
@@ -220,12 +220,12 @@ export function CashAndBankSettingsPage() {
       </h2>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+      <div className="mb-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">صندوق‌های نقدی</div>
         {boxes !== null && boxes.length === 0 ? (
           <EmptyState
@@ -283,14 +283,14 @@ export function CashAndBankSettingsPage() {
             type="button"
             onClick={addBox}
             disabled={!newBoxName.trim()}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + افزودن
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+      <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">حساب‌های بانکی</div>
         {accounts !== null && accounts.length === 0 ? (
           <EmptyState
@@ -367,14 +367,14 @@ export function CashAndBankSettingsPage() {
             type="button"
             onClick={addAccount}
             disabled={!newBankName.trim() || !newAccountNumber.trim()}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + افزودن
           </button>
         </div>
       </div>
 
-      <div className="mt-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+      <div className="mt-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
           فهرست بانک‌ها
           <span className="ms-2 text-[11.5px] font-normal text-(--ice-3)">
@@ -427,7 +427,7 @@ export function CashAndBankSettingsPage() {
             type="button"
             onClick={addBank}
             disabled={!newBankListName.trim()}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + افزودن
           </button>
@@ -460,7 +460,7 @@ function OpeningBalanceInput({ value, onSave }: { value: number; onSave: (v: num
         if (e.key === "Escape") setEditing(false);
       }}
       dir="ltr"
-      className="w-32 rounded-[8px] border border-(--mint) bg-(--fld) px-2 py-1 text-[12.5px] tabular-nums text-(--ice) outline-none"
+      className="w-32 rounded-(--r) border border-(--mint) bg-(--fld) px-2 py-1 text-[12.5px] tabular-nums text-(--ice) outline-none"
     />
   ) : (
     <button

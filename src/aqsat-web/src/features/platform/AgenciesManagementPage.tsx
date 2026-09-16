@@ -276,7 +276,7 @@ export function AgenciesManagementPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">مدیریت و پروندهٔ تمام نمایندگی‌های فعال روی پلتفرم</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -299,7 +299,7 @@ export function AgenciesManagementPage() {
       )}
 
       {chartData.length > 0 && (
-        <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">بیمه‌نامه‌های صادرشده به تفکیک استان — ۱۰ استان برتر</div>
           <div className="h-64" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
@@ -330,7 +330,7 @@ export function AgenciesManagementPage() {
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="text-[13px] font-bold text-(--ice)">اشتراک‌گذاری ریسک شبکه‌ای</div>
         <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
           با فعال‌سازی، همهٔ نمایندگی‌ها به‌صورت خودکار و متقابل وضعیت ریسک مشتریان (فقط امتیاز، معوقات و سابقهٔ
@@ -349,7 +349,7 @@ export function AgenciesManagementPage() {
               type="button"
               onClick={() => void toggleRiskNetwork(!riskNetwork.isEnabled)}
               disabled={riskNetworkSaving}
-              className={`rounded-[10px] border px-4 py-2 text-[12.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`rounded-(--r) border px-4 py-2 text-[12.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 riskNetwork.isEnabled
                   ? "border-(--ember)/50 bg-(--ember)/10 text-(--ember) hover:brightness-110"
                   : "border-(--mint) bg-(--mint) text-(--on-mint) hover:brightness-105"
@@ -375,7 +375,7 @@ export function AgenciesManagementPage() {
         )}
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="text-[13px] font-bold text-(--ice)">ثبت‌نام خودکار نمایندگی</div>
         <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
           با فعال‌سازی، لینک «ثبت‌نام نمایندگی جدید» در صفحهٔ ورود باز می‌شود و نمایندهٔ بیمه می‌تواند خودش
@@ -394,7 +394,7 @@ export function AgenciesManagementPage() {
               type="button"
               onClick={() => void toggleSignupOpen(!signupOpen.allowAgencySignup)}
               disabled={signupOpenSaving}
-              className={`rounded-[10px] border px-4 py-2 text-[12.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`rounded-(--r) border px-4 py-2 text-[12.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 signupOpen.allowAgencySignup
                   ? "border-(--ember)/50 bg-(--ember)/10 text-(--ember) hover:brightness-110"
                   : "border-(--mint) bg-(--mint) text-(--on-mint) hover:brightness-105"
@@ -420,7 +420,7 @@ export function AgenciesManagementPage() {
         )}
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             value={search}
@@ -437,7 +437,7 @@ export function AgenciesManagementPage() {
           {filtersError && (
             <span className="flex items-center gap-1.5 text-[12px] text-(--ember)">
               {filtersError}
-              <button type="button" onClick={loadFilters} className="rounded-md border border-(--edge) px-2 py-0.5 hover:bg-(--hover)">
+              <button type="button" onClick={loadFilters} className="rounded-(--r-sharp) border border-(--edge) px-2 py-0.5 hover:bg-(--hover)">
                 تلاش مجدد
               </button>
             </span>
@@ -463,7 +463,7 @@ export function AgenciesManagementPage() {
             <button
               type="button"
               onClick={clearFilters}
-              className="rounded-[10px] border border-(--edge-2) px-3 py-2 text-[11.5px] text-(--ice-2) transition-colors hover:border-(--ember) hover:text-(--ember)"
+              className="rounded-(--r) border border-(--edge-2) px-3 py-2 text-[11.5px] text-(--ice-2) transition-colors hover:border-(--ember) hover:text-(--ember)"
             >
               حذف فیلترها
             </button>
@@ -471,7 +471,7 @@ export function AgenciesManagementPage() {
         </div>
 
         {listError ? (
-          <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{listError}</div>
+          <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{listError}</div>
         ) : pageData === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : pageData.rows.length === 0 ? (
@@ -542,7 +542,7 @@ export function AgenciesManagementPage() {
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-[10px] border border-(--edge-2) px-3 py-1.5 transition-colors hover:border-(--mint) disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-(--r) border border-(--edge-2) px-3 py-1.5 transition-colors hover:border-(--mint) disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   قبلی
                 </button>
@@ -551,7 +551,7 @@ export function AgenciesManagementPage() {
                   type="button"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-[10px] border border-(--edge-2) px-3 py-1.5 transition-colors hover:border-(--mint) disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-(--r) border border-(--edge-2) px-3 py-1.5 transition-colors hover:border-(--mint) disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   بعدی
                 </button>
@@ -562,12 +562,12 @@ export function AgenciesManagementPage() {
       </div>
 
       {justCreated && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
           نمایندگی «{justCreated.agency.name}» ساخته شد. اطلاعات ورود اولین کاربر: شمارهٔ همراه {fa(justCreated.managerMobile)} با نقش «{justCreated.roleName}» — رمز عبوری که وارد کردید.
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">نمایندگی جدید</div>
         <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="کد نمایندگی" className={inputClass} />
@@ -591,7 +591,7 @@ export function AgenciesManagementPage() {
           type="button"
           onClick={create}
           disabled={busy}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال ساخت…" : "ساخت نمایندگی"}
         </button>
@@ -614,7 +614,7 @@ function SortableTh({ label, active, dir, onClick }: { label: string; active: bo
 
 function Fig({ label, value, tone }: { label: string; value: string; tone?: "mint" }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-(--edge) bg-(--pane) px-3.5 pt-3 pb-2.5">
+    <div className="relative overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane) px-3.5 pt-3 pb-2.5">
       <span className={`absolute start-0 top-0 h-0.5 w-7.5 ${tone === "mint" ? "bg-(--mint)" : "bg-(--ice-3)/40"}`} />
       <div className="text-[10.5px] tracking-wider text-(--ice-3)">{label}</div>
       <div className="mt-1 text-[15px] font-bold text-(--ice)">{value}</div>
@@ -623,4 +623,4 @@ function Fig({ label, value, tone }: { label: string; value: string; tone?: "min
 }
 
 const inputClass =
-  "rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)";

@@ -163,12 +163,12 @@ export function CollateralPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">وثیقهٔ اقساط — چک صیادی و سفته</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">ثبت وثیقهٔ جدید</div>
         <div className="mb-3 grid grid-cols-6 gap-3">
           <input
@@ -220,7 +220,7 @@ export function CollateralPage() {
         <button
           type="button"
           onClick={register}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
         >
           ثبت
         </button>
@@ -326,7 +326,7 @@ export function CollateralPage() {
                       <button
                         type="button"
                         onClick={() => setStatus(c.id, "AtBank")}
-                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                        className="rounded-(--r) border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                       >
                         نزد بانک
                       </button>
@@ -336,14 +336,14 @@ export function CollateralPage() {
                         <button
                           type="button"
                           onClick={() => setStatus(c.id, "Cleared")}
-                          className="rounded-[8px] border border-(--mint) px-2 py-1 text-[10.5px] text-(--mint) transition-colors hover:bg-(--mint)/10"
+                          className="rounded-(--r) border border-(--mint) px-2 py-1 text-[10.5px] text-(--mint) transition-colors hover:bg-(--mint)/10"
                         >
                           پاس‌شد
                         </button>
                         <button
                           type="button"
                           onClick={() => setStatus(c.id, "Bounced")}
-                          className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                          className="rounded-(--r) border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
                         >
                           برگشت خورد
                         </button>
@@ -353,7 +353,7 @@ export function CollateralPage() {
                       <button
                         type="button"
                         onClick={() => checkColor(c.id)}
-                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                        className="rounded-(--r) border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                       >
                         استعلام رنگ
                       </button>

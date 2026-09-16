@@ -101,7 +101,7 @@ export function MonitoringLogsPage() {
         <select
           value={level}
           onChange={(e) => setLevel(e.target.value)}
-          className="rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice-2)"
+          className="rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice-2)"
         >
           {LEVELS.map((l) => (
             <option key={l} value={l}>
@@ -112,7 +112,7 @@ export function MonitoringLogsPage() {
         <select
           value={minutes}
           onChange={(e) => setMinutes(Number(e.target.value))}
-          className="rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice-2)"
+          className="rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice-2)"
         >
           {MINUTES_OPTIONS.map((m) => (
             <option key={m.value} value={m.value}>
@@ -125,12 +125,12 @@ export function MonitoringLogsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="جستجو در متن پیام…"
-          className="min-w-52 flex-1 rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice) placeholder:text-(--ice-3)"
+          className="min-w-52 flex-1 rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice) placeholder:text-(--ice-3)"
         />
         <button
           type="button"
           onClick={loadFirst}
-          className="rounded-[10px] bg-(--mint) px-3.5 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-opacity hover:opacity-90"
+          className="rounded-(--r) bg-(--mint) px-3.5 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-opacity hover:opacity-90"
         >
           اعمال فیلتر
         </button>
@@ -185,7 +185,7 @@ export function MonitoringLogsPage() {
                 type="button"
                 onClick={loadMore}
                 disabled={loading}
-                className="rounded-[10px] border border-(--edge) bg-(--pane) px-4 py-1.5 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov) disabled:opacity-50"
+                className="rounded-(--r) border border-(--edge) bg-(--pane) px-4 py-1.5 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov) disabled:opacity-50"
               >
                 {loading ? "در حال بارگذاری…" : "بیشتر"}
               </button>

@@ -56,12 +56,12 @@ export function ContractTemplatesPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <b className="mb-3 block text-[13.5px] text-(--ice)">قراردادهای تعریف‌شده</b>
 
         {templates === null ? (
@@ -99,20 +99,20 @@ export function ContractTemplatesPage() {
             value={newTemplate.contractNamePattern}
             onChange={(e) => setNewTemplate((t) => ({ ...t, contractNamePattern: e.target.value }))}
             placeholder="مثلاً تجارت آفرینان تسنیم"
-            className="col-span-2 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="col-span-2 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={newTemplate.defaultInstallmentCount}
             onChange={(e) => setNewTemplate((t) => ({ ...t, defaultInstallmentCount: Number(e.target.value) }))}
             type="number"
             placeholder="تعداد اقساط"
-            className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <button
             type="button"
             onClick={addTemplate}
             disabled={!newTemplate.contractNamePattern.trim()}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             افزودن
           </button>

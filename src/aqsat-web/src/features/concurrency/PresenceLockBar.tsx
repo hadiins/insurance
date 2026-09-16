@@ -129,14 +129,14 @@ export function PresenceLockBar({ entityType, entityId }: { entityType: string; 
   }
 
   return (
-    <div className="mb-4.5 rounded-xl border border-(--edge) bg-(--pane) p-3.5 text-[12.5px]">
+    <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5 text-[12.5px]">
       {revoked && (
-        <div className="mb-3 rounded-[10px] border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-(--amber)">
+        <div className="mb-3 rounded-(--r) border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-(--amber)">
           دسترسی ویرایش شما توسط <b>{revoked.by}</b> لغو شد. دلیل: «{revoked.reason}»
         </div>
       )}
       {error && (
-        <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-(--ember)">{error}</div>
+        <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-(--ember)">{error}</div>
       )}
 
       <div className="mb-2.5 flex flex-wrap items-center gap-2 text-(--ice-3)">
@@ -159,7 +159,7 @@ export function PresenceLockBar({ entityType, entityId }: { entityType: string; 
             <button
               type="button"
               onClick={release}
-              className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-3 py-1 font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+              className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-3 py-1 font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
             >
               پایان ویرایش
             </button>
@@ -170,7 +170,7 @@ export function PresenceLockBar({ entityType, entityId }: { entityType: string; 
             <button
               type="button"
               onClick={forceRelease}
-              className="rounded-[8px] border border-(--ember)/40 bg-(--ember)/10 px-3 py-1 font-semibold text-(--ember) transition-colors hover:bg-(--ember)/20"
+              className="rounded-(--r) border border-(--ember)/40 bg-(--ember)/10 px-3 py-1 font-semibold text-(--ember) transition-colors hover:bg-(--ember)/20"
             >
               آزادسازی اجباری
             </button>
@@ -179,7 +179,7 @@ export function PresenceLockBar({ entityType, entityId }: { entityType: string; 
           <button
             type="button"
             onClick={acquire}
-            className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1 font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-3 py-1 font-semibold text-(--on-mint) transition-colors hover:brightness-105"
           >
             ویرایش
           </button>

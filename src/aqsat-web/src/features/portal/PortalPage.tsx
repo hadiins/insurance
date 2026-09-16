@@ -45,9 +45,9 @@ type Phase =
   | "error";
 
 const PRIMARY_BTN =
-  "w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
 const SECONDARY_BTN =
-  "flex-1 rounded-[10px] border border-(--edge-2) bg-transparent px-4 py-2.5 text-[13.5px] font-semibold text-(--ice-2) transition-colors hover:brightness-110";
+  "flex-1 rounded-(--r) border border-(--edge-2) bg-transparent px-4 py-2.5 text-[13.5px] font-semibold text-(--ice-2) transition-colors hover:brightness-110";
 
 export function PortalPage() {
   const token = window.location.pathname.split("/").pop() ?? "";
@@ -140,14 +140,14 @@ export function PortalPage() {
 
   return (
     <div className="grid h-full place-items-center overflow-y-auto bg-(--void) px-6 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-(--edge) bg-(--pane) p-6">
+      <div className="w-full max-w-md rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6">
         <h1 className="mb-1 text-xl font-extrabold text-(--ice)">پورتال مشتری</h1>
         <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
           {isPolicyLink ? "بیمه‌نامهٔ اقساطی — تکمیل مراحل" : "پرداخت کارمزد استعلام بیمه"}
         </div>
 
         {error && (
-          <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+          <div className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
             {error}
           </div>
         )}
@@ -160,11 +160,11 @@ export function PortalPage() {
 
         {info && (phase === "info" || phase === "feePaid" || phase === "error" || phase === "rejected") && (
           <>
-            <div className="mb-4.5 rounded-[10px] bg-(--fld) px-3 py-2.5">
+            <div className="mb-4.5 rounded-(--r) bg-(--fld) px-3 py-2.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مشتری</div>
               <div className="text-[14px] font-semibold text-(--ice)">{info.customerDisplayName}</div>
             </div>
-            <div className="mb-4.5 flex items-baseline justify-between rounded-[10px] bg-(--fld) px-3 py-2.5">
+            <div className="mb-4.5 flex items-baseline justify-between rounded-(--r) bg-(--fld) px-3 py-2.5">
               <span className="text-[12.5px] text-(--ice-3)">کارمزد استعلام</span>
               <span className="text-[15px] font-bold tabular-nums text-(--ice)">
                 {money(info.feeToman)} <span className="text-[11.5px] font-normal text-(--ice-3)">تومان</span>
@@ -175,7 +175,7 @@ export function PortalPage() {
             </div>
 
             {phase === "feePaid" ? (
-              <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
+              <div className="rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
                 <div className="mb-1 text-[14px] font-bold text-(--mint)">پرداخت کارمزد با موفقیت انجام شد</div>
                 <div className="text-[12.5px] tabular-nums text-(--ice-2)">
                   مبلغ {money(payResult?.paidAmountToman ?? info.feeToman)} تومان
@@ -204,7 +204,7 @@ export function PortalPage() {
 
         {info && phase === "contract" && (
           <>
-            <div className="mb-4.5 rounded-[10px] bg-(--fld) px-3 py-2.5">
+            <div className="mb-4.5 rounded-(--r) bg-(--fld) px-3 py-2.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مشتری</div>
               <div className="text-[14px] font-semibold text-(--ice)">{info.customerDisplayName}</div>
               {info.policyNumber && (
@@ -221,7 +221,7 @@ export function PortalPage() {
               قرارداد و جدول اقساط را بررسی کنید و در صورت پذیرش، تأیید کنید.
             </div>
 
-            <div className="mb-3.5 max-h-44 overflow-y-auto rounded-[10px] border border-(--edge-2) bg-(--fld) p-3 text-[11.5px] leading-relaxed whitespace-pre-wrap text-(--ice-2)">
+            <div className="mb-3.5 max-h-44 overflow-y-auto rounded-(--r) border border-(--edge-2) bg-(--fld) p-3 text-[11.5px] leading-relaxed whitespace-pre-wrap text-(--ice-2)">
               {info.contractText}
             </div>
 
@@ -243,7 +243,7 @@ export function PortalPage() {
             )}
 
             {info.downPaymentAmountToman != null && info.downPaymentAmountToman > 0 && (
-              <div className="mb-3.5 flex items-baseline justify-between rounded-[10px] bg-(--fld) px-3 py-2.5">
+              <div className="mb-3.5 flex items-baseline justify-between rounded-(--r) bg-(--fld) px-3 py-2.5">
                 <span className="text-[12.5px] text-(--ice-3)">پیشپرداخت</span>
                 <span className="text-[14px] font-bold tabular-nums text-(--ice)">
                   {money(info.downPaymentAmountToman)}{" "}
@@ -283,7 +283,7 @@ export function PortalPage() {
           )}
 
         {phase === "downPaid" && info && (
-          <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
+          <div className="rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
             <div className="mb-1 text-[14px] font-bold text-(--mint)">پیشپرداخت با موفقیت پرداخت شد</div>
             <div className="text-[12.5px] tabular-nums text-(--ice-2)">
               مبلغ {money(payResult?.paidAmountToman ?? info.downPaymentAmountToman ?? 0)} تومان
@@ -324,26 +324,26 @@ function derivePhase(i: PortalInfoDto, prev: Phase): Phase {
 function StageNotice({ stage, onPayDownPayment }: { stage: string | null; onPayDownPayment: () => void }) {
   if (stage === "Rejected") {
     return (
-      <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ember)">
+      <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ember)">
         درخواست بیمه‌نامهٔ اقساطی شما از سمت نمایندگی تأیید نشد. برای اطلاعات بیشتر با نمایندگی تماس بگیرید.
       </div>
     );
   }
   if (stage === "Completed") {
     return (
-      <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--mint)">
+      <div className="rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--mint)">
         فرایند بیمه‌نامهٔ اقساطی شما کامل شد. ممنون از همراهی شما.
       </div>
     );
   }
   if (stage === "CustomerApproved") {
     return (
-      <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ice-2)">
+      <div className="rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ice-2)">
         قرارداد شما ثبت شد — برای تکمیل فرایند، پیشپرداخت را پرداخت کنید:
         <button
           type="button"
           onClick={onPayDownPayment}
-          className="mt-2 w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+          className="mt-2 w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
         >
           پرداخت پیشپرداخت
         </button>
@@ -351,7 +351,7 @@ function StageNotice({ stage, onPayDownPayment }: { stage: string | null; onPayD
     );
   }
   return (
-    <div className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-3 text-[12.5px] leading-relaxed text-(--ice-3)">
+    <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-3 text-[12.5px] leading-relaxed text-(--ice-3)">
       {stage === "ReportReady"
         ? "استعلام اعتباری شما انجام شد و پروندهٔ شما در حال بررسی نمایندگی است. با تأیید نمایندگی، قرارداد و جدول اقساط همین‌جا نمایش داده میشود."
         : stage === "FeePaid"
@@ -370,12 +370,12 @@ function renderGateway(
 ) {
   return (
     <>
-      <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[11.5px] text-(--ice-3)">
+      <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[11.5px] text-(--ice-3)">
         در حال انتقال به درگاه پرداخت… — {title}
       </div>
       {/* Simulated PSP screen — the Mock gateway's "redirect". In production this is replaced
           by the real provider's hosted page; only the confirm click charges. */}
-      <div className="mb-4.5 rounded-[10px] border border-(--edge-2) bg-(--void) p-4">
+      <div className="mb-4.5 rounded-(--r) border border-(--edge-2) bg-(--void) p-4">
         <div className="mb-2 text-center text-[12.5px] font-bold tracking-[0.12em] text-(--ice-2)">
           درگاه پرداخت آزمایشی
         </div>
@@ -388,7 +388,7 @@ function renderGateway(
         <div className="mb-1 text-[10.5px] text-(--ice-3)">شمارهٔ کارت</div>
         <div
           dir="ltr"
-          className="mb-3 rounded-[8px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[13.5px] tabular-nums tracking-widest text-(--ice-3)"
+          className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[13.5px] tabular-nums tracking-widest text-(--ice-3)"
         >
           6037-99**-****-0000
         </div>
@@ -404,7 +404,7 @@ function renderGateway(
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="flex-1 rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال پرداخت…" : "پرداخت"}
         </button>

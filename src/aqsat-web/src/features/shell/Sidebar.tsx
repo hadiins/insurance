@@ -84,7 +84,7 @@ export function Sidebar() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="جست‌وجوی منو..."
               aria-label="جست‌وجوی منو"
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) py-2 ps-8 pe-3 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) py-2 ps-8 pe-3 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
             />
           </div>
         </div>
@@ -115,7 +115,7 @@ export function Sidebar() {
           type="button"
           onClick={toggleCollapsed}
           title="جمع کردن منو"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-(--edge) py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-(--r) border border-(--edge) py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
         >
           <svg
             viewBox="0 0 24 24"

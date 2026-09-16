@@ -284,7 +284,7 @@ export function MonitoringDashboardPage() {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactElement }) {
   return (
-    <div className="rounded-2xl border border-(--edge) bg-(--pane) p-4">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
       <div className="mb-2 text-[12.5px] font-semibold text-(--ice-2)">{title}</div>
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
@@ -297,7 +297,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactEl
 
 function ResourcePanel({ server, error, onRetry }: { server: ServerStatusDto | null; error: string | null; onRetry: () => void }) {
   return (
-    <div className="rounded-2xl border border-(--edge) bg-(--pane) p-4">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
       <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">منابع فرایند (لحظه‌ای)</div>
       {error && !server ? (
         <EmptyState icon="⚠️" title="بارگذاری منابع ناموفق بود" description={error} action={{ label: "تلاش دوباره", onClick: onRetry }} />
@@ -469,7 +469,7 @@ export function AlertList({ alerts, onChanged }: { alerts: AlertOccurrenceDto[];
                 <button
                   type="button"
                   onClick={() => ack(a.id)}
-                  className="ml-2 rounded-md border border-(--edge) px-2 py-1 text-[11px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                  className="ml-2 rounded-(--r-sharp) border border-(--edge) px-2 py-1 text-[11px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                 >
                   دیده شد
                 </button>
@@ -478,7 +478,7 @@ export function AlertList({ alerts, onChanged }: { alerts: AlertOccurrenceDto[];
                 <button
                   type="button"
                   onClick={() => resolve(a.id)}
-                  className="rounded-md border border-(--mint) px-2 py-1 text-[11px] font-semibold text-(--mint) transition-colors hover:bg-(--mint)/10"
+                  className="rounded-(--r-sharp) border border-(--mint) px-2 py-1 text-[11px] font-semibold text-(--mint) transition-colors hover:bg-(--mint)/10"
                 >
                   برطرف شد
                 </button>

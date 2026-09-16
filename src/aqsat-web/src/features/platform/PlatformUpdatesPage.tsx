@@ -203,13 +203,13 @@ export function PlatformUpdatesPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">این صفحه فقط برای مالک پلتفرم است — نمایندگی‌ها آن را نمی‌بینند</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
       {status && (
-        <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">نسخهٔ فعلی</div>
           <div className="text-[20px] font-extrabold text-(--ice)">{status.currentVersion}</div>
           {status.maintenanceModeActive && (
@@ -219,7 +219,7 @@ export function PlatformUpdatesPage() {
       )}
 
       {displayedRun && displayedRun.status === "Running" && (
-        <div className="mb-4.5 rounded-2xl border border-(--mint)/30 bg-(--mint)/6 p-5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--mint)/30 bg-(--mint)/6 p-5">
           <div className="mb-3 text-[13.5px] font-bold text-(--ice)">
             به‌روزرسانی به {displayedRun.toVersion} — {fa(displayedProgress)}٪
           </div>
@@ -234,7 +234,7 @@ export function PlatformUpdatesPage() {
       )}
 
       {displayedRun && (displayedRun.status === "Failed" || displayedRun.status === "RolledBack") && (
-        <div className="mb-4.5 rounded-2xl border border-(--ember)/30 bg-(--ember)/8 p-5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--ember)/30 bg-(--ember)/8 p-5">
           <div className="mb-1 text-[14px] font-bold text-(--ember)">❌ به‌روزرسانی ناموفق بود</div>
           <div className="mb-2 text-[12.5px] text-(--ice-2)">{displayedRun.errorMessage}</div>
           {displayedRun.status === "RolledBack" && (
@@ -243,7 +243,7 @@ export function PlatformUpdatesPage() {
           <button
             type="button"
             onClick={() => copyReport(displayedRun)}
-            className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+            className="rounded-(--r) border border-(--edge-2) px-3 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
           >
             کپی برای پشتیبانی
           </button>
@@ -263,7 +263,7 @@ export function PlatformUpdatesPage() {
         ) : (
           <div className="space-y-2">
             {packages.map((pkg) => (
-              <div key={pkg.id} className="rounded-2xl border border-(--edge) bg-(--pane) p-4">
+              <div key={pkg.id} className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
                 <div className="mb-1.5 flex items-center justify-between">
                   <b className="text-[13.5px] text-(--ice)">نسخهٔ {pkg.version}</b>
                   <div className="flex items-center gap-1.5">
@@ -277,14 +277,14 @@ export function PlatformUpdatesPage() {
                     type="button"
                     disabled={Boolean(displayedRun && displayedRun.status === "Running")}
                     onClick={() => requestOtp(pkg)}
-                    className="rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-(--r) border border-(--mint) bg-(--mint) px-3 py-1.5 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     اجرای به‌روزرسانی
                   </button>
                   <button
                     type="button"
                     onClick={() => yankPackage(pkg)}
-                    className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                    className="rounded-(--r) border border-(--edge-2) px-3 py-1.5 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                   >
                     لغو این نسخه
                   </button>
@@ -297,18 +297,18 @@ export function PlatformUpdatesPage() {
 
       {otpPackage && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-(--edge) bg-(--pane) p-5">
+          <div className="w-full max-w-sm rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
             <b className="mb-3 block text-[14px] text-(--ice)">تأیید دومرحله‌ای — به‌روزرسانی به {otpPackage.version}</b>
             {otpError ? (
               <>
-                <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+                <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
                   {otpError}
                 </div>
                 <div className="mb-1">
                   <button
                     type="button"
                     onClick={() => requestOtp(otpPackage)}
-                    className="rounded-[8px] border border-(--edge-2) px-3 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                    className="rounded-(--r) border border-(--edge-2) px-3 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                   >
                     ارسال دوبارهٔ کد
                   </button>
@@ -324,7 +324,7 @@ export function PlatformUpdatesPage() {
                   onChange={(e) => setOtpCode(e.target.value)}
                   placeholder="کد ۶ رقمی"
                   maxLength={6}
-                  className="mb-3 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[16px] tracking-[0.3em] text-(--ice) outline-none focus:border-(--mint)"
+                  className="mb-3 w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[16px] tracking-[0.3em] text-(--ice) outline-none focus:border-(--mint)"
                 />
               </>
             )}
@@ -333,14 +333,14 @@ export function PlatformUpdatesPage() {
                 type="button"
                 disabled={busy || !otpSent || otpCode.trim().length !== 6}
                 onClick={confirmStart}
-                className="flex-1 rounded-[10px] border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-(--r) border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy ? "در حال شروع…" : "تأیید و شروع"}
               </button>
               <button
                 type="button"
                 onClick={() => setOtpPackage(null)}
-                className="rounded-[10px] border border-(--edge-2) px-3 py-2 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                className="rounded-(--r) border border-(--edge-2) px-3 py-2 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
               >
                 انصراف
               </button>
@@ -349,7 +349,7 @@ export function PlatformUpdatesPage() {
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-2 text-[12.5px] font-semibold text-(--ice-2)">بازگشت دستی</div>
         <div className="mb-3 text-[11.5px] text-(--ice-3)">
           بازگشت ایمیج آسان است، بازگشت مهاجرت دیتابیس نیست — اگر نسخهٔ فعلی ستونی حذف یا داده‌ای تبدیل کرده باشد، بازگشت ایمیج به‌تنهایی کافی نیست.
@@ -359,13 +359,13 @@ export function PlatformUpdatesPage() {
             value={rollbackImageTag}
             onChange={(e) => setRollbackImageTag(e.target.value)}
             placeholder="برچسب ایمیج برای بازگشت (مثلاً registry/aqsat-api:1.4.2)"
-            className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="flex-1 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <button
             type="button"
             disabled={busy}
             onClick={rollback}
-            className="rounded-[10px] border border-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             بازگشت
           </button>
@@ -405,7 +405,7 @@ export function PlatformUpdatesPage() {
                       <button
                         type="button"
                         onClick={() => copyReport(run)}
-                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                        className="rounded-(--r) border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                       >
                         کپی گزارش
                       </button>

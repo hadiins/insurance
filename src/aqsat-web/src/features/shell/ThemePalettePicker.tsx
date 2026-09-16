@@ -39,7 +39,7 @@ export function ThemePalettePicker() {
         onClick={() => setOpen((v) => !v)}
         title="رنگ‌بندی"
         aria-label="رنگ‌بندی"
-        className="grid h-8 w-8 place-items-center rounded-[9px] border border-(--edge) transition-colors hover:bg-(--hov)"
+        className="grid h-8 w-8 place-items-center rounded-(--r) border border-(--edge) transition-colors hover:bg-(--hov)"
       >
         <span
           className="h-4 w-4 rounded-full border border-(--edge-2)"
@@ -48,7 +48,7 @@ export function ThemePalettePicker() {
       </button>
 
       {open && (
-        <div className="absolute end-0 top-9 z-50 w-40 rounded-[12px] border border-(--edge-2) bg-(--pane) p-1.5 shadow-lg">
+        <div className="absolute end-0 top-9 z-50 w-40 rounded-(--r) border border-(--edge-2) bg-(--pane) p-1.5 shadow-lg">
           {PALETTES.map((p) => (
             <button
               key={p.id}
@@ -58,7 +58,7 @@ export function ThemePalettePicker() {
                 setPaletteState(p.id);
                 setOpen(false);
               }}
-              className={`flex w-full items-center gap-2 rounded-[9px] px-2.5 py-2 text-right text-[12.5px] transition-colors hover:bg-(--hov) ${
+              className={`flex w-full items-center gap-2 rounded-(--r) px-2.5 py-2 text-right text-[12.5px] transition-colors hover:bg-(--hov) ${
                 p.id === palette ? "border border-(--mint) bg-(--hov) text-(--ice)" : "text-(--ice-2)"
               }`}
             >

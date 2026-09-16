@@ -69,7 +69,7 @@ export function AgencyPaymentSettingsPage() {
       <div>
         <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">تنظیمات درگاه پرداخت</h2>
         {error ? (
-          <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+          <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
         ) : (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         )}
@@ -85,23 +85,23 @@ export function AgencyPaymentSettingsPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{fa(form.name)} — کد {fa(form.code)}</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
       )}
       {saved && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">تنظیمات ذخیره شد.</div>
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">تنظیمات ذخیره شد.</div>
       )}
 
-      <div className="mb-4.5 rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-2 text-[11.5px] leading-relaxed text-(--ice-3)">
+      <div className="mb-4.5 rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-2 text-[11.5px] leading-relaxed text-(--ice-3)">
         درگاه پرداخت نمایندگی فقط برای دریافت <span className="font-semibold text-(--ice-2)">پیش‌پرداخت و اقساط مشتریان همین نمایندگی</span> استفاده می‌شود
         و مبالغ به حسابی که نمایندگی در درگاه تعریف کرده واریز می‌شود.
         کارمزد استعلام‌ها از طریق درگاه مالک دریافت و به حساب مالک واریز می‌شود — این دو درگاه مستقل‌اند و تداخلی با هم ندارند.
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">درگاه پرداخت</div>
         <div className="mb-2 space-y-2">
           {PROVIDERS.map((p) => (
-            <label key={p.value} className="flex cursor-pointer items-start gap-2.5 rounded-[10px] bg-(--fld) px-3 py-2">
+            <label key={p.value} className="flex cursor-pointer items-start gap-2.5 rounded-(--r) bg-(--fld) px-3 py-2">
               <input
                 type="radio"
                 name="agency-payment-provider"
@@ -151,7 +151,7 @@ export function AgencyPaymentSettingsPage() {
         </div>
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">شناسهٔ پذیرنده (Merchant ID)</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">
           شناسهٔ حساب نمایندگی در درگاه پرداخت — پرداخت‌های مشتریان بابت پیش‌پرداخت و اقساط به همین حساب واریز می‌شود.
@@ -175,7 +175,7 @@ export function AgencyPaymentSettingsPage() {
         type="button"
         disabled={busy}
         onClick={save}
-        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-(--r) border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
       </button>

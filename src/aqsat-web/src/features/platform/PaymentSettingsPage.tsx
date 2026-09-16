@@ -79,23 +79,23 @@ export function PaymentSettingsPage() {
       <h1 className="mb-4.5 text-[20px] font-extrabold text-(--ice)">درگاه پرداخت مالک</h1>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
       {message && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
           {message}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-2 text-[11.5px] leading-relaxed text-(--ice-3)">
+      <div className="mb-4.5 rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-2 text-[11.5px] leading-relaxed text-(--ice-3)">
         این درگاه فقط برای <span className="font-semibold text-(--ice-2)">دریافت کارمزد استعلام‌های مورد نیاز</span> استفاده می‌شود
         و مبالغ به حسابی که مالک در درگاه پرداخت اعمال می‌کند واریز می‌شود.
         درگاه پرداخت نمایندگی‌ها (برای پیش‌پرداخت و اقساط مشتریان) جداگانه در تنظیمات خودِ هر نمایندگی پیکربندی می‌شود و با این درگاه تداخلی ندارد.
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">وضعیت فعلی</div>
         {settings === null ? (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری...</div>
@@ -124,13 +124,13 @@ export function PaymentSettingsPage() {
         )}
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">پیکربندی</div>
 
         <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">درگاه پرداخت</div>
         <div className="mb-2 space-y-2">
           {PROVIDERS.map((p) => (
-            <label key={p.value} className="flex cursor-pointer items-start gap-2.5 rounded-[10px] bg-(--fld) px-3 py-2">
+            <label key={p.value} className="flex cursor-pointer items-start gap-2.5 rounded-(--r) bg-(--fld) px-3 py-2">
               <input
                 type="radio"
                 name="payment-provider"
@@ -164,11 +164,11 @@ export function PaymentSettingsPage() {
           <MoneyInput
             value={String(inquiryFee)}
             onChange={(v) => setInquiryFee(Number(v))}
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
         </div>
         {enabled && provider === "ZarinPal" && !settings?.hasOwnerMerchantId && merchantId.trim() === "" && (
-          <div className="mb-4 rounded-[10px] border border-(--amber)/30 bg-(--amber)/8 px-3 py-2 text-[11.5px] leading-relaxed text-(--amber)">
+          <div className="mb-4 rounded-(--r) border border-(--amber)/30 bg-(--amber)/8 px-3 py-2 text-[11.5px] leading-relaxed text-(--amber)">
             برای فعالسازی درگاه زرینپال، شناسهٔ پذیرنده (Merchant ID) الزامی است — سرور ذخیرهٔ تنظیمات بدون آن را نمیپذیرد.
           </div>
         )}
@@ -181,7 +181,7 @@ export function PaymentSettingsPage() {
           value={merchantId}
           onChange={(e) => setMerchantId(e.target.value)}
           placeholder={settings?.hasOwnerMerchantId ? settings.ownerMerchantIdMasked ?? "" : "شناسهٔ پذیرنده"}
-          className="mb-4 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className="mb-4 w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           autoComplete="off"
         />
 
@@ -193,7 +193,7 @@ export function PaymentSettingsPage() {
           value={callbackUrl}
           onChange={(e) => setCallbackUrl(e.target.value)}
           placeholder="https://api.example.ir"
-          className="mb-4 w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className="mb-4 w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
           autoComplete="off"
           dir="ltr"
         />
@@ -202,7 +202,7 @@ export function PaymentSettingsPage() {
           type="button"
           disabled={busy || settings === null}
           onClick={save}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال ذخیره..." : "ذخیره"}
         </button>

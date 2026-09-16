@@ -38,15 +38,15 @@ export function JalaliCalendarPopup({ viewYear, viewMonth, selected, onNavigate,
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute top-full z-50 mt-1.5 w-64 rounded-[12px] border border-(--edge) bg-(--pane) p-3 shadow-xl">
+      <div className="absolute top-full z-50 mt-1.5 w-64 rounded-(--r) border border-(--edge) bg-(--pane) p-3 shadow-xl">
         <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={goPrevMonth} className="rounded-[6px] px-2 py-1 text-[13.5px] text-(--ice-2) hover:bg-(--hov)">
+          <button type="button" onClick={goPrevMonth} className="rounded-(--r-sharp) px-2 py-1 text-[13.5px] text-(--ice-2) hover:bg-(--hov)">
             ›
           </button>
           <div className="text-[12.5px] font-semibold text-(--ice)">
             {MONTH_NAMES[viewMonth - 1]} {fa(viewYear)}
           </div>
-          <button type="button" onClick={goNextMonth} className="rounded-[6px] px-2 py-1 text-[13.5px] text-(--ice-2) hover:bg-(--hov)">
+          <button type="button" onClick={goNextMonth} className="rounded-(--r-sharp) px-2 py-1 text-[13.5px] text-(--ice-2) hover:bg-(--hov)">
             ‹
           </button>
         </div>
@@ -67,7 +67,7 @@ export function JalaliCalendarPopup({ viewYear, viewMonth, selected, onNavigate,
                 key={day}
                 type="button"
                 onClick={() => onSelect(jalaliPartsToIso(viewYear, viewMonth, day))}
-                className={`rounded-[6px] py-1.5 text-[12.5px] tabular-nums transition-colors ${
+                className={`rounded-(--r-sharp) py-1.5 text-[12.5px] tabular-nums transition-colors ${
                   isSelected
                     ? "bg-(--mint) font-bold text-(--on-mint)"
                     : isToday
@@ -83,7 +83,7 @@ export function JalaliCalendarPopup({ viewYear, viewMonth, selected, onNavigate,
         <button
           type="button"
           onClick={() => onSelect(jalaliPartsToIso(today.jy, today.jm, today.jd))}
-          className="mt-2 w-full rounded-[8px] border border-(--edge-2) bg-(--btn-bg) py-1.5 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--btn-hov)"
+          className="mt-2 w-full rounded-(--r) border border-(--edge-2) bg-(--btn-bg) py-1.5 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--btn-hov)"
         >
           امروز
         </button>

@@ -46,7 +46,7 @@ export function RiskWarningsPage() {
       {warnings.isPending && <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>}
 
       {warnings.isError && (
-        <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {warnings.error instanceof ApiError ? warnings.error.message : "خطا در بارگذاری هشدارها"}
           <button type="button" onClick={() => void warnings.refetch()} className="ms-2 underline">
             تلاش مجدد
@@ -64,7 +64,7 @@ export function RiskWarningsPage() {
               description="هشدارها هنگام ارزیابی مجدد مشتریان ساخته می‌شوند — هر تغییر مهم در وضعیت اعتباری اینجا گزارش می‌شود."
             />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+            <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
               {warnings.data.map((w) => (
                 <div
                   key={w.id}
@@ -103,7 +103,7 @@ export function RiskWarningsPage() {
                       type="button"
                       onClick={() => markRead.mutate(w.id)}
                       disabled={markRead.isPending}
-                      className="rounded-[10px] border border-(--edge-2) px-2.5 py-1 text-[11px] font-semibold text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice) disabled:opacity-50"
+                      className="rounded-(--r) border border-(--edge-2) px-2.5 py-1 text-[11px] font-semibold text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice) disabled:opacity-50"
                     >
                       خوانده شد
                     </button>

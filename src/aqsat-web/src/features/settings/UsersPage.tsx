@@ -81,12 +81,12 @@ export function UsersPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">کاربرانی که به این نمایندگی دسترسی دارند</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">افزودن کاربر</div>
         <div className="mb-3 grid grid-cols-4 gap-3">
           <input
@@ -124,7 +124,7 @@ export function UsersPage() {
           type="button"
           onClick={create}
           disabled={busy}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال ثبت…" : "افزودن"}
         </button>
@@ -157,7 +157,7 @@ export function UsersPage() {
                   <button
                     type="button"
                     onClick={() => deactivate(u.membershipId)}
-                    className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                    className="rounded-(--r) border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
                   >
                     حذف دسترسی
                   </button>

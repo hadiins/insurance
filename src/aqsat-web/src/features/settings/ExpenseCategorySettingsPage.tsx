@@ -10,7 +10,7 @@ interface ExpenseCategoryDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** «دسته‌بندی هزینه‌ها» — agency-definable, never a fixed system list. */
 export function ExpenseCategorySettingsPage() {
@@ -67,12 +67,12 @@ export function ExpenseCategorySettingsPage() {
       </h2>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+      <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         {categories !== null && categories.length === 0 ? (
           <EmptyState
             icon="🗂"
@@ -119,7 +119,7 @@ export function ExpenseCategorySettingsPage() {
             type="button"
             onClick={addCategory}
             disabled={!newName.trim()}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + افزودن
           </button>

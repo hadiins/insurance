@@ -148,7 +148,7 @@ export function DeskFeedPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{sub}</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -195,7 +195,7 @@ export function DeskFeedPage() {
                           e.stopPropagation();
                           setPayingRow(r);
                         }}
-                        className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                        className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
                       >
                         ثبت پرداخت
                       </button>
@@ -209,7 +209,7 @@ export function DeskFeedPage() {
       )}
 
       {mode === "notifications" && warnings !== null && (
-        <div className="mt-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="mt-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="flex items-center justify-between border-b border-(--edge) px-4 py-2.5">
             <span className="text-[12.5px] font-semibold text-(--ice-2)">هشدارهای ریسک خوانده‌نشده</span>
             <button
@@ -259,7 +259,7 @@ export function DeskFeedPage() {
       )}
 
       {mode === "notifications" && log !== null && (
-        <div className="mt-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="mt-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="border-b border-(--edge) px-4 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">آخرین پیامک‌های ارسالی</div>
           {log.length === 0 ? (
             <div className="p-6 text-center text-[13.5px] text-(--ice-3)">هنوز پیامکی ارسال نشده.</div>

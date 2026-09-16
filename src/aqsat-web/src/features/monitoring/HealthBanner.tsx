@@ -15,7 +15,7 @@ export function HealthBanner({ overview }: { overview: MonitoringOverviewDto }) 
     overview.healthStatus === "ok" ? "bg-(--moss)" : overview.healthStatus === "down" ? "bg-(--ember)" : "bg-(--amber)";
 
   return (
-    <div className={`flex flex-wrap items-center gap-x-8 gap-y-3 rounded-2xl border p-4.5 ${tone}`}>
+    <div className={`flex flex-wrap items-center gap-x-8 gap-y-3 rounded-(--r-lg) border p-4.5 ${tone}`}>
       <div className="flex items-center gap-2.5">
         <span className={`h-3 w-3 rounded-full ${dot}`} />
         <div>

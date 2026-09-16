@@ -16,7 +16,7 @@ export function TimeRangeSelector({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex overflow-hidden rounded-[10px] border border-(--edge) bg-(--pane)">
+      <div className="flex overflow-hidden rounded-(--r) border border-(--edge) bg-(--pane)">
         {TIME_RANGES.map((option) => (
           <button
             key={option.key}
@@ -31,7 +31,7 @@ export function TimeRangeSelector({
         ))}
       </div>
       {autoRefresh !== undefined && onAutoRefreshChange && (
-        <label className="flex cursor-pointer select-none items-center gap-2 rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice-2)">
+        <label className="flex cursor-pointer select-none items-center gap-2 rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-1.5 text-[12px] text-(--ice-2)">
           <input
             type="checkbox"
             checked={autoRefresh}

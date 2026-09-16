@@ -141,7 +141,7 @@ export function NewCustomerPage() {
         <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
           مشتری <em className="font-extralight not-italic text-(--ice-2)">جدید</em>
         </h2>
-        <div className="mt-4 rounded-2xl border border-(--mint)/30 bg-(--mint)/8 p-5">
+        <div className="mt-4 rounded-(--r-lg) border border-(--mint)/30 bg-(--mint)/8 p-5">
           <div className="text-[14px] font-bold text-(--ice)">
             {created.fullName} ثبت شد — کد ملی <b className="tabular-nums" dir="ltr">{fa(created.nationalId ?? "")}</b>
           </div>
@@ -172,12 +172,12 @@ export function NewCustomerPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="max-w-2xl rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="max-w-2xl rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="grid grid-cols-2 gap-3.5">
           <label className="block">
             <span className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">نام</span>

@@ -9,7 +9,7 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setThemeState(toggleTheme())}
       aria-label="روز و شب"
-      className="relative grid h-8 w-8 flex-none place-items-center overflow-hidden rounded-[9px] border border-(--edge) text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+      className="relative grid h-8 w-8 flex-none place-items-center overflow-hidden rounded-(--r) border border-(--edge) text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
     >
       <svg
         viewBox="0 0 24 24"

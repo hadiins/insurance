@@ -67,7 +67,7 @@ export function EditInstallmentDialog({
       onClick={settled ? onClose : undefined}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-(--edge-2) bg-(--pane) p-5"
+        className="w-full max-w-md rounded-(--r-lg) border border-(--edge-2) bg-(--pane) p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-1 text-[15px] font-extrabold text-(--ice)">
@@ -78,7 +78,7 @@ export function EditInstallmentDialog({
         </div>
 
         {settled && (
-          <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
             قسط تسویه‌شده قابل ویرایش نیست.
           </div>
         )}
@@ -106,7 +106,7 @@ export function EditInstallmentDialog({
         )}
 
         {error && (
-          <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
             {error}
           </div>
         )}
@@ -115,7 +115,7 @@ export function EditInstallmentDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[10px] border border-(--edge-2) px-4 py-2 text-[12.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+            className="rounded-(--r) border border-(--edge-2) px-4 py-2 text-[12.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
           >
             انصراف
           </button>
@@ -123,7 +123,7 @@ export function EditInstallmentDialog({
             type="button"
             disabled={busy || settled || dueDate === ""}
             onClick={save}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:opacity-50"
           >
             {busy ? "در حال ذخیره…" : "ذخیره"}
           </button>

@@ -132,13 +132,13 @@ export function PoliciesListPage() {
           onChange={(e) => setFilters({ ...filters, search: e.target.value })}
           placeholder="شمارهٔ بیمه‌نامه، نام، موبایل، کد ملی، پلاک…"
           dir="ltr"
-          className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-right text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-right text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
         />
         {search && (
           <button
             type="button"
             onClick={() => setFilters({ ...filters, search: "" })}
-            className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+            className="shrink-0 rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-2.5 py-2 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             پاک کردن
           </button>
@@ -180,7 +180,7 @@ export function PoliciesListPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -230,7 +230,7 @@ export function PoliciesListPage() {
                         <button
                           type="button"
                           onClick={(e) => confirm(p.id, e)}
-                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                          className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
                         >
                           تأیید شد
                         </button>

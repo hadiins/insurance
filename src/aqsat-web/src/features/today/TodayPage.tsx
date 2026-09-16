@@ -6,6 +6,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { useLiveReload } from "../shell/useLiveReload";
 import { EmptyState } from "../../components/EmptyState";
 import { ProgressBar } from "../../components/ProgressBar";
+import { SkeletonBlock, SkeletonCards, SkeletonRows } from "../../components/Skeleton";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
@@ -147,13 +148,13 @@ export function TodayPage() {
       </h2>
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">اقساطی که باید ظرف مهلت مقرر به بیمه‌گر تسویه شوند</div>
 
-      <div className="mb-4.5 rounded-xl border border-(--mint)/22 bg-(--mint)/7 p-4 text-[12.5px] text-(--ice-2)">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--mint)/22 bg-(--mint)/7 p-4 text-[12.5px] text-(--ice-2)">
         این تب <b className="font-bold text-(--mint)">سنجاق</b> شده و بسته نمی‌شود. روی هر ردیف کلیک کنید تا در تب
         جدید باز شود — این تب دست‌نخورده می‌ماند.
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -163,7 +164,7 @@ export function TodayPage() {
           onClick={() =>
             openTab({ navType: "reports-pnl", page: "pnl", kind: "singleton", title: "سود و زیان" })
           }
-          className="mb-4.5 flex cursor-pointer items-center justify-between rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 transition-colors hover:bg-(--hov)"
+          className="mb-4.5 flex cursor-pointer items-center justify-between rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5 transition-colors hover:bg-(--hov)"
         >
           <div>
             <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">سود و زیان این ماه (تعهدی)</div>
@@ -180,7 +181,7 @@ export function TodayPage() {
           onClick={() =>
             openTab({ navType: "customer-completion", page: "customer-completion", kind: "singleton", title: "تکمیل پروندهٔ مشتریان" })
           }
-          className="mb-4.5 cursor-pointer rounded-[14px] border border-(--amber)/25 bg-(--amber)/6 p-3.5 transition-colors hover:bg-(--amber)/10"
+          className="mb-4.5 cursor-pointer rounded-(--r-lg) border border-(--amber)/25 bg-(--amber)/6 p-3.5 transition-colors hover:bg-(--amber)/10"
         >
           <div className="mb-2 flex items-center justify-between">
             <div className="text-[13.5px] font-bold text-(--amber)">⚠ {fa(incompleteProfiles.total)} مشتری اطلاعات ناقص دارند</div>
@@ -207,7 +208,7 @@ export function TodayPage() {
       )}
 
       {dueRenewals !== null && dueRenewals.length > 0 && (
-        <div className="mb-4.5 rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-[13.5px] font-bold text-(--ice)">
               🔁 سررسیدهای تمدید نزدیک — {fa(dueRenewals.length)} مورد
@@ -227,7 +228,7 @@ export function TodayPage() {
               مشاهدهٔ همه ←
             </button>
           </div>
-          <Table className="!rounded-[10px]">
+          <Table className="!rounded-(--r)">
             <thead>
               <tr>
                 <Th>بیمه‌گذار</Th>
@@ -260,7 +261,15 @@ export function TodayPage() {
         </div>
       )}
 
-      {!error && data === null && <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>}
+      {!error && data === null && (
+        <div aria-busy>
+          <div className="mb-4">
+            <SkeletonCards />
+          </div>
+          <SkeletonBlock className="mb-4 h-2.5 w-full" />
+          <SkeletonRows rows={6} />
+        </div>
+      )}
 
       {!error && data !== null && (
         <>
@@ -329,7 +338,7 @@ export function TodayPage() {
                           e.stopPropagation();
                           setPayingRow(r);
                         }}
-                        className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                        className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
                       >
                         ثبت پرداخت
                       </button>
@@ -369,7 +378,7 @@ function Fig({
   const valueColor = tone === "ember" ? "text-(--ember)" : tone === "amber" ? "text-(--amber)" : "text-(--ice)";
   const barColor = tone === "ember" ? "bg-(--ember)" : tone === "amber" ? "bg-(--amber)" : "bg-(--mint)";
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+    <div className="relative overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
       <span className={`absolute start-0 top-0 h-0.5 w-7.5 ${barColor}`} />
       <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
       <div className={`text-[20px] font-extrabold tracking-tight ${valueColor}`}>{value}</div>

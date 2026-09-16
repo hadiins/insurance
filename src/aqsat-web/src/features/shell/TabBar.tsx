@@ -42,7 +42,7 @@ export function TabBar() {
                     e.stopPropagation();
                     closeTab(tab.key);
                   }}
-                  className="grid h-[17px] w-[17px] flex-none place-items-center rounded-[5px] text-[14px] leading-none opacity-50 transition-opacity hover:bg-(--btn-hov) hover:text-(--ember) hover:opacity-100"
+                  className="grid h-[17px] w-[17px] flex-none place-items-center rounded-(--r-sharp) text-[14px] leading-none opacity-50 transition-opacity hover:bg-(--btn-hov) hover:text-(--ember) hover:opacity-100"
                 >
                   ×
                 </span>

@@ -9,7 +9,7 @@ import { NetworkRiskResults } from "./NetworkRiskResultCard";
 type Query = { nationalId: string } | { plate: string } | null;
 
 const MODE_TAB =
-  "rounded-[10px] border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors";
+  "rounded-(--r) border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors";
 
 /** «استعلام شبکه‌ای» (Phase 2B-1) — cross-agency status lookup by national ID or vehicle plate.
  * Behind the platform owner's switch; the disabled state is shown explicitly, never as an empty
@@ -82,7 +82,7 @@ export function NetworkRiskPage() {
             onKeyDown={(e) => e.key === "Enter" && search()}
             placeholder="کد ملی مالک…"
             dir="ltr"
-            className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="flex-1 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
         ) : (
           <PlateField value={plate} onChange={setPlate} inline />
@@ -91,7 +91,7 @@ export function NetworkRiskPage() {
           type="button"
           onClick={search}
           disabled={!plateReady}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
         >
           استعلام
         </button>

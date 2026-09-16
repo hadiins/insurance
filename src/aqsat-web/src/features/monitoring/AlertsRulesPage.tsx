@@ -151,14 +151,14 @@ export function AlertsRulesPage() {
         <button
           type="button"
           onClick={startCreate}
-          className="rounded-[10px] bg-(--mint) px-3.5 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-opacity hover:opacity-90"
+          className="rounded-(--r) bg-(--mint) px-3.5 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-opacity hover:opacity-90"
         >
           + قانون جدید
         </button>
       </div>
 
       {actionError && (
-        <div className="rounded-[10px] border border-(--ember)/40 bg-(--ember)/8 px-3.5 py-2 text-[12px] text-(--ember)">
+        <div className="rounded-(--r) border border-(--ember)/40 bg-(--ember)/8 px-3.5 py-2 text-[12px] text-(--ember)">
           {actionError}
         </div>
       )}
@@ -244,14 +244,14 @@ export function AlertsRulesPage() {
                     <button
                       type="button"
                       onClick={() => startEdit(rule)}
-                      className="ml-2 rounded-md border border-(--edge) px-2 py-1 text-[11px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                      className="ml-2 rounded-(--r-sharp) border border-(--edge) px-2 py-1 text-[11px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                     >
                       ویرایش
                     </button>
                     <button
                       type="button"
                       onClick={() => removeRule(rule)}
-                      className="rounded-md border border-(--ember)/50 px-2 py-1 text-[11px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                      className="rounded-(--r-sharp) border border-(--ember)/50 px-2 py-1 text-[11px] text-(--ember) transition-colors hover:bg-(--ember)/10"
                     >
                       حذف
                     </button>
@@ -264,7 +264,7 @@ export function AlertsRulesPage() {
       </section>
 
       {formOpen && (
-        <section className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <section className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <h3 className="mb-4 text-[13px] font-bold text-(--ice)">{editing ? `ویرایش «${editing.name}»` : "قانون جدید"}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="نام قانون">
@@ -272,14 +272,14 @@ export function AlertsRulesPage() {
                 type="text"
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
+                className="w-full rounded-(--r) border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
               />
             </Field>
             <Field label="سنجه">
               <select
                 value={draft.metric}
                 onChange={(e) => setDraft({ ...draft, metric: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
+                className="w-full rounded-(--r) border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
               >
                 {METRICS.map((m) => (
                   <option key={m} value={m}>
@@ -292,7 +292,7 @@ export function AlertsRulesPage() {
               <select
                 value={draft.comparator}
                 onChange={(e) => setDraft({ ...draft, comparator: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
+                className="w-full rounded-(--r) border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
               >
                 {COMPARATORS.map((c) => (
                   <option key={c} value={c}>
@@ -307,7 +307,7 @@ export function AlertsRulesPage() {
                 step="any"
                 value={draft.threshold}
                 onChange={(e) => setDraft({ ...draft, threshold: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
+                className="w-full rounded-(--r) border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
               />
             </Field>
             <Field label="پنجرهٔ بررسی (دقیقه)">
@@ -316,14 +316,14 @@ export function AlertsRulesPage() {
                 min={1}
                 value={draft.windowMinutes}
                 onChange={(e) => setDraft({ ...draft, windowMinutes: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
+                className="w-full rounded-(--r) border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
               />
             </Field>
             <Field label="شدت">
               <select
                 value={draft.severity}
                 onChange={(e) => setDraft({ ...draft, severity: e.target.value })}
-                className="w-full rounded-[10px] border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
+                className="w-full rounded-(--r) border border-(--edge) bg-(--void) px-3 py-1.5 text-[12px] text-(--ice)"
               >
                 <option value="Info">اطلاع</option>
                 <option value="Warning">هشدار</option>
@@ -345,7 +345,7 @@ export function AlertsRulesPage() {
               type="button"
               onClick={save}
               disabled={saving || !draft.name.trim() || draft.threshold === "" || draft.windowMinutes === ""}
-              className="rounded-[10px] bg-(--mint) px-4 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-(--r) bg-(--mint) px-4 py-1.5 text-[12px] font-semibold text-(--on-mint) transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {saving ? "در حال ذخیره…" : "ذخیره"}
             </button>
@@ -355,7 +355,7 @@ export function AlertsRulesPage() {
                 setCreating(false);
                 setEditing(null);
               }}
-              className="rounded-[10px] border border-(--edge) px-4 py-1.5 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+              className="rounded-(--r) border border-(--edge) px-4 py-1.5 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov)"
             >
               انصراف
             </button>

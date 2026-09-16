@@ -49,7 +49,7 @@ export function AgencySmsSettingsPage() {
       <div>
         <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">تنظیمات پنل پیامکی</h2>
         {error ? (
-          <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+          <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
         ) : (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         )}
@@ -65,25 +65,25 @@ export function AgencySmsSettingsPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{fa(form.name)} — کد {fa(form.code)}</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
       )}
       {saved && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">تنظیمات ذخیره شد.</div>
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">تنظیمات ذخیره شد.</div>
       )}
 
-      <div className="mb-4.5 rounded-[10px] border border-(--edge) bg-(--pane) px-3 py-2 text-[11.5px] leading-relaxed text-(--ice-3)">
+      <div className="mb-4.5 rounded-(--r) border border-(--edge) bg-(--pane) px-3 py-2 text-[11.5px] leading-relaxed text-(--ice-3)">
         پیامک‌های این نمایندگی (یادآوری اقساط و اطلاع‌رسانی) با کلید api.ir خودِ نمایندگی ارسال می‌شود و هزینهٔ آن به حساب پیامکی نمایندگی تعلق می‌گیرد.
         تا زمانی که کلید ثبت نشود، ارسال با کلید پلتفرم انجام می‌شود.
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">کلید API پنل پیامکی (api.ir)</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">
           کلید صادرشده از پنل api.ir برای حساب پیامکی این نمایندگی. برای حفظ مقدار فعلی خالی بگذارید؛ پس از ذخیره هرگز کامل نمایش داده نمی‌شود.
         </div>
         {form.hasSmsApiKey ? (
           <div className="space-y-1.5">
-            <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[13.5px] text-(--ice-3)" dir="ltr">
+            <div className="rounded-(--r) border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[13.5px] text-(--ice-3)" dir="ltr">
               {form.smsApiKeyMasked ?? "—"}
             </div>
             <input
@@ -109,7 +109,7 @@ export function AgencySmsSettingsPage() {
         type="button"
         disabled={busy}
         onClick={save}
-        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-(--r) border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
       </button>
@@ -118,4 +118,4 @@ export function AgencySmsSettingsPage() {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";

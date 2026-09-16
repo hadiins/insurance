@@ -13,7 +13,7 @@ export function Toast() {
 
   return (
     <div
-      className={`fixed bottom-5.5 start-5.5 z-[70] flex items-center gap-2.5 rounded-xl border border-(--edge-2) bg-(--slate-2) px-4.5 py-2.5 text-[12.5px] text-(--ice) shadow-[var(--sh)] transition-transform duration-300 ${
+      className={`fixed bottom-5.5 start-5.5 z-[70] flex items-center gap-2.5 rounded-(--r-lg) border border-(--edge-2) bg-(--slate-2) px-4.5 py-2.5 text-[12.5px] text-(--ice) shadow-[var(--sh)] transition-transform duration-300 ${
         message ? "translate-y-0" : "translate-y-[160%]"
       }`}
     >

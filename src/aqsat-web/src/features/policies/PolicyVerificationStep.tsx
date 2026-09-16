@@ -115,7 +115,7 @@ export function PolicyVerificationStep({
   return (
     <div>
       {error && (
-        <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+        <div className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
           {error}
         </div>
       )}
@@ -129,7 +129,7 @@ export function PolicyVerificationStep({
             و تسهیلات بانکی به‌صورت خودکار اجرا میشود و پس از بررسی شما و تأیید قرارداد توسط مشتری، پیشپرداخت قابل
             دریافت خواهد بود.
           </div>
-          <button type="button" onClick={start} disabled={busy} className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={start} disabled={busy} className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">
             {busy ? "در حال ارسال…" : "شروع اعتبارسنجی و ارسال لینک به مشتری"}
           </button>
         </div>
@@ -156,12 +156,12 @@ export function PolicyVerificationStep({
           </div>
 
           {dto.stage === "Rejected" ? (
-            <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ember)">
+            <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ember)">
               این بیمه‌نامه لغو شد. برای صدور مجدد، بیمه‌نامهٔ جدیدی ثبت کنید.
             </div>
           ) : (
             <>
-              <div className="mb-3.5 flex flex-wrap items-center gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2">
+              <div className="mb-3.5 flex flex-wrap items-center gap-2 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2">
                 <span className="text-[11.5px] text-(--ice-3)">لینک پورتال مشتری:</span>
                 <span dir="ltr" className="truncate text-[11.5px] text-(--ice-2)">
                   {window.location.origin}/portal/{dto.token}
@@ -169,7 +169,7 @@ export function PolicyVerificationStep({
                 <button
                   type="button"
                   onClick={copyLink}
-                  className="rounded-[8px] border border-(--edge-2) bg-(--btn-bg) px-2.5 py-1 text-[11.5px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
+                  className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-2.5 py-1 text-[11.5px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
                 >
                   {copied ? "کپی شد" : "کپی"}
                 </button>
@@ -199,7 +199,7 @@ export function PolicyVerificationStep({
                     type="button"
                     onClick={retryInquiries}
                     disabled={busy}
-                    className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busy ? "در حال تلاش…" : "تلاش مجدد استعلام"}
                   </button>
@@ -207,7 +207,7 @@ export function PolicyVerificationStep({
               )}
 
               {dto.inquiryFeeToman === 0 && dto.creditReport && dto.stage !== "Completed" && (
-                <div className="mb-3.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--mint)">
+                <div className="mb-3.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--mint)">
                   استعلام قبلی مشتری ({fa(toJalaliDateTimeDisplay(dto.creditReport.retrievedAtUtc))}) بازیافت شد —
                   کارمزد و استعلام مجدد لازم نیست.
                 </div>
@@ -221,7 +221,7 @@ export function PolicyVerificationStep({
                     type="button"
                     onClick={() => void decide(true)}
                     disabled={busy}
-                    className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busy ? "…" : "تأیید و ادامه"}
                   </button>
@@ -230,7 +230,7 @@ export function PolicyVerificationStep({
                       type="button"
                       onClick={() => void decide(false)}
                       disabled={busy}
-                      className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-(--r) border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       تأیید لغو بیمه‌نامه
                     </button>
@@ -238,7 +238,7 @@ export function PolicyVerificationStep({
                     <button
                       type="button"
                       onClick={() => setConfirmingReject(true)}
-                      className="rounded-[10px] border border-(--ember)/50 bg-transparent px-4 py-2 text-[12.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                      className="rounded-(--r) border border-(--ember)/50 bg-transparent px-4 py-2 text-[12.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
                     >
                       رد و لغو بیمه‌نامه
                     </button>
@@ -247,7 +247,7 @@ export function PolicyVerificationStep({
                     <button
                       type="button"
                       onClick={() => setConfirmingReject(false)}
-                      className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2)"
+                      className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2)"
                     >
                       بازگشت
                     </button>
@@ -266,7 +266,7 @@ export function PolicyVerificationStep({
                   <button
                     type="button"
                     onClick={() => onChainCompleted(false)}
-                    className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                    className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
                   >
                     دریافت پیشپرداخت بهصورت دستی
                   </button>
@@ -284,7 +284,7 @@ export function PolicyVerificationStep({
                   <button
                     type="button"
                     onClick={() => onChainCompleted(true)}
-                    className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                    className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
                   >
                     ادامه
                   </button>

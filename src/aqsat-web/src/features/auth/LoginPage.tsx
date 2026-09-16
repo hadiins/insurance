@@ -56,7 +56,7 @@ export function LoginPage() {
         <div className="w-full max-w-[380px]">
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-(--edge) bg-(--pane) p-6 shadow-(--sh) md:p-7"
+            className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6 shadow-(--sh) md:p-7"
             noValidate
           >
             <h2 className="mb-1 text-[17px] font-bold text-(--ice)">ورود به Credix</h2>
@@ -75,7 +75,7 @@ export function LoginPage() {
                 dir="ltr"
                 inputMode="numeric"
                 autoComplete="username"
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none transition-colors focus:border-(--mint)"
+                className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none transition-colors focus:border-(--mint)"
               />
             </div>
 
@@ -91,12 +91,12 @@ export function LoginPage() {
                 type="password"
                 dir="ltr"
                 autoComplete="current-password"
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none transition-colors focus:border-(--mint)"
+                className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none transition-colors focus:border-(--mint)"
               />
             </div>
 
             {error && (
-              <div role="alert" className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+              <div role="alert" className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
                 {error}
               </div>
             )}
@@ -104,7 +104,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={submitting || !mobile.trim() || !password}
-              className="w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-(--gl-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-(--gl-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "در حال ورود…" : "ورود"}
             </button>

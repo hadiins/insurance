@@ -1,7 +1,7 @@
 import { fa, toLatinDigits } from "../lib/persian";
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)";
 
 /** CLAUDE.md — "Tabular numerals for every figure" / "Persian digits in all display". A plain
  * digit-only input is hard to read once amounts hit six or seven digits — this groups by

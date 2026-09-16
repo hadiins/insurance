@@ -18,7 +18,7 @@ export function ProgressBar({
   const percent = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
 
   return (
-    <div className="rounded-2xl border border-(--edge) bg-(--pane) p-4.5">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4.5">
       <div className="mb-1 text-[10.5px] tracking-[0.14em] text-(--ice-3)">{label}</div>
       <div className="mb-3 flex items-baseline justify-between">
         <div className="text-[20px] font-extrabold tabular-nums text-(--mint)">{fa(percent)}٪</div>

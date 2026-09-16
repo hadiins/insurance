@@ -86,12 +86,12 @@ export function FanavaranImportPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 flex items-center justify-between">
           <b className="text-[13.5px] text-(--ice)">نگاشت ستون‌ها</b>
           {mappingSaved && <span className="text-[11.5px] text-(--mint)">ذخیره شده</span>}
@@ -112,7 +112,7 @@ export function FanavaranImportPage() {
                     value={mapping[field.key] ?? ""}
                     onChange={(e) => setMapping((m) => ({ ...m, [field.key]: e.target.value }))}
                     placeholder="عنوان ستون در فایل اکسل"
-                    className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                    className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
                   />
                 </div>
               ))}
@@ -121,7 +121,7 @@ export function FanavaranImportPage() {
               type="button"
               onClick={saveMapping}
               disabled={savingMapping}
-              className="mt-4 rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-4 rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingMapping ? "در حال ذخیره…" : "ذخیرهٔ نگاشت"}
             </button>
@@ -129,11 +129,11 @@ export function FanavaranImportPage() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <b className="mb-3 block text-[13.5px] text-(--ice)">آپلود و ثبت</b>
 
         {!mappingSaved && (
-          <div className="mb-3 rounded-[10px] border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
+          <div className="mb-3 rounded-(--r) border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
             قبل از آپلود، نگاشت ستون‌ها را ذخیره کنید.
           </div>
         )}
@@ -149,7 +149,7 @@ export function FanavaranImportPage() {
           type="button"
           onClick={commitFile}
           disabled={!file || !mappingSaved || committing}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {committing ? "در حال ثبت…" : "آپلود و ثبت"}
         </button>
@@ -168,7 +168,7 @@ export function FanavaranImportPage() {
 
 function ReportStat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="rounded-[10px] border border-(--edge-2) bg-(--fld) p-3 text-center">
+    <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) p-3 text-center">
       <div className="text-[11.5px] text-(--ice-3)">{label}</div>
       <div className="text-lg font-bold" style={{ color }}>
         {fa(value)}

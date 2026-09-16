@@ -24,7 +24,7 @@ export function CustomerRiskPanel({ customerId }: { customerId: string }) {
 
   if (risk.isError) {
     return (
-      <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+      <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
         {(risk.error as ApiError).message ?? "خطا در بارگذاری وضعیت اعتباری"}
         <button type="button" onClick={() => void risk.refetch()} className="ms-2 underline">
           تلاش مجدد
@@ -38,7 +38,7 @@ export function CustomerRiskPanel({ customerId }: { customerId: string }) {
   return (
     <div>
       {assess.isError && (
-        <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {(assess.error as ApiError).message ?? "ارزیابی ناموفق بود"}
         </div>
       )}
@@ -126,7 +126,7 @@ function AssessmentCard({ assessment }: { assessment: RiskAssessmentDto }) {
   const positive = assessment.factors.filter((f) => f.impact > 0).sort((a, b) => b.impact - a.impact);
 
   return (
-    <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
       <div className="flex flex-wrap items-center gap-3">
         <div>
           <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">امتیاز اعتباری</div>
@@ -186,7 +186,7 @@ function AssessmentCard({ assessment }: { assessment: RiskAssessmentDto }) {
 
 function Stat({ label, value, hint, warn }: { label: string; value: string; hint?: string; warn?: boolean }) {
   return (
-    <div className="rounded-[14px] border border-(--edge-2) bg-(--fld) p-3">
+    <div className="rounded-(--r-lg) border border-(--edge-2) bg-(--fld) p-3">
       <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
       <div className={`text-[16px] font-extrabold tabular-nums tracking-tight ${warn ? "text-(--ember)" : "text-(--ice)"}`}>{value}</div>
       {hint && <div className="mt-0.5 text-[10.5px] text-(--ice-3)">{hint}</div>}
@@ -211,11 +211,11 @@ function FactorList({
     <div>
       <div className="mb-2 text-[12.5px] font-bold text-(--ice)">{title}</div>
       {items.length === 0 ? (
-        <div className="rounded-[10px] border border-(--edge) px-3 py-2 text-[12px] text-(--ice-3)">{empty}</div>
+        <div className="rounded-(--r) border border-(--edge) px-3 py-2 text-[12px] text-(--ice-3)">{empty}</div>
       ) : (
         <ul className="space-y-1.5">
           {items.map((f) => (
-            <li key={f.code} className="rounded-[10px] border border-(--edge) px-3 py-2 text-[12px] leading-relaxed">
+            <li key={f.code} className="rounded-(--r) border border-(--edge) px-3 py-2 text-[12px] leading-relaxed">
               <span className={`font-bold text-(--${tone}) tabular-nums`}>
                 {sign}
                 {fa(Math.abs(f.impact))}
@@ -259,7 +259,7 @@ function CreditLimitEditor({
   }
 
   return (
-    <div className="mt-5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
+    <div className="mt-5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[13px] font-bold text-(--ice)">حد اعتبار</span>
         <span className="rounded-full border border-(--edge-2) px-2.5 py-0.5 text-[11.5px] font-semibold tabular-nums text-(--ice-2)">

@@ -72,7 +72,7 @@ export function AgingReportPage() {
           <button
             type="button"
             onClick={exportXlsx}
-            className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+            className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             خروجی اکسل
           </button>
@@ -81,7 +81,7 @@ export function AgingReportPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">اقساط باز مشتریان به تفکیک روزهای تأخیر — بر پایهٔ ماندهٔ هر قسط</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -103,7 +103,7 @@ export function AgingReportPage() {
           description="در حال حاضر هیچ مشتری‌ای قسط باز ندارد؛ همهٔ اقساط تسویه شده‌اند."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
             به تفکیک مشتری
             {report && <span className="ms-2 text-[11.5px] font-normal text-(--ice-3)">{fa(report.rows.length)} مشتری</span>}

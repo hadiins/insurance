@@ -205,7 +205,7 @@ export function SchedulePolicyPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -246,7 +246,7 @@ export function SchedulePolicyPage() {
             </Table>
           )}
 
-          <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+          <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
             {!selected ? (
               <div className="text-[12.5px] text-(--ice-3)">یک بیمه‌نامه را از فهرست انتخاب کنید.</div>
             ) : (
@@ -287,13 +287,13 @@ export function SchedulePolicyPage() {
                   type="button"
                   onClick={submitSchedule}
                   disabled={saving || !installmentCount.trim()}
-                  className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "در حال ساخت اقساط…" : "ساخت اقساط"}
                 </button>
 
                 {result && (
-                  <div className="mt-4 rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 p-3">
+                  <div className="mt-4 rounded-(--r) border border-(--mint)/30 bg-(--mint)/8 p-3">
                     {result.exceedsMaxInstallments && (
                       <div className="mb-2 text-[12.5px] text-(--amber)">
                         ⚠️ تعداد اقساط از سقف تنظیم‌شدهٔ نمایندگی بیشتر است.
@@ -382,7 +382,7 @@ export function SchedulePolicyPage() {
                                 </div>
                               )}
                               {receiveMethodType === "PosDirect" && (
-                                <div className="rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
+                                <div className="rounded-(--r) border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
                                   مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود.
                                 </div>
                               )}
@@ -397,7 +397,7 @@ export function SchedulePolicyPage() {
                             </div>
 
                             {receiveMethodType === "Cheque" && (
-                              <div className="mb-2 grid grid-cols-2 gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 p-2.5">
+                              <div className="mb-2 grid grid-cols-2 gap-2 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 p-2.5">
                                 <div>
                                   <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
                                   <input
@@ -434,7 +434,7 @@ export function SchedulePolicyPage() {
                               type="button"
                               onClick={receiveDownPayment}
                               disabled={receiving}
-                              className="w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {receiving ? "در حال ثبت…" : "ثبت دریافت پیش‌پرداخت"}
                             </button>

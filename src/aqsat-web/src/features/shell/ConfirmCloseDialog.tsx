@@ -11,7 +11,7 @@ export function ConfirmCloseDialog() {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/55" />
         <Dialog.Content className="fixed inset-0 z-[60] grid place-items-center p-5">
-          <div className="max-w-[400px] rounded-2xl border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
+          <div className="max-w-[400px] rounded-(--r-lg) border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
             <Dialog.Title className="mb-1.5 text-[15px] font-bold text-(--ice)">
               کار ذخیره‌نشده دارید
             </Dialog.Title>
@@ -22,14 +22,14 @@ export function ConfirmCloseDialog() {
               <button
                 type="button"
                 onClick={cancelClose}
-                className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
+                className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
               >
                 برگرد و ذخیره کن
               </button>
               <button
                 type="button"
                 onClick={confirmClose}
-                className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+                className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
               >
                 بستن بدون ذخیره
               </button>

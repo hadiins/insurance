@@ -947,13 +947,13 @@ export function NewPolicyPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
       {step === 1 && (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3 text-[13.5px] font-bold text-(--ice)">مشتری را با کد ملی پیدا کنید</div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
             <div>
@@ -972,7 +972,7 @@ export function NewPolicyPage() {
           </div>
 
                     {customerMode === "existing" && lookupCustomer && (
-            <div className="mt-4 rounded-[12px] border border-(--mint)/30 bg-(--mint)/8 p-4">
+            <div className="mt-4 rounded-(--r) border border-(--mint)/30 bg-(--mint)/8 p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="text-[13.5px] font-bold text-(--ice)">{lookupCustomer.fullName}</div>
                 <div
@@ -996,18 +996,18 @@ export function NewPolicyPage() {
                 <div className="col-span-2 text-(--ice-3)">این مشتری {fa(lookupPolicyCount)} بیمه‌نامه در سیستم دارد.</div>
               </div>
               {creditStatus?.report && creditStatus.isReusableForIssuance ? (
-                <div className="mt-2 rounded-[8px] border border-(--mint)/30 bg-(--mint)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--mint)">
+                <div className="mt-2 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--mint)">
                   گزارش اعتباری معتبر تا {toJalaliDateTimeDisplay(creditStatus.validUntilUtc!)} موجود است — در مرحلهٔ
                   اعتبارسنجی بدون کارمزد و استعلام مجدد بازیافت میشود.
                 </div>
               ) : creditStatus ? (
-                <div className="mt-2 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
+                <div className="mt-2 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
                   گزارش اعتباری تازه‌ای (۳۰ روز) برای این مشتری نیست — در صدور اقساطی، پرداخت کارمزد و استعلام لازم
                   میشود. برای اعتبارسنجی قبل از صدور، از پروندهٔ مشتری لینک پورتال بفرستید.
                 </div>
               ) : null}
               {linkSentMobile && (
-                <div className="mt-2 rounded-[8px] border border-(--mint)/30 bg-(--mint)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--mint)">
+                <div className="mt-2 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--mint)">
                   لینک اعتبارسنجی برای <b className="tabular-nums">{fa(linkSentMobile)}</b> پیامک شد — پس از پرداخت
                   کارمزد توسط مشتری و اجرای استعلام، گزارش در مرحلهٔ اعتبارسنجی بدون کارمزد مجدد بازیافت میشود.
                 </div>
@@ -1024,7 +1024,7 @@ export function NewPolicyPage() {
           )}
 
           {customerMode === "new" && (
-            <div className="mt-4 rounded-[12px] border border-(--edge-2) bg-(--fld) p-4">
+            <div className="mt-4 rounded-(--r) border border-(--edge-2) bg-(--fld) p-4">
               <div className="mb-3 text-[12.5px] font-semibold text-(--ice)">
                 مشتری با این کد ملی پیدا نشد — اطلاعات بیمه‌گذار جدید را وارد کنید:
               </div>
@@ -1033,7 +1033,7 @@ export function NewPolicyPage() {
                 پیامک میشود)؛ در غیر این صورت مشتری هنگام ثبت بیمه‌نامه ساخته میشود.
               </div>
               {networkNationalId !== null && (
-                <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--card) p-3">
+                <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--card) p-3">
                   <div className="mb-2 text-[12px] font-bold text-(--ice)">سابقهٔ شبکه‌ای این مشتری</div>
                   {networkLookup.isPending ? (
                     <div className="text-[11.5px] text-(--ice-3)">در حال استعلام از شبکهٔ نمایندگی‌ها…</div>
@@ -1089,10 +1089,10 @@ export function NewPolicyPage() {
       )}
 
       {step === 2 && (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3 text-[13.5px] font-bold text-(--ice)">مشخصات بیمه‌نامه</div>
           {customerMode === "existing" && lookupCustomer && (
-            <div className="mb-3.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-[12.5px] text-(--ice-2)">
+            <div className="mb-3.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-[12.5px] text-(--ice-2)">
               بیمه‌گذار: <b className="text-(--ice)">{lookupCustomer.fullName}</b> — کد ملی{" "}
               <b className="tabular-nums text-(--ice)" dir="ltr">{fa(lookupCustomer.nationalId ?? "")}</b>
             </div>
@@ -1168,8 +1168,8 @@ export function NewPolicyPage() {
                     }}
                     className={
                       paymentType === value
-                        ? "rounded-[10px] border border-(--mint) bg-(--mint)/15 px-4 py-2 text-[12.5px] font-semibold text-(--mint)"
-                        : "rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
+                        ? "rounded-(--r) border border-(--mint) bg-(--mint)/15 px-4 py-2 text-[12.5px] font-semibold text-(--mint)"
+                        : "rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:text-(--ice)"
                     }
                   >
                     {label}
@@ -1248,7 +1248,7 @@ export function NewPolicyPage() {
       )}
 
       {step === 3 && created && (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-1 text-[13.5px] font-bold text-(--ice)">
             بیمه‌نامهٔ <span className="tabular-nums">{created.policyNumber}</span> ثبت شد — پیشپرداخت و اقساط
           </div>
@@ -1283,7 +1283,7 @@ export function NewPolicyPage() {
                 {scheduling ? "در حال تولید..." : "تولید اقساط"}
               </button>
             ) : (
-              <div className="rounded-[10px] border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-center text-[12.5px] font-semibold text-(--mint)">
+              <div className="rounded-(--r) border border-(--mint)/30 bg-(--mint)/8 px-3 py-2 text-center text-[12.5px] font-semibold text-(--mint)">
                 اقساط تولید شد
               </div>
             )}
@@ -1292,7 +1292,7 @@ export function NewPolicyPage() {
           {scheduleResult && (
             <div className="mt-4">
               {scheduleResult.exceedsMaxInstallments && (
-                <div className="mb-2 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+                <div className="mb-2 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
                   ⚠️ تعداد اقساط از سقف تنظیمشدهٔ نمایندگی بیشتر است.
                 </div>
               )}
@@ -1325,7 +1325,7 @@ export function NewPolicyPage() {
       )}
 
       {step === 4 && created && scheduleResult && paymentType === "installment" && (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-1 text-[13.5px] font-bold text-(--ice)">
             اعتبارسنجی مشتری — بیمه‌نامهٔ <span className="tabular-nums">{created.policyNumber}</span>
           </div>
@@ -1359,12 +1359,12 @@ export function NewPolicyPage() {
       )}
 
       {step === 5 && created && (paymentType === "cash" || scheduleResult) && (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3 text-[13.5px] font-bold text-(--ice)">
             بررسی پرونده، {paymentType === "cash" ? "ثبت پرداخت کامل" : "دریافت پیشپرداخت"} و ثبت نهایی
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 rounded-[12px] border border-(--edge-2) bg-(--fld) p-4 text-[12.5px] text-(--ice-2)">
+          <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 rounded-(--r) border border-(--edge-2) bg-(--fld) p-4 text-[12.5px] text-(--ice-2)">
             <div>شمارهٔ بیمه‌نامه: <b className="tabular-nums text-(--ice)">{created.policyNumber}</b></div>
             <div>
               بیمه‌گذار:{" "}
@@ -1476,7 +1476,7 @@ export function NewPolicyPage() {
             </div>
           )}
           {paymentType === "installment" && scheduledDownPayment <= 0 && (
-            <div className="mb-4 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] leading-relaxed text-(--ice-3)">
+            <div className="mb-4 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] leading-relaxed text-(--ice-3)">
               برای این بیمه‌نامه پیشپرداخت تعریف نشده — پس از مرور پرونده در بالا میتوانید ثبت نهایی کنید.
             </div>
           )}
@@ -1509,7 +1509,7 @@ export function NewPolicyPage() {
       )}
 
       {finalized && created && (
-        <div className="mt-4.5 rounded-2xl border border-(--mint)/30 bg-(--mint)/8 p-5">
+        <div className="mt-4.5 rounded-(--r-lg) border border-(--mint)/30 bg-(--mint)/8 p-5">
           <div className="mb-3 text-[14px] font-bold text-(--mint)">بیمه‌نامه با موفقیت ثبت و نهایی شد</div>
           <div className="mb-4 text-[13.5px] text-(--ice-2)">
             شمارهٔ بیمه‌نامه: <b>{created.policyNumber}</b> — پروندهٔ بیمه‌نامه در تب جدید باز شد.
@@ -1527,7 +1527,7 @@ export function NewPolicyPage() {
 
       {gapPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
+          <div className="w-full max-w-sm rounded-(--r-lg) border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
             <div className="mb-2 text-[14px] font-bold text-(--ember)">
               ⚠️ {fa(gapPrompt.length)} شماره جا افتاده
             </div>
@@ -1544,7 +1544,7 @@ export function NewPolicyPage() {
                   setGapConfirmed(true);
                   setGapPrompt(null);
                 }}
-                className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                className="rounded-(--r) border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
               >
                 ادامه
               </button>
@@ -1558,7 +1558,7 @@ export function NewPolicyPage() {
 
       {mismatchPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
+          <div className="w-full max-w-sm rounded-(--r-lg) border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
             <div className="mb-2 text-[14px] font-bold text-(--ember)">⚠️ عدم تطابق در شمارهٔ واردشده</div>
             <ul className="mb-4 list-inside list-disc space-y-1 text-[12.5px] leading-relaxed text-(--ice-2)">
               {mismatchPrompt.map((w, i) => (
@@ -1575,7 +1575,7 @@ export function NewPolicyPage() {
                   setNumberWarningsConfirmed(true);
                   setMismatchPrompt(null);
                 }}
-                className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                className="rounded-(--r) border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
               >
                 ادامه
               </button>

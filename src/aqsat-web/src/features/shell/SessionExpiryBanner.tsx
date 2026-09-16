@@ -33,7 +33,7 @@ export function SessionExpiryBanner() {
         <button
           type="button"
           onClick={beginRelogin}
-          className="rounded-md bg-(--void) px-2.5 py-1 text-(--ice) hover:opacity-80"
+          className="rounded-(--r-sharp) bg-(--void) px-2.5 py-1 text-(--ice) hover:opacity-80"
         >
           ورود مجدد
         </button>

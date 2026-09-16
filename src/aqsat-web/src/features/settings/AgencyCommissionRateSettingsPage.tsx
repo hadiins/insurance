@@ -19,7 +19,7 @@ interface AgencyCommissionRateDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** «کارمزد از بیمه‌گر» — the agency's own commission rate from the insurer, per insurance line
  * (including sub-lines). Locked into Policy.AgencyCommissionPercent at issuance; a rate change
@@ -70,12 +70,12 @@ export function AgencyCommissionRateSettingsPage() {
       </h2>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+      <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         {rates !== null && rates.length === 0 ? (
           <EmptyState
             icon="📈"
@@ -134,7 +134,7 @@ export function AgencyCommissionRateSettingsPage() {
             type="button"
             onClick={addRate}
             disabled={!newLineId || !newRatePercent}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + افزودن
           </button>

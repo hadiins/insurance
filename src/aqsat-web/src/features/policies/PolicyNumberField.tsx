@@ -54,7 +54,7 @@ export function PolicyNumberField({
             onChange={(e) => onManualNumberChange(e.target.value)}
             placeholder="1110/576210/405/000001"
             dir="ltr"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-left text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-left text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
           />
           <button
             type="button"
@@ -65,7 +65,7 @@ export function PolicyNumberField({
           </button>
         </div>
       ) : (
-        <div className="rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5">
+        <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2.5">
           {disabled ? (
             <div className="text-[12.5px] text-(--ice-3)">ابتدا نوع بیمه‌نامه و تاریخ صدور را انتخاب کنید.</div>
           ) : (
@@ -86,7 +86,7 @@ export function PolicyNumberField({
                     }
                   }}
                   placeholder={suggestion?.suggestedSerial ?? "000001"}
-                  className="w-24 rounded-[6px] border border-(--mint)/40 bg-(--pane) px-2 py-1 text-center text-(--mint) outline-none focus:border-(--mint)"
+                  className="w-24 rounded-(--r-sharp) border border-(--mint)/40 bg-(--pane) px-2 py-1 text-center text-(--mint) outline-none focus:border-(--mint)"
                 />
               </div>
               <div className="mt-1 flex gap-1.5 text-[10.5px] text-(--ice-3)" dir="ltr">
@@ -140,7 +140,7 @@ function LockedSegment({ value, title, missing }: { value: string; title: string
   return (
     <span
       title={title}
-      className={`rounded-[6px] px-2 py-1 ${missing ? "bg-(--ember)/10 text-(--ember)" : "bg-(--pane) text-(--ice-2)"}`}
+      className={`rounded-(--r-sharp) px-2 py-1 ${missing ? "bg-(--ember)/10 text-(--ember)" : "bg-(--pane) text-(--ice-2)"}`}
     >
       {value}
     </span>

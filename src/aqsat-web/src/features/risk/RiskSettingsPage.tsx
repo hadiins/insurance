@@ -36,7 +36,7 @@ export function RiskSettingsPage() {
     return (
       <div>
         <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">قوانین اعتبارسنجی</h2>
-        <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {settings.error instanceof Error ? settings.error.message : "خطا در بارگذاری تنظیمات"}
           <button type="button" onClick={() => void settings.refetch()} className="ms-2 underline">
             تلاش مجدد
@@ -69,12 +69,12 @@ export function RiskSettingsPage() {
       </div>
 
       {update.isError && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
           {update.error instanceof Error ? update.error.message : "ذخیرهٔ تنظیمات ناموفق بود."}
         </div>
       )}
       {update.isSuccess && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
           تنظیمات ذخیره شد.
         </div>
       )}
@@ -84,7 +84,7 @@ export function RiskSettingsPage() {
           {GATE_MODES.map((m) => (
             <label
               key={m.value}
-              className={`flex cursor-pointer items-start gap-2.5 rounded-[10px] border px-3 py-2 transition-colors ${
+              className={`flex cursor-pointer items-start gap-2.5 rounded-(--r) border px-3 py-2 transition-colors ${
                 form.issuanceGateMode === m.value ? "border-(--mint)/50 bg-(--mint)/5" : "border-(--edge-2)"
               }`}
             >
@@ -162,7 +162,7 @@ export function RiskSettingsPage() {
           type="button"
           onClick={() => update.mutate(form)}
           disabled={update.isPending}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-5 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {update.isPending ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
         </button>
@@ -170,7 +170,7 @@ export function RiskSettingsPage() {
           type="button"
           onClick={() => setForm(settings.data!)}
           disabled={update.isPending}
-          className="rounded-[10px] border border-(--edge-2) px-5 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--hov) hover:text-(--ice) disabled:opacity-50"
+          className="rounded-(--r) border border-(--edge-2) px-5 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--hov) hover:text-(--ice) disabled:opacity-50"
         >
           بازگردانی
         </button>
@@ -191,7 +191,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+    <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
       <div className="mb-1 text-[13px] font-bold text-(--ice)">{title}</div>
       {hint && (
         <div className={`mb-3 text-[11.5px] ${tone === "ember" ? "font-semibold text-(--ember)" : tone === "mint" ? "text-(--mint)" : "text-(--ice-3)"}`}>

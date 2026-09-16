@@ -23,7 +23,7 @@ export interface CreditReportDto {
 /// sandbox warning when the inquiry had no real data.
 export function CreditReportCard({ report }: { report: CreditReportDto }) {
   return (
-    <div className="rounded-[12px] border border-(--edge-2) bg-(--fld) p-4">
+    <div className="rounded-(--r) border border-(--edge-2) bg-(--fld) p-4">
       <div className="mb-2.5 flex items-center justify-between gap-2">
         <div className="text-[12.5px] font-bold text-(--ice)">گزارش اعتباری</div>
         <div className="text-[11.5px] text-(--ice-3)">
@@ -31,7 +31,7 @@ export function CreditReportCard({ report }: { report: CreditReportDto }) {
         </div>
       </div>
       {!report.rawSuccess && (
-        <div className="mb-2.5 rounded-[8px] border border-(--ember)/30 bg-(--ember)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--ember)">
+        <div className="mb-2.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-(--ember)">
           استعلام در حالت آزمایشی (sandbox) اجرا شده و دادهٔ واقعی ندارد.
         </div>
       )}
@@ -57,7 +57,7 @@ export function CreditReportCard({ report }: { report: CreditReportDto }) {
 function ReportCell({ label, value, isMoney = false }: { label: string; value: number | null; isMoney?: boolean }) {
   const display = value === null ? "—" : isMoney ? money(value) : fa(value);
   return (
-    <div className="rounded-[8px] bg-(--pane) px-2.5 py-2">
+    <div className="rounded-(--r) bg-(--pane) px-2.5 py-2">
       <div className="mb-0.5 text-[10.5px] tracking-wider text-(--ice-3)">{label}</div>
       <div className="tabular-nums font-semibold text-(--ice)">{display}</div>
     </div>

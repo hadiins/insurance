@@ -148,12 +148,12 @@ export function RenewalWatchesPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">ثبت مشتری احتمالی (واکینگ)</div>
         <div className="mb-3 grid grid-cols-5 gap-3">
           <input
@@ -197,12 +197,12 @@ export function RenewalWatchesPage() {
           <input
             value={notifyDaysBefore}
             onChange={(e) => setProspectForm({ ...prospectForm, notifyDaysBefore: e.target.value })}
-            className="w-16 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
+            className="w-16 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2 py-1.5 text-[12.5px] text-(--ice)"
           />
           <button
             type="button"
             onClick={registerProspect}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
           >
             ثبت سررسید
           </button>
@@ -268,12 +268,12 @@ export function RenewalWatchesPage() {
                             value={convertPolicyId}
                             onChange={(e) => setConvertPolicyId(e.target.value)}
                             placeholder="شناسهٔ بیمه‌نامهٔ جدید"
-                            className="w-40 rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11.5px] text-(--ice)"
+                            className="w-40 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11.5px] text-(--ice)"
                           />
                           <button
                             type="button"
                             onClick={() => convert(w.id)}
-                            className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
+                            className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
                           >
                             تأیید
                           </button>
@@ -285,7 +285,7 @@ export function RenewalWatchesPage() {
                             setConvertingId(w.id);
                             setConvertPolicyId("");
                           }}
-                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
+                          className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint)"
                         >
                           تمدید شد
                         </button>
@@ -293,7 +293,7 @@ export function RenewalWatchesPage() {
                       <button
                         type="button"
                         onClick={() => markLost(w.id)}
-                        className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11.5px] font-semibold text-(--ice-3) transition-colors hover:bg-(--hov)"
+                        className="rounded-(--r) border border-(--edge-2) px-2.5 py-1 text-[11.5px] font-semibold text-(--ice-3) transition-colors hover:bg-(--hov)"
                       >
                         از دست رفت
                       </button>

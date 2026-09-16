@@ -74,7 +74,7 @@ export function PlateField({
           }
         }}
         placeholder="۵۵"
-        className={`w-12 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
+        className={`w-12 rounded-(--r) border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
       />
       <select
         ref={letterRef}
@@ -85,7 +85,7 @@ export function PlateField({
             threeRef.current?.focus();
           }
         }}
-        className={`w-20 rounded-[8px] border-2 ${type.border} bg-(--fld) px-1 py-2 text-center text-[14px] text-(--ice) outline-none`}
+        className={`w-20 rounded-(--r) border-2 ${type.border} bg-(--fld) px-1 py-2 text-center text-[14px] text-(--ice) outline-none`}
       >
         <option value=""></option>
         {allowedLetters.map((l) => (
@@ -105,9 +105,9 @@ export function PlateField({
           }
         }}
         placeholder="۵۵۵"
-        className={`w-16 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
+        className={`w-16 rounded-(--r) border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
       />
-      <div className="flex flex-col items-center justify-center rounded-[8px] bg-blue-900/40 px-2 text-[10.5px] leading-tight text-blue-200">
+      <div className="flex flex-col items-center justify-center rounded-(--r) bg-blue-900/40 px-2 text-[10.5px] leading-tight text-blue-200">
         <span>I.R.</span>
         <span>IRAN</span>
       </div>
@@ -116,7 +116,7 @@ export function PlateField({
         value={fa(value.iranCode)}
         onChange={(e) => onChange({ ...value, iranCode: onlyDigits(e.target.value, 2) })}
         placeholder="۵۵"
-        className={`w-12 rounded-[8px] border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
+        className={`w-12 rounded-(--r) border-2 ${type.border} bg-(--fld) px-2 py-2 text-center text-[14px] tabular-nums text-(--ice) outline-none`}
       />
     </>
   );
@@ -129,7 +129,7 @@ export function PlateField({
             value={value.plateType}
             onChange={(e) => setPlateType(Number(e.target.value))}
             title="نوع پلاک"
-            className="max-w-32 rounded-[8px] border border-(--edge-2) bg-(--fld) px-1.5 py-2 text-[11px] text-(--ice) outline-none focus:border-(--mint)"
+            className="max-w-32 rounded-(--r) border border-(--edge-2) bg-(--fld) px-1.5 py-2 text-[11px] text-(--ice) outline-none focus:border-(--mint)"
           >
             {PLATE_TYPES.map((t) => (
               <option key={t.code} value={t.code}>
@@ -146,7 +146,7 @@ export function PlateField({
             <select
               value={value.plateType}
               onChange={(e) => setPlateType(Number(e.target.value))}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
+              className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-1.5 text-[12.5px] text-(--ice) outline-none focus:border-(--mint)"
             >
               {PLATE_TYPES.map((t) => (
                 <option key={t.code} value={t.code}>

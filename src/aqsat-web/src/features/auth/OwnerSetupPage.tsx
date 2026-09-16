@@ -73,12 +73,12 @@ export function OwnerSetupPage() {
 
   return (
     <div className="grid h-full place-items-center bg-(--void) px-6">
-      <div className="w-full max-w-sm rounded-2xl border border-(--edge) bg-(--pane) p-6">
+      <div className="w-full max-w-sm rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6">
         <h1 className="mb-1 text-xl font-extrabold text-(--ice)">راه‌اندازی حساب مالک</h1>
         <div className="mb-4.5 text-[12.5px] text-(--ice-3)">این فرم فقط یک‌بار قابل استفاده است</div>
 
         {error && (
-          <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          <div className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
             {error}
           </div>
         )}
@@ -89,26 +89,26 @@ export function OwnerSetupPage() {
             onChange={(e) => setSecret(e.target.value)}
             type="password"
             placeholder="کد راه‌اندازی"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="نام کامل"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
             placeholder="شمارهٔ همراه"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
             placeholder="رمز عبور"
-            className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
         </div>
 
@@ -116,7 +116,7 @@ export function OwnerSetupPage() {
           type="button"
           onClick={submit}
           disabled={busy}
-          className="mt-4 w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال ساخت…" : "ساخت حساب مالک"}
         </button>

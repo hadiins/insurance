@@ -153,7 +153,7 @@ export function ChequesListPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -226,7 +226,7 @@ export function ChequesListPage() {
                       <button
                         type="button"
                         onClick={() => setStatus(c, "AtBank")}
-                        className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                        className="rounded-(--r) border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                       >
                         نزد بانک
                       </button>
@@ -236,14 +236,14 @@ export function ChequesListPage() {
                         <button
                           type="button"
                           onClick={() => setStatus(c, "Cleared")}
-                          className="rounded-[8px] border border-(--mint) px-2 py-1 text-[10.5px] text-(--mint) transition-colors hover:bg-(--mint)/10"
+                          className="rounded-(--r) border border-(--mint) px-2 py-1 text-[10.5px] text-(--mint) transition-colors hover:bg-(--mint)/10"
                         >
                           پاس‌شد
                         </button>
                         <button
                           type="button"
                           onClick={() => setStatus(c, "Bounced")}
-                          className="rounded-[8px] border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                          className="rounded-(--r) border border-(--ember) px-2 py-1 text-[10.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
                         >
                           برگشت خورد
                         </button>

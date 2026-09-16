@@ -71,26 +71,26 @@ export function MissingSerialsPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4 flex items-end gap-2.5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
+      <div className="mb-4 flex items-end gap-2.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
         <div>
           <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">سال (شمسی)</label>
           <input
             value={year}
             onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
             dir="ltr"
-            className="w-28 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
+            className="w-28 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-center text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)"
           />
         </div>
         <button
           type="button"
           onClick={run}
           disabled={busy}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال بررسی…" : "بررسی"}
         </button>
@@ -98,7 +98,7 @@ export function MissingSerialsPage() {
           <button
             type="button"
             onClick={exportXlsx}
-            className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+            className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
           >
             خروجی اکسل
           </button>
@@ -106,7 +106,7 @@ export function MissingSerialsPage() {
       </div>
 
       {result && (
-        <div className="rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           {result.registeredCount === 0 ? (
             <div className="text-[13.5px] text-(--ice-3)">هیچ بیمه‌نامهٔ تجزیه‌شده‌ای در سال {fa(result.year)} یافت نشد.</div>
           ) : (
@@ -124,7 +124,7 @@ export function MissingSerialsPage() {
                   {result.missing.map((s) => (
                     <div
                       key={s}
-                      className="rounded-[8px] border border-(--ember)/30 bg-(--ember)/10 px-2 py-1.5 text-center text-[12.5px] text-(--ember)"
+                      className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-2 py-1.5 text-center text-[12.5px] text-(--ember)"
                     >
                       {fa(s)}
                     </div>

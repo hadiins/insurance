@@ -102,7 +102,7 @@ export function AgencySettingsPage() {
       <div>
         <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">مشخصات نمایندگی</h2>
         {error ? (
-          <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+          <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
         ) : (
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         )}
@@ -118,17 +118,17 @@ export function AgencySettingsPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">کد نمایندگی: {fa(form.code)}</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
       {saved && (
-        <div className="mb-4.5 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
+        <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">
           تنظیمات ذخیره شد.
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">هویت نمایندگی</div>
         <div className="grid grid-cols-3 gap-3">
           <Field label="نام نمایندگی">
@@ -170,7 +170,7 @@ export function AgencySettingsPage() {
                   type="button"
                   disabled={agencyCodeBusy || !agencyCodeInput.trim()}
                   onClick={saveAgencyCode}
-                  className="shrink-0 rounded-[10px] border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="shrink-0 rounded-(--r) border border-(--mint) bg-(--mint) px-3 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   ذخیره
                 </button>
@@ -181,7 +181,7 @@ export function AgencySettingsPage() {
         </div>
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">شمارش‌معکوس تسویه</div>
         <div className="grid grid-cols-3 gap-3">
           <Field label="مهلت تسویه (روز)">
@@ -210,7 +210,7 @@ export function AgencySettingsPage() {
         </div>
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">اقساط و یادآوری</div>
         <div className="grid grid-cols-3 gap-3">
           <Field label="سقف تعداد اقساط">
@@ -225,7 +225,7 @@ export function AgencySettingsPage() {
         </div>
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">کارمزد خدمات و سود و زیان</div>
         <div className="grid grid-cols-4 gap-3">
           <Field label="کارمزد خدمات پیش‌فرض">
@@ -250,7 +250,7 @@ export function AgencySettingsPage() {
         </div>
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">متن قرارداد اقساط</div>
         <div className="mb-3 text-[11.5px] leading-relaxed text-(--ice-3)">
           متنی که مشتری هنگام تأیید قرارداد در پورتال می‌بیند و می‌پذیرد. خالی گذاشتن = بازگشت به متن پیش‌فرض سیستم.
@@ -272,7 +272,7 @@ export function AgencySettingsPage() {
         type="button"
         disabled={busy}
         onClick={save}
-        className="rounded-[10px] border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-(--r) border border-(--mint) bg-(--mint) px-5 py-2.5 text-[13.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}
       </button>
@@ -324,29 +324,29 @@ function DangerZone({ code }: { code: string }) {
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-(--ember)/30 bg-(--ember)/5 p-5">
+    <div className="mt-6 rounded-(--r-lg) border border-(--ember)/30 bg-(--ember)/5 p-5">
       <div className="mb-1 text-[12.5px] font-semibold text-(--ember)">منطقهٔ خطر</div>
       <div className="mb-3 text-[11.5px] text-(--ice-3)">
         پاک‌کردن کامل داده‌های این نمایندگی — همهٔ بیمه‌نامه‌ها، اقساط، پرداخت‌ها و وثیقه‌ها. مشتریان و کاربران دست‌نخورده می‌مانند. غیرقابل بازگشت از داخل برنامه. برای انجام، یک کد تأیید پیامکی به موبایل مدیر نمایندگی (در تنظیمات بالا) ارسال می‌شود.
       </div>
       {error && (
-        <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
+        <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">{error}</div>
       )}
       {done && (
-        <div className="mb-3 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">داده‌ها پاک شدند.</div>
+        <div className="mb-3 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] text-(--mint)">داده‌ها پاک شدند.</div>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder={`برای تأیید، «${code}» را تایپ کنید`}
-          className="w-64 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--ember)"
+          className="w-64 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] text-(--ice) outline-none focus:border-(--ember)"
         />
         <button
           type="button"
           disabled={otpBusy || confirmText.trim() !== code}
           onClick={requestOtp}
-          className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) disabled:cursor-not-allowed disabled:opacity-50"
         >
           {otpBusy ? "در حال ارسال…" : otpSent ? "ارسال مجدد کد" : "ارسال کد تأیید پیامکی"}
         </button>
@@ -356,14 +356,14 @@ function DangerZone({ code }: { code: string }) {
             onChange={(e) => setOtpCode(e.target.value)}
             placeholder="کد ۶ رقمی پیامک‌شده"
             dir="ltr"
-            className="w-40 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--ember)"
+            className="w-40 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px] tabular-nums text-(--ice) outline-none focus:border-(--ember)"
           />
         )}
         <button
           type="button"
           disabled={busy || confirmText.trim() !== code || !otpSent || otpCode.trim().length < 6}
           onClick={clearData}
-          className="rounded-[10px] border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--ember) bg-(--ember) px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "در حال پاکسازی…" : "پاک‌کردن کامل داده‌ها"}
         </button>

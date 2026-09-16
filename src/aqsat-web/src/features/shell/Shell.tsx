@@ -72,7 +72,7 @@ export function Shell() {
           <select
             value={user.activeOrganizationId}
             onChange={(e) => switchOrganization(e.target.value)}
-            className="rounded-[8px] border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11.5px] text-(--ice-2) outline-none focus:border-(--mint)"
+            className="rounded-(--r) border border-(--edge-2) bg-(--fld) px-2 py-1 text-[11.5px] text-(--ice-2) outline-none focus:border-(--mint)"
           >
             {user.organizations.map((o) => (
               <option key={o.organizationId} value={o.organizationId}>
@@ -89,7 +89,7 @@ export function Shell() {
         <button
           type="button"
           onClick={logout}
-          className="rounded-[9px] border border-(--edge) px-2.5 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+          className="rounded-(--r) border border-(--edge) px-2.5 py-1.5 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
         >
           خروج
         </button>

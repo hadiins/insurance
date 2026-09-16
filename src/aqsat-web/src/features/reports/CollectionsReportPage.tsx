@@ -104,20 +104,20 @@ export function CollectionsReportPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">وصولی، نرخ به‌موقع‌بودن و تحلیل نکول</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
         </div>
         <div className="flex gap-2">
@@ -125,7 +125,7 @@ export function CollectionsReportPage() {
             type="button"
             onClick={() => run(1)}
             disabled={busy}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? "در حال محاسبه…" : "دریافت گزارش"}
           </button>
@@ -133,7 +133,7 @@ export function CollectionsReportPage() {
             <button
               type="button"
               onClick={exportXlsx}
-              className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+              className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
             >
               خروجی اکسل
             </button>
@@ -191,7 +191,7 @@ export function CollectionsReportPage() {
                 type="button"
                 disabled={page <= 1}
                 onClick={() => run(page - 1)}
-                className="rounded-[8px] border border-(--edge-2) px-3 py-1 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-(--r) border border-(--edge-2) px-3 py-1 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) disabled:cursor-not-allowed disabled:opacity-40"
               >
                 قبلی
               </button>
@@ -202,7 +202,7 @@ export function CollectionsReportPage() {
                 type="button"
                 disabled={page >= totalPages}
                 onClick={() => run(page + 1)}
-                className="rounded-[8px] border border-(--edge-2) px-3 py-1 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-(--r) border border-(--edge-2) px-3 py-1 text-[11.5px] text-(--ice-3) transition-colors hover:bg-(--hov) disabled:cursor-not-allowed disabled:opacity-40"
               >
                 بعدی
               </button>
@@ -217,7 +217,7 @@ export function CollectionsReportPage() {
 function Fig({ label, value, tone }: { label: string; value: string; tone?: "mint" | "ember" }) {
   const color = tone === "mint" ? "text-(--mint)" : tone === "ember" ? "text-(--ember)" : "text-(--ice)";
   return (
-    <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
       <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
       <div className={`text-[20px] font-extrabold tracking-tight ${color}`}>{value}</div>
     </div>

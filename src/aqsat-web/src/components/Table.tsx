@@ -2,7 +2,7 @@
  * once so a spacing or border tweak lands everywhere at the same time. */
 export function Table({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`overflow-hidden rounded-2xl border border-(--edge) bg-(--pane) ${className}`}>
+    <div className={`overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane) ${className}`}>
       <table className="w-full border-collapse">{children}</table>
     </div>
   );

@@ -88,7 +88,7 @@ export function CustomerLookupPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">{sub}</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -99,12 +99,12 @@ export function CustomerLookupPage() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
           placeholder="نام، کد ملی، موبایل یا پلاک خودرو…"
-          className="flex-1 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+          className="flex-1 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
         />
         <button
           type="button"
           onClick={search}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
         >
           جست‌وجو
         </button>
@@ -126,7 +126,7 @@ export function CustomerLookupPage() {
                   key={c.id}
                   type="button"
                   onClick={() => selectCustomer(c)}
-                  className="block w-full rounded-[10px] border border-(--edge-2) px-3 py-2 text-right text-[12.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                  className="block w-full rounded-(--r) border border-(--edge-2) px-3 py-2 text-right text-[12.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                 >
                   {c.fullName} <span className="text-(--ice-3)">— {c.mobile ?? "بدون شماره"} — {fa(c.policyCount)} بیمه‌نامه</span>
                 </button>
@@ -151,7 +151,7 @@ export function CustomerLookupPage() {
 
           {mode === "statement" ? (
             <>
-              <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
+              <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
                 <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">جمع بدهی</div>
                 <div className="text-[20px] font-extrabold text-(--ice)">{money(selected.aggregateBalance)}</div>
               </div>

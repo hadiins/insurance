@@ -104,27 +104,27 @@ export function PnlPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">درآمد کارمزد شرکت بیمه + کارمزد خدمات، منهای پورسانت بازاریاب و سوخت نکول</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-4 gap-3">
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={from} onChange={setFrom} className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+            <JalaliDateField value={to} onChange={setTo} className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
           </div>
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">مبنا</label>
             <select
               value={basis}
               onChange={(e) => setBasis(e.target.value as "Accrual" | "Cash")}
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             >
               <option value="Accrual">تعهدی (صدور)</option>
               <option value="Cash">نقدی (وصول)</option>
@@ -136,7 +136,7 @@ export function PnlPage() {
               value={writeOffDays}
               onChange={(e) => setWriteOffDays(e.target.value)}
               placeholder="پیش‌فرض نمایندگی"
-              className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
+              className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)"
             />
           </div>
         </div>
@@ -145,7 +145,7 @@ export function PnlPage() {
             type="button"
             onClick={run}
             disabled={busy}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? "در حال محاسبه…" : "دریافت گزارش"}
           </button>
@@ -153,7 +153,7 @@ export function PnlPage() {
             <button
               type="button"
               onClick={exportXlsx}
-              className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
+              className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice)"
             >
               خروجی اکسل
             </button>
@@ -192,7 +192,7 @@ export function PnlPage() {
             <PnlSummaryCard title={basis === "Accrual" ? "نقدی" : "تعهدی"} result={compareBasis} />
           </div>
 
-          <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-4">
+          <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
             <div className="mb-2 text-[12.5px] font-semibold text-(--ice-2)">سود خالص به‌تفکیک ماه</div>
             <TrendBars
               title="سود خالص به‌تفکیک ماه"
@@ -213,7 +213,7 @@ export function PnlPage() {
 function PnlSummaryCard({ title, result, highlight }: { title: string; result: PnlResultDto; highlight?: boolean }) {
   const netColor = result.netProfit >= 0 ? "text-(--mint)" : "text-(--ember)";
   return (
-    <div className={`rounded-2xl border p-5 ${highlight ? "border-(--mint)/30 bg-(--mint)/6" : "border-(--edge) bg-(--pane)"}`}>
+    <div className={`rounded-(--r-lg) border p-5 ${highlight ? "border-(--mint)/30 bg-(--mint)/6" : "border-(--edge) bg-(--pane)"}`}>
       <div className="mb-3 text-[13.5px] font-bold text-(--ice)">{title}</div>
       <div className="mb-3 grid grid-cols-2 gap-2 text-[12.5px]">
         <Line label="کارمزد از بیمه‌گر" value={result.agencyCommissionIncome} />
@@ -242,7 +242,7 @@ function Line({ label, value, muted }: { label: string; value: number; muted?: b
 
 function BreakdownTable({ title, rows }: { title: string; rows: PnlBreakdownRow[] }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+    <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
       <div className="border-b border-(--edge) px-3.5 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">{title}</div>
       {rows.length === 0 ? (
         <div className="p-4 text-center text-[11.5px] text-(--ice-3)">داده‌ای نیست</div>

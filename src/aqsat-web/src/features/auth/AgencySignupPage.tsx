@@ -29,7 +29,7 @@ const PROVINCES = [
 ];
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /// Standalone public page (feature 5 — self-serve agency signup), outside the MDI shell and
 /// reached only by direct URL (/signup). The agency is created PENDING: the manager logs in only
@@ -126,14 +126,14 @@ export function AgencySignupPage() {
   if (done) {
     return (
       <div className="grid h-full place-items-center bg-(--void) px-6">
-        <div className="w-full max-w-sm rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center">
+        <div className="w-full max-w-sm rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6 text-center">
           <b className="mb-2 block text-[15px] font-bold text-(--ice)">ثبت‌نام شما ثبت شد</b>
           <span className="mb-4 block text-[13px] leading-relaxed text-(--ice-3)">
             پس از تأیید مالک سامانه می‌توانید با همین شمارهٔ همراه وارد شوید.
           </span>
           <a
             href="/"
-            className="inline-block rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+            className="inline-block rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
           >
             بازگشت به صفحهٔ ورود
           </a>
@@ -144,14 +144,14 @@ export function AgencySignupPage() {
 
   return (
     <div className="grid h-full place-items-center overflow-auto bg-(--void) px-6 py-10">
-      <div className="w-full max-w-sm rounded-2xl border border-(--edge) bg-(--pane) p-6">
+      <div className="w-full max-w-sm rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6">
         <h1 className="mb-1 text-xl font-extrabold text-(--ice)">ثبت‌نام نمایندگی</h1>
         <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
           نمایندگی شما پس از تأیید مالک سامانه فعال می‌شود
         </div>
 
         {error && (
-          <div className="mb-3.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          <div className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
             {error}
           </div>
         )}
@@ -169,14 +169,14 @@ export function AgencySignupPage() {
               type="button"
               onClick={sendOtp}
               disabled={busy}
-              className="mt-1 w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-1 w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? "در حال ارسال…" : "ارسال کد تأیید"}
             </button>
           </div>
         ) : (
           <div className="space-y-2.5">
-            <div className="mb-1 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12px] text-(--ice-2)">
+            <div className="mb-1 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12px] text-(--ice-2)">
               کد تأیید به {mobile || "شمارهٔ شما"} ارسال شد (تا ۵ دقیقه معتبر است).
             </div>
             <input
@@ -232,7 +232,7 @@ export function AgencySignupPage() {
               type="button"
               onClick={submit}
               disabled={busy}
-              className="mt-1 w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-1 w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? "در حال ثبت…" : "ثبت‌نام نمایندگی"}
             </button>

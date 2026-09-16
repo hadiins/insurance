@@ -30,7 +30,7 @@ export function SidebarGroup({
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className={`flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-right text-[12.5px] font-semibold transition-colors ${
+        className={`flex w-full items-center gap-2.5 rounded-(--r) px-2.5 py-2.5 text-right text-[12.5px] font-semibold transition-colors ${
           collapsed ? "justify-center" : ""
         } ${isOpen ? "text-(--ice)" : "text-(--ice-2)"} hover:bg-(--hov) hover:text-(--ice)`}
       >
@@ -69,7 +69,7 @@ export function SidebarGroup({
       <div
         className={`overflow-hidden transition-[max-height] duration-200 ${
           collapsed
-            ? "hidden group-hover/nav:absolute group-hover/nav:end-full group-hover/nav:top-0 group-hover/nav:z-40 group-hover/nav:block group-hover/nav:min-w-[190px] group-hover/nav:rounded-xl group-hover/nav:border group-hover/nav:border-(--edge-2) group-hover/nav:bg-(--slate) group-hover/nav:p-1.5 group-hover/nav:shadow-[var(--sh)]"
+            ? "hidden group-hover/nav:absolute group-hover/nav:end-full group-hover/nav:top-0 group-hover/nav:z-40 group-hover/nav:block group-hover/nav:min-w-[190px] group-hover/nav:rounded-(--r-lg) group-hover/nav:border group-hover/nav:border-(--edge-2) group-hover/nav:bg-(--slate) group-hover/nav:p-1.5 group-hover/nav:shadow-[var(--sh)]"
             : isOpen
               ? "max-h-[640px]"
               : "max-h-0"

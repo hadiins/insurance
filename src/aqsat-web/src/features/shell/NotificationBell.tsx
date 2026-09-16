@@ -71,7 +71,7 @@ export function NotificationBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="اعلان‌ها"
-        className="relative grid h-8 w-8 place-items-center rounded-[9px] border border-(--edge) text-[15px] text-(--ice-2) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+        className="relative grid h-8 w-8 place-items-center rounded-(--r) border border-(--edge) text-[15px] text-(--ice-2) transition-colors hover:bg-(--hov) hover:text-(--ice)"
       >
         🔔
         {total > 0 && (
@@ -82,7 +82,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute end-0 top-9 z-50 w-64 rounded-[12px] border border-(--edge-2) bg-(--pane) p-1.5 shadow-lg">
+        <div className="absolute end-0 top-9 z-50 w-64 rounded-(--r) border border-(--edge-2) bg-(--pane) p-1.5 shadow-lg">
           <BellRow
             label="اقساط معوق"
             count={overdue}
@@ -142,7 +142,7 @@ function BellRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-right text-[12.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+      className="flex w-full items-center justify-between rounded-(--r) px-2.5 py-2 text-right text-[12.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
     >
       <span>{label}</span>
       <b className={`text-[14px] font-extrabold ${countClass}`}>{fa(count)}</b>

@@ -221,7 +221,7 @@ export function CustomerFilePage() {
   return (
     <div>
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -239,21 +239,21 @@ export function CustomerFilePage() {
           </div>
 
           <div className="mb-4.5 grid grid-cols-4 gap-3">
-            <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+            <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مانده کل</div>
               <div className={`text-[20px] font-extrabold tracking-tight ${file.aggregateBalance > 0 ? "text-(--ember)" : "text-(--moss)"}`}>
                 {money(file.aggregateBalance)}
               </div>
             </div>
-            <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+            <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">تعداد بیمه‌نامه</div>
               <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(file.policies.length)}</div>
             </div>
-            <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+            <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">پرداخت‌ها</div>
               <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(file.payments.length)}</div>
             </div>
-            <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+            <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">وثیقه</div>
               <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{fa(file.collateral.length)}</div>
             </div>
@@ -380,12 +380,12 @@ export function CustomerFilePage() {
           {section === "portal" && (
             <div>
               {issueError && (
-                <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+                <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
                   {issueError}
                 </div>
               )}
               {issueMessage && (
-                <div className="mb-3 rounded-[10px] border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--mint)">
+                <div className="mb-3 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--mint)">
                   {issueMessage}
                 </div>
               )}
@@ -393,19 +393,19 @@ export function CustomerFilePage() {
                 type="button"
                 onClick={issueLink}
                 disabled={issueBusy}
-                className="mb-4.5 rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mb-4.5 rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {issueBusy ? "در حال ساخت…" : "ارسال لینک پورتال به مشتری"}
               </button>
 
               <div className="mb-2.5 text-[13px] font-bold text-(--ice)">گزارش اعتباری</div>
               {creditReportError ? (
-                <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+                <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
                   {creditReportError}
                   <button
                     type="button"
                     onClick={loadCreditReport}
-                    className="ms-2 rounded-[8px] border border-(--ember)/50 px-2.5 py-1 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                    className="ms-2 rounded-(--r) border border-(--ember)/50 px-2.5 py-1 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
                   >
                     تلاش مجدد
                   </button>
@@ -430,13 +430,13 @@ export function CustomerFilePage() {
               ) : (
                 <div className="mb-4.5">
                   {creditReport.failedStandaloneInvitationId ? (
-                    <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2.5 text-[12.5px] leading-relaxed text-(--ember)">
+                    <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2.5 text-[12.5px] leading-relaxed text-(--ember)">
                       کارمزد پرداخت شد اما استعلام ناموفق بود. کارمزد دوباره گرفته نمیشود.
                       <button
                         type="button"
                         onClick={() => void retryStandaloneInquiries(creditReport.failedStandaloneInvitationId!)}
                         disabled={retryBusy}
-                        className="ms-2 rounded-[8px] border border-(--mint) bg-(--mint) px-3 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="ms-2 rounded-(--r) border border-(--mint) bg-(--mint) px-3 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {retryBusy ? "در حال تلاش…" : "تلاش مجدد استعلام"}
                       </button>
@@ -452,7 +452,7 @@ export function CustomerFilePage() {
               )}
 
               {invitationsError && (
-                <div className="rounded-2xl border border-(--ember)/30 bg-(--ember)/10 p-4 text-[13.5px] text-(--ember)">
+                <div className="rounded-(--r-lg) border border-(--ember)/30 bg-(--ember)/10 p-4 text-[13.5px] text-(--ember)">
                   {invitationsError}
                 </div>
               )}
@@ -500,7 +500,7 @@ export function CustomerFilePage() {
                   </Table>
                 ))}
 
-              <div className="mt-4.5 rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2.5">
+              <div className="mt-4.5 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2.5">
                 <div className="mb-1 text-[12.5px] font-semibold text-(--ice)">لینک پرداخت آنلاین اقساط</div>
                 {paymentLinkError ? (
                   <div className="text-[12px] leading-relaxed text-(--ember)">
@@ -508,7 +508,7 @@ export function CustomerFilePage() {
                     <button
                       type="button"
                       onClick={loadPaymentLink}
-                      className="ms-2 rounded-[8px] border border-(--ember)/50 px-2.5 py-1 text-[11px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
+                      className="ms-2 rounded-(--r) border border-(--ember)/50 px-2.5 py-1 text-[11px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10"
                     >
                       تلاش مجدد
                     </button>
@@ -526,7 +526,7 @@ export function CustomerFilePage() {
                       type="button"
                       onClick={revokePaymentLink}
                       disabled={revokeBusy}
-                      className="mt-2 rounded-[8px] border border-(--ember)/50 px-3 py-1 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mt-2 rounded-(--r) border border-(--ember)/50 px-3 py-1 text-[11.5px] font-semibold text-(--ember) transition-colors hover:bg-(--ember)/10 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {revokeBusy ? "در حال لغو…" : "لغو لینک پرداخت"}
                     </button>
@@ -542,7 +542,7 @@ export function CustomerFilePage() {
           )}
 
           {section === "timeline" && (
-            <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+            <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
               {file.timeline.length === 0 ? (
                 <Empty text="تاریخچه‌ای ثبت نشده." />
               ) : (
@@ -563,5 +563,5 @@ export function CustomerFilePage() {
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="rounded-2xl border border-(--edge) bg-(--pane) p-6 text-center text-[13.5px] text-(--ice-3)">{text}</div>;
+  return <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-6 text-center text-[13.5px] text-(--ice-3)">{text}</div>;
 }

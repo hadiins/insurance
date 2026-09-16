@@ -33,7 +33,7 @@ export function RiskDashboardPage() {
     return (
       <div>
         <h2 className="mb-4 text-xl font-extrabold tracking-tight text-(--ice)">داشبورد ریسک</h2>
-        <div className="rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {dashboard.error instanceof ApiError ? dashboard.error.message : "خطا در بارگذاری داشبورد ریسک"}
           <button type="button" onClick={() => void dashboard.refetch()} className="ms-2 underline">
             تلاش مجدد
@@ -116,7 +116,7 @@ export function RiskDashboardPage() {
 function Kpi({ label, value, tone, hint }: { label: string; value: string; tone?: "mint" | "amber" | "ember"; hint?: string }) {
   const toneClass = tone === "mint" ? "text-(--mint)" : tone === "amber" ? "text-(--amber)" : tone === "ember" ? "text-(--ember)" : "text-(--ice)";
   return (
-    <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
       <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
       <div className={`text-[19px] font-extrabold tabular-nums tracking-tight ${toneClass}`}>{value}</div>
       {hint && <div className="mt-0.5 text-[10.5px] text-(--ice-3)">{hint}</div>}
@@ -126,7 +126,7 @@ function Kpi({ label, value, tone, hint }: { label: string; value: string; tone?
 
 function ChartCard({ title, empty, children }: { title: string; empty?: boolean; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-(--edge) bg-(--pane) p-4">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
       <div className="mb-3 text-[12.5px] font-bold text-(--ice)">{title}</div>
       {empty ? (
         <div className="grid h-56 place-items-center text-[12px] text-(--ice-3)">دادهٔ کافی برای رسم نمودار وجود ندارد.</div>

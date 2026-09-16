@@ -34,7 +34,7 @@ export function HighRiskCustomersPage() {
       {query.isPending && <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>}
 
       {query.isError && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {query.error instanceof ApiError ? query.error.message : "خطا در بارگذاری فهرست"}
           <button type="button" onClick={() => void query.refetch()} className="ms-2 underline">
             تلاش مجدد

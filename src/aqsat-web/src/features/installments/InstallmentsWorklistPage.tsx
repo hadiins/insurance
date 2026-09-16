@@ -140,7 +140,7 @@ export function InstallmentsWorklistPage() {
       {overdueBucket && overdueBucket.count > 0 && filters.urgency !== "Overdue" && (
         <div
           onClick={() => setFilters({ ...filters, urgency: "Overdue" })}
-          className="mb-4.5 flex cursor-pointer items-center gap-3 rounded-[12px] border border-(--ember)/25 bg-(--ember)/8 px-3.5 py-2.5 transition-colors hover:bg-(--ember)/12"
+          className="mb-4.5 flex cursor-pointer items-center gap-3 rounded-(--r) border border-(--ember)/25 bg-(--ember)/8 px-3.5 py-2.5 transition-colors hover:bg-(--ember)/12"
         >
           <span className="text-[16px]">⚠</span>
           <div className="flex-1 text-[12.5px] text-(--ice-2)">
@@ -155,7 +155,7 @@ export function InstallmentsWorklistPage() {
         <button
           type="button"
           onClick={() => setFilters({ ...filters, urgency: "" })}
-          className={`rounded-[10px] border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+          className={`rounded-(--r) border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
             !filters.urgency
               ? "border-(--mint) bg-(--mint) text-(--on-mint)"
               : "border-(--edge-2) bg-(--btn-bg) text-(--ice-2) hover:bg-(--btn-hov)"
@@ -172,7 +172,7 @@ export function InstallmentsWorklistPage() {
               key={u}
               type="button"
               onClick={() => setFilters({ ...filters, urgency: active ? "" : u })}
-              className={`rounded-[10px] border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+              className={`rounded-(--r) border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
                 active
                   ? "border-(--mint) bg-(--mint) text-(--on-mint)"
                   : hot && count > 0
@@ -238,7 +238,7 @@ export function InstallmentsWorklistPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -306,7 +306,7 @@ export function InstallmentsWorklistPage() {
                             e.stopPropagation();
                             setPayingRow(r);
                           }}
-                          className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+                          className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
                         >
                           ثبت پرداخت
                         </button>
@@ -323,7 +323,7 @@ export function InstallmentsWorklistPage() {
                                 status: r.status,
                               });
                             }}
-                            className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                            className="rounded-(--r) border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                           >
                             ویرایش
                           </button>

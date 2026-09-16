@@ -14,7 +14,7 @@ export function TabOverflowMenu() {
         <button
           type="button"
           aria-label="فهرست همهٔ تب‌ها"
-          className="mx-1.5 my-1 grid h-7 w-7 flex-none place-items-center self-center rounded-lg border border-(--edge) text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+          className="mx-1.5 my-1 grid h-7 w-7 flex-none place-items-center self-center rounded-(--r) border border-(--edge) text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
             <path d="M6 9l6 6 6-6" />
@@ -25,13 +25,13 @@ export function TabOverflowMenu() {
         <DropdownMenu.Content
           align="end"
           sideOffset={6}
-          className="z-50 max-h-80 min-w-[220px] overflow-y-auto rounded-xl border border-(--edge-2) bg-(--slate) p-1.5 shadow-[var(--sh)]"
+          className="z-50 max-h-80 min-w-[220px] overflow-y-auto rounded-(--r-lg) border border-(--edge-2) bg-(--slate) p-1.5 shadow-[var(--sh)]"
         >
           {tabs.map((tab) => (
             <DropdownMenu.Item
               key={tab.key}
               onSelect={() => setActive(tab.key)}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-[12.5px] outline-none ${
+              className={`flex cursor-pointer items-center gap-2 rounded-(--r) px-2.5 py-2 text-[12.5px] outline-none ${
                 tab.key === activeKey ? "font-semibold text-(--mint)" : "text-(--ice-2)"
               } hover:bg-(--hov)`}
             >

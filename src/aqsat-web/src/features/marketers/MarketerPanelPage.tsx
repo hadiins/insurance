@@ -55,22 +55,22 @@ export function MarketerPanelPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">فقط مشتریانی که خودتان معرفی کرده‌اید</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
       {!error && commissions && (
         <div className="mb-4.5 grid grid-cols-3 gap-3">
-          <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
+          <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5 text-center">
             <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">در انتظار تسویه</div>
             <div className="text-[20px] font-extrabold text-(--ice)">{money(commissions.pending)}</div>
           </div>
-          <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
+          <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5 text-center">
             <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">قابل پرداخت</div>
             <div className="text-[20px] font-extrabold text-(--amber)">{money(commissions.payable)}</div>
           </div>
-          <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5 text-center">
+          <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5 text-center">
             <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">پرداخت‌شده</div>
             <div className="text-[20px] font-extrabold text-(--moss)">{money(commissions.paid)}</div>
           </div>
@@ -78,7 +78,7 @@ export function MarketerPanelPage() {
       )}
 
       {!error && (
-        <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="mb-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <table className="w-full border-collapse">
             <thead>
               <tr>
@@ -112,7 +112,7 @@ export function MarketerPanelPage() {
       )}
 
       {!error && commissions && (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           {commissions.entries.map((e) => (
             <div
               key={e.id}

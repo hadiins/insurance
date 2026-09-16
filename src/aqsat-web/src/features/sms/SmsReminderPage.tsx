@@ -127,12 +127,12 @@ export function SmsReminderPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">فیلتر کنید، تعداد و هزینه را ببینید، بعد ارسال کنید</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 grid grid-cols-3 gap-3">
           <div>
             <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">سررسید از</label>
@@ -217,7 +217,7 @@ export function SmsReminderPage() {
             type="button"
             onClick={runPreview}
             disabled={busy}
-            className="rounded-[10px] border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice) disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--edge-2) bg-(--btn-bg) px-4 py-2 text-[12.5px] font-semibold text-(--ice-2) transition-colors hover:bg-(--btn-hov) hover:text-(--ice) disabled:cursor-not-allowed disabled:opacity-50"
           >
             پیش‌نمایش
           </button>
@@ -230,7 +230,7 @@ export function SmsReminderPage() {
                 type="button"
                 onClick={confirmSend}
                 disabled={busy || preview.count === 0}
-                className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy ? "در حال ارسال…" : "تأیید و ارسال"}
               </button>
@@ -240,15 +240,15 @@ export function SmsReminderPage() {
 
         {sendResult && (
           <div className="mt-3.5 grid grid-cols-3 gap-2 text-center text-[11.5px]">
-            <div className="rounded-[8px] border border-(--edge-2) p-2">
+            <div className="rounded-(--r) border border-(--edge-2) p-2">
               <div className="text-(--ice-3)">ارسال‌شده</div>
               <div className="font-bold text-(--moss)">{fa(sendResult.sentCount)}</div>
             </div>
-            <div className="rounded-[8px] border border-(--edge-2) p-2">
+            <div className="rounded-(--r) border border-(--edge-2) p-2">
               <div className="text-(--ice-3)">ناموفق/رد‌شده</div>
               <div className="font-bold text-(--ember)">{fa(sendResult.skippedCount)}</div>
             </div>
-            <div className="rounded-[8px] border border-(--edge-2) p-2">
+            <div className="rounded-(--r) border border-(--edge-2) p-2">
               <div className="text-(--ice-3)">قبلاً ارسال‌شده</div>
               <div className="font-bold text-(--ice)">{fa(sendResult.alreadySentTodayCount)}</div>
             </div>
@@ -256,7 +256,7 @@ export function SmsReminderPage() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+      <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         <div className="border-b border-(--edge) px-4 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
           گزارش تحویل (آخرین ارسال‌ها)
         </div>

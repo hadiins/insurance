@@ -184,7 +184,7 @@ export function SecurityDashboardPage() {
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-md border border-(--edge) bg-(--pane) px-3 py-1 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov) disabled:opacity-40"
+                  className="rounded-(--r-sharp) border border-(--edge) bg-(--pane) px-3 py-1 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov) disabled:opacity-40"
                 >
                   صفحهٔ قبل
                 </button>
@@ -193,7 +193,7 @@ export function SecurityDashboardPage() {
                   type="button"
                   disabled={page * FEED_PAGE_SIZE >= events.totalCount}
                   onClick={() => setPage((p) => p + 1)}
-                  className="rounded-md border border-(--edge) bg-(--pane) px-3 py-1 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov) disabled:opacity-40"
+                  className="rounded-(--r-sharp) border border-(--edge) bg-(--pane) px-3 py-1 text-[12px] text-(--ice-2) transition-colors hover:bg-(--hov) disabled:opacity-40"
                 >
                   صفحهٔ بعد
                 </button>
@@ -203,7 +203,7 @@ export function SecurityDashboardPage() {
         </section>
 
         <div className="space-y-4">
-          <section className="rounded-2xl border border-(--edge) bg-(--pane) p-4">
+          <section className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
             <h3 className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">وضعیت HTTPS</h3>
             {server ? (
               server.https.enabled ? (
@@ -231,7 +231,7 @@ export function SecurityDashboardPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-(--edge) bg-(--pane) p-4">
+          <section className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
             <h3 className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">پرتکرارترین IPهای ورود ناموفق</h3>
             <div className="mb-3 text-[10.5px] text-(--ice-3)">بر اساس آخرین رویدادهای نمایش‌داده‌شده در این صفحه</div>
             {failedLoginIps.length === 0 ? (
@@ -263,7 +263,7 @@ function ScoreCard({ score }: { score: SecurityScoreDto }) {
   const filled = (score.score / 100) * circumference;
 
   return (
-    <div className="flex flex-col gap-6 rounded-2xl border border-(--edge) bg-(--pane) p-5 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-6 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5 sm:flex-row sm:items-center">
       <div className="relative h-32 w-32 shrink-0 self-center">
         <svg viewBox="0 0 110 110" className="h-full w-full -rotate-90">
           <circle cx="55" cy="55" r={radius} fill="none" stroke="var(--fld)" strokeWidth="9" />

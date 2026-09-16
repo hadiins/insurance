@@ -38,10 +38,10 @@ export function MetricCard({
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border border-(--edge) bg-(--pane) p-4.5 ${onClick ? "cursor-pointer transition-colors hover:bg-(--hov)" : ""}`}
+      className={`rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4.5 ${onClick ? "cursor-pointer transition-colors hover:bg-(--hov)" : ""}`}
     >
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--fld) text-lg">{icon}</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-(--r) bg-(--fld) text-lg">{icon}</div>
         {delta !== undefined && delta !== 0 && (
           <span
             className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${

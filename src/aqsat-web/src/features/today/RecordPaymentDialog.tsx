@@ -154,7 +154,7 @@ export function RecordPaymentDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/55" />
         <Dialog.Content className="fixed inset-0 z-[60] grid place-items-center p-5">
-          <div className="w-full max-w-[380px] rounded-2xl border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
+          <div className="w-full max-w-[380px] rounded-(--r-lg) border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
             <Dialog.Title className="mb-1.5 text-[15px] font-bold text-(--ice)">ثبت پرداخت</Dialog.Title>
             <Dialog.Description className="mb-4.5 text-[13.5px] text-(--ice-2)">{customerFullName}</Dialog.Description>
 
@@ -164,14 +164,14 @@ export function RecordPaymentDialog({
                   {result.allocations.map((line) => (
                     <div
                       key={line.installmentId}
-                      className="flex items-center justify-between rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px]"
+                      className="flex items-center justify-between rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px]"
                     >
                       <span className="text-(--ice-2)">قسط شمارهٔ {fa(line.seqNo)}</span>
                       <span className="font-bold text-(--ice)">{money(line.amount)}</span>
                     </div>
                   ))}
                   {result.unallocatedAmount > 0 && (
-                    <div className="rounded-[10px] border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
+                    <div className="rounded-(--r) border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
                       {money(result.unallocatedAmount)} تومان مازاد — به‌عنوان اعتبار مشتری باقی ماند.
                     </div>
                   )}
@@ -179,7 +179,7 @@ export function RecordPaymentDialog({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
+                  className="w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
                 >
                   بستن
                 </button>
@@ -187,7 +187,7 @@ export function RecordPaymentDialog({
             ) : (
               <>
                 {error && (
-                  <div className="mb-3 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+                  <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
                     {error}
                   </div>
                 )}
@@ -260,7 +260,7 @@ export function RecordPaymentDialog({
 
                 {methodType === "PosDirect" && (
                   <>
-                    <div className="mb-3 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
+                    <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
                       مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود — نیازی به انتخاب صندوق یا حساب بانکی نیست.
                     </div>
                     <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ مرجع/ترمینال (اختیاری)</label>
@@ -274,7 +274,7 @@ export function RecordPaymentDialog({
                 )}
 
                 {methodType === "Cheque" && (
-                  <div className="mb-4.5 grid grid-cols-2 gap-2 rounded-[10px] border border-(--edge-2) bg-(--fld)/50 p-2.5">
+                  <div className="mb-4.5 grid grid-cols-2 gap-2 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 p-2.5">
                     <div>
                       <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
                       <input

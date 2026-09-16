@@ -14,7 +14,7 @@ export function EmptyState({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="rounded-2xl border border-(--edge) bg-(--pane) px-4 py-12 text-center">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) px-4 py-12 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-(--fld) text-2xl">
         {icon}
       </div>
@@ -24,7 +24,7 @@ export function EmptyState({
         <button
           type="button"
           onClick={action.onClick}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
         >
           {action.label}
         </button>

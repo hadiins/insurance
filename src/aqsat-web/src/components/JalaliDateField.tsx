@@ -4,7 +4,7 @@ import { isoToJalaliParts, isoToJalaliText, jalaliTextToIso, todayJalaliParts } 
 import { JalaliCalendarPopup } from "./JalaliCalendarPopup";
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] tabular-nums text-(--ice) outline-none focus:border-(--mint)";
 
 /** docs/TASK-25-IDENTITY-VEHICLE.md §6.1 — "ورودی: انتخابگر شمسی + تایپ مستقیم 1405/05/23". Both
  * halves: direct typing in this field, or the calendar-icon button opens a month-grid popup. Either
@@ -56,7 +56,7 @@ export function JalaliDateField({
         <button
           type="button"
           onClick={() => (open ? setOpen(false) : openPopup())}
-          className="shrink-0 rounded-[10px] border border-(--edge-2) bg-(--fld) px-2.5 text-[14px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+          className="shrink-0 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 text-[14px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
           aria-label="نمایش تقویم"
         >
           📅

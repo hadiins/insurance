@@ -150,7 +150,7 @@ export function InsurerRemittancePage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">واریز اقساط و حق بیمهٔ جمع‌آوری‌شده به حساب بیمه‌گر</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -164,7 +164,7 @@ export function InsurerRemittancePage() {
           />
         </div>
       ) : (
-        <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="mb-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">بدهی به بیمه‌گران به تفکیک بیمه</div>
           <table className="w-full border-collapse">
             <thead>
@@ -205,7 +205,7 @@ export function InsurerRemittancePage() {
           />
         </div>
       ) : (
-        <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="mb-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">دریافتی‌های واریزنشده به بیمه‌گر</div>
           <table className="w-full border-collapse">
             <thead>
@@ -235,21 +235,21 @@ export function InsurerRemittancePage() {
       )}
 
       {selectedRows.length > 0 && (
-        <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3.5 text-[13.5px] font-semibold text-(--ice)">
             ثبت پرداخت — {fa(selectedRows.length)} مورد — جمع {money(selectedTotal)} تومان
           </div>
           <div className="mb-3 grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ پرداخت</label>
-              <JalaliDateField value={date} onChange={setDate} className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
+              <JalaliDateField value={date} onChange={setDate} className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice)" />
             </div>
             <div>
               <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">روش پرداخت</label>
               <select
                 value={methodType}
                 onChange={(e) => setMethodType(e.target.value as MethodType)}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="BankTransfer">واریز بانکی</option>
                 <option value="Cash">نقدی</option>
@@ -261,7 +261,7 @@ export function InsurerRemittancePage() {
                 value={referenceNo}
                 onChange={(e) => setReferenceNo(e.target.value)}
                 dir="ltr"
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               />
             </div>
           </div>
@@ -271,7 +271,7 @@ export function InsurerRemittancePage() {
               <select
                 value={cashBoxId}
                 onChange={(e) => setCashBoxId(e.target.value)}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="">انتخاب کنید…</option>
                 {cashBoxes.filter((b) => b.isActive).map((b) => (
@@ -287,7 +287,7 @@ export function InsurerRemittancePage() {
               <select
                 value={bankAccountId}
                 onChange={(e) => setBankAccountId(e.target.value)}
-                className="w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+                className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
               >
                 <option value="">انتخاب کنید…</option>
                 {bankAccounts.filter((a) => a.isActive).map((a) => (
@@ -302,7 +302,7 @@ export function InsurerRemittancePage() {
             type="button"
             onClick={submit}
             disabled={saving}
-            className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "در حال ثبت…" : "ثبت پرداخت به بیمه‌گر"}
           </button>
@@ -316,7 +316,7 @@ export function InsurerRemittancePage() {
           description="پس از ثبت نخستین پرداخت به بیمه‌گر، تاریخچهٔ آن در این بخش نمایش داده می‌شود."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">تاریخچهٔ پرداخت‌ها</div>
           <table className="w-full border-collapse">
             <thead>

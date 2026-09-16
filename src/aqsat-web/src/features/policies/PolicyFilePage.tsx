@@ -151,7 +151,7 @@ export function PolicyFilePage() {
   return (
     <div>
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -173,7 +173,7 @@ export function PolicyFilePage() {
                   type="button"
                   onClick={() => void transitionStatus("mark-pending-confirmation")}
                   disabled={busy}
-                  className="rounded-[8px] border border-(--amber)/60 bg-transparent px-2.5 py-1 text-[11.5px] font-semibold text-(--amber) transition-colors hover:bg-(--amber)/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-(--r) border border-(--amber)/60 bg-transparent px-2.5 py-1 text-[11.5px] font-semibold text-(--amber) transition-colors hover:bg-(--amber)/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   انتقال به «در انتظار تأیید مشتری»
                 </button>
@@ -183,7 +183,7 @@ export function PolicyFilePage() {
                   type="button"
                   onClick={() => void transitionStatus("confirm")}
                   disabled={busy}
-                  className="rounded-[8px] border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-(--r) border border-(--mint) bg-(--mint) px-2.5 py-1 text-[11.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   تأیید مشتری
                 </button>
@@ -275,7 +275,7 @@ export function PolicyFilePage() {
                                 status: i.status,
                               })
                             }
-                            className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                            className="rounded-(--r) border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                           >
                             ویرایش
                           </button>
@@ -358,7 +358,7 @@ export function PolicyFilePage() {
                 description="رخدادهای ثبت‌شدهٔ این بیمه‌نامه اینجا نمایش داده می‌شوند."
               />
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+              <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
                 {file.timeline.map((t, idx) => (
                   <div key={idx} className="border-t border-(--edge) px-4 py-2.5 text-[12.5px] first:border-t-0">
                     <span className="font-semibold text-(--ice)">{t.actorDisplayName}</span>
@@ -384,7 +384,7 @@ export function PolicyFilePage() {
 
 function Fig({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[14px] border border-(--edge) bg-(--pane) p-3.5">
+    <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5">
       <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">{label}</div>
       <div className="text-[20px] font-extrabold tracking-tight text-(--ice)">{value}</div>
     </div>

@@ -102,19 +102,19 @@ export function RoleManagementPage() {
       </div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
 
       {editingId ? (
-        <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">{editingId === "new" ? "نقش جدید" : "ویرایش نقش"}</div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="نام نقش"
-            className="mb-3 w-full max-w-sm rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
+            className="mb-3 w-full max-w-sm rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
           <div className="mb-3 grid grid-cols-2 gap-2">
             {catalog?.map((p) => (
@@ -129,14 +129,14 @@ export function RoleManagementPage() {
               type="button"
               onClick={save}
               disabled={busy}
-              className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
             >
               ذخیره
             </button>
             <button
               type="button"
               onClick={cancel}
-              className="rounded-[10px] border border-(--edge-2) px-4 py-2 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+              className="rounded-(--r) border border-(--edge-2) px-4 py-2 text-[12.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
             >
               انصراف
             </button>
@@ -146,7 +146,7 @@ export function RoleManagementPage() {
         <button
           type="button"
           onClick={startCreate}
-          className="mb-4.5 rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
+          className="mb-4.5 rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105"
         >
           نقش جدید
         </button>
@@ -157,7 +157,7 @@ export function RoleManagementPage() {
       ) : (
         <div className="space-y-2">
           {roles.map((r) => (
-            <div key={r.id} className="flex items-center justify-between rounded-2xl border border-(--edge) bg-(--pane) p-4">
+            <div key={r.id} className="flex items-center justify-between rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
               <div>
                 <div className="flex items-center gap-2">
                   <b className="text-[13.5px] text-(--ice)">{r.name}</b>
@@ -175,14 +175,14 @@ export function RoleManagementPage() {
                   <button
                     type="button"
                     onClick={() => startEdit(r)}
-                    className="rounded-[8px] border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
+                    className="rounded-(--r) border border-(--edge-2) px-2.5 py-1 text-[11.5px] text-(--ice-2) transition-colors hover:bg-(--hov)"
                   >
                     ویرایش
                   </button>
                   <button
                     type="button"
                     onClick={() => remove(r)}
-                    className="rounded-[8px] border border-(--ember) px-2.5 py-1 text-[11.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
+                    className="rounded-(--r) border border-(--ember) px-2.5 py-1 text-[11.5px] text-(--ember) transition-colors hover:bg-(--ember)/10"
                   >
                     حذف
                   </button>

@@ -38,7 +38,7 @@ interface FundMovementsDto {
 }
 
 const inputClass =
-  "w-full rounded-[10px] border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
+  "w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)";
 
 /** «موجودی و گردش صندوق و بانک» — live balances (opening + arithmetic over every recorded flow)
  * and the unified movement view behind each balance. */
@@ -146,7 +146,7 @@ export function CashFlowPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">ماندهٔ زندهٔ هر صندوق و حساب — جمع ماندهٔ ابتدای دوره، دریافتی‌ها و پرداخت‌ها</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -160,7 +160,7 @@ export function CashFlowPage() {
           />
         </div>
       ) : (
-        <div className="mb-4.5 overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="mb-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">
             موجودی‌ها
             {balances && <span className="ms-2 text-[11.5px] font-normal text-(--ice-3)">{allFunds.length} صندوق و حساب</span>}
@@ -188,7 +188,7 @@ export function CashFlowPage() {
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-(--edge) bg-(--pane) p-5">
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3.5 text-[13.5px] font-semibold text-(--ice)">انتقال وجه بین صندوق و حساب‌ها</div>
         <div className="mb-3 grid grid-cols-4 gap-3">
           <div>
@@ -244,14 +244,14 @@ export function CashFlowPage() {
           type="button"
           onClick={submitTransfer}
           disabled={saving}
-          className="rounded-[10px] border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "در حال ثبت…" : "ثبت انتقال"}
         </button>
       </div>
 
       {selected && (
-        <div className="overflow-hidden rounded-2xl border border-(--edge) bg-(--pane)">
+        <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--edge) px-3 py-2.5">
             <div className="text-[12.5px] font-semibold text-(--ice-2)">
               گردش {selected.label}
@@ -262,8 +262,8 @@ export function CashFlowPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <JalaliDateField value={from} onChange={setFrom} placeholder="از تاریخ" className="w-36 rounded-[10px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] text-(--ice)" />
-              <JalaliDateField value={to} onChange={setTo} placeholder="تا تاریخ" className="w-36 rounded-[10px] border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] text-(--ice)" />
+              <JalaliDateField value={from} onChange={setFrom} placeholder="از تاریخ" className="w-36 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] text-(--ice)" />
+              <JalaliDateField value={to} onChange={setTo} placeholder="تا تاریخ" className="w-36 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 py-1.5 text-[12.5px] text-(--ice)" />
             </div>
           </div>
           {movements !== null && movements.rows.length === 0 ? (

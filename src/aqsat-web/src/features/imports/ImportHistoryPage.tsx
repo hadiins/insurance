@@ -41,7 +41,7 @@ export function ImportHistoryPage() {
       <div className="mb-4.5 text-[12.5px] text-(--ice-3)">هر ورود اطلاعاتی که تاکنون انجام شده، جدیدترین در بالا</div>
 
       {error && (
-        <div className="mb-4.5 rounded-[10px] border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+        <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
           {error}
         </div>
       )}
@@ -78,7 +78,7 @@ export function ImportHistoryPage() {
                         <button
                           type="button"
                           onClick={() => openMismatches(b)}
-                          className="rounded-[8px] border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
+                          className="rounded-(--r) border border-(--edge-2) px-2 py-1 text-[10.5px] text-(--ice-3) transition-colors hover:bg-(--hov)"
                         >
                           مشاهدهٔ ناسازگارها
                         </button>
