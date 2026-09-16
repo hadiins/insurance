@@ -5,6 +5,7 @@ import { fa } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { ScrollIcon } from "@phosphor-icons/react";
 
 interface AuditLogRowDto {
   id: number;
@@ -73,7 +74,7 @@ export function AuditLogPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(rows.length)} رویداد</div>
           {rows.length === 0 ? (
             <EmptyState
-              icon="📜"
+              icon={ScrollIcon}
               title="رویدادی ثبت نشده"
               description={
                 search.trim()

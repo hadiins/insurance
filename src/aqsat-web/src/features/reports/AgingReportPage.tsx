@@ -5,7 +5,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { MetricCard } from "../../components/MetricCard";
 import { EmptyState } from "../../components/EmptyState";
 import { Td, Th, Tr } from "../../components/Table";
-
+import { AlarmIcon, BriefcaseIcon, CheckCircleIcon, ClockIcon, SirenIcon } from "@phosphor-icons/react";
 interface AgingReportRow {
   customerId: string;
   customerFullName: string;
@@ -88,17 +88,17 @@ export function AgingReportPage() {
 
       {report && (
         <div className="mb-4.5 grid grid-cols-5 gap-3">
-          <MetricCard icon="🟢" label="جاری" value={report.totalCurrentAmount} />
-          <MetricCard icon="🕐" label="۱ تا ۳۰ روز" value={report.totalOverdue1To30} tone="amber" />
-          <MetricCard icon="⏰" label="۳۱ تا ۶۰ روز" value={report.totalOverdue31To60} tone="ember" />
-          <MetricCard icon="🚨" label="بیش از ۶۰ روز" value={report.totalOverdue60Plus} tone="ember" />
-          <MetricCard icon="💼" label="جمع بدهی باز" value={report.totalOpen} tone="mint" />
+          <MetricCard icon={CheckCircleIcon} label="جاری" value={report.totalCurrentAmount} />
+          <MetricCard icon={ClockIcon} label="۱ تا ۳۰ روز" value={report.totalOverdue1To30} tone="amber" />
+          <MetricCard icon={AlarmIcon} label="۳۱ تا ۶۰ روز" value={report.totalOverdue31To60} tone="ember" />
+          <MetricCard icon={SirenIcon} label="بیش از ۶۰ روز" value={report.totalOverdue60Plus} tone="ember" />
+          <MetricCard icon={BriefcaseIcon} label="جمع بدهی باز" value={report.totalOpen} tone="mint" />
         </div>
       )}
 
       {report !== null && report.rows.length === 0 ? (
         <EmptyState
-          icon="✅"
+          icon={CheckCircleIcon}
           title="هیچ قسط بازی وجود ندارد"
           description="در حال حاضر هیچ مشتری‌ای قسط باز ندارد؛ همهٔ اقساط تسویه شده‌اند."
         />

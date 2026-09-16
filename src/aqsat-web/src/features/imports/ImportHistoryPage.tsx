@@ -4,6 +4,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { FoldersIcon } from "@phosphor-icons/react";
 
 interface ImportBatchDto {
   id: string;
@@ -53,7 +54,7 @@ export function ImportHistoryPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(batches.length)} ورود</div>
           {batches.length === 0 ? (
             <EmptyState
-              icon="🗂️"
+              icon={FoldersIcon}
               title="هنوز ورود اطلاعاتی ثبت نشده."
               description="پس از اولین بارگذاری فایل، تاریخچهٔ آن در این‌جا نمایش داده می‌شود."
             />

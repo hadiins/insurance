@@ -9,6 +9,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EditInstallmentDialog, type EditInstallmentTarget } from "../installments/EditInstallmentDialog";
+import { CalendarBlankIcon, ClockIcon, CoinsIcon, PaperclipIcon } from "@phosphor-icons/react";
 
 interface PolicyFilePayload {
   policyId: string;
@@ -230,7 +231,7 @@ export function PolicyFilePage() {
           {tabSection === "installments" &&
             (file.installments.length === 0 ? (
               <EmptyState
-                icon="🗓"
+                icon={CalendarBlankIcon}
                 title="قسطی ثبت نشده"
                 description="برای این بیمه‌نامه هنوز قسطی ایجاد نشده است — از «زمان‌بندی اقساط» می‌توانید اقساط را بسازید."
               />
@@ -290,7 +291,7 @@ export function PolicyFilePage() {
           {tabSection === "endorsements" &&
             (file.endorsements.length === 0 ? (
               <EmptyState
-                icon="📎"
+                icon={PaperclipIcon}
                 title="الحاقیه‌ای ثبت نشده"
                 description="برای این بیمه‌نامه هنوز الحاقیه‌ای صادر نشده است."
               />
@@ -321,7 +322,7 @@ export function PolicyFilePage() {
           {tabSection === "commissions" &&
             (file.commissions.length === 0 ? (
               <EmptyState
-                icon="🪙"
+                icon={CoinsIcon}
                 title="سهم پورسانتی ثبت نشده"
                 description="برای این بیمه‌نامه هنوز سهم پورسانتی محاسبه نشده است."
               />
@@ -353,7 +354,7 @@ export function PolicyFilePage() {
           {tabSection === "timeline" &&
             (file.timeline.length === 0 ? (
               <EmptyState
-                icon="🕘"
+                icon={ClockIcon}
                 title="تاریخچه‌ای ثبت نشده"
                 description="رخدادهای ثبت‌شدهٔ این بیمه‌نامه اینجا نمایش داده می‌شوند."
               />

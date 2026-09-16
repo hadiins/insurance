@@ -8,6 +8,8 @@ import { toJalaliDisplay, toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
+import { BellIcon, CalendarBlankIcon, CheckCircleIcon, WarningIcon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 
 type Mode = "reminders" | "overdue" | "notifications";
 
@@ -51,26 +53,26 @@ interface RiskWarningDto {
   createdAt: string;
 }
 
-const TITLE: Record<Mode, { heading: string; sub: string; empty: string; emptyIcon: string; emptyDesc: string }> = {
+const TITLE: Record<Mode, { heading: string; sub: string; empty: string; emptyIcon: Icon; emptyDesc: string }> = {
   reminders: {
     heading: "یادآوری‌های امروز",
     sub: "اقساطی که امروز سررسید می‌شوند",
     empty: "امروز قسطی سررسید نمی‌شود.",
-    emptyIcon: "📅",
+    emptyIcon: CalendarBlankIcon,
     emptyDesc: "قسطی برای یادآوری امروز نیست — فردا دوباره بررسی کنید.",
   },
   overdue: {
     heading: "کارهای معوق",
     sub: "اقساطی که از مهلت تسویه گذشته‌اند",
     empty: "هیچ قسط معوقی نیست.",
-    emptyIcon: "✅",
+    emptyIcon: CheckCircleIcon,
     emptyDesc: "همهٔ اقساط در مهلت تسویهٔ خود قرار دارند.",
   },
   notifications: {
     heading: "اعلان‌ها",
     sub: "معوق/بحرانی + هشدارهای ریسک + آخرین پیامک‌های ارسالی",
     empty: "اعلان تازه‌ای نیست.",
-    emptyIcon: "🔔",
+    emptyIcon: BellIcon,
     emptyDesc: "هیچ قسط معوق یا بحرانی وجود ندارد، هشدار ریسکی نخوانده مانده و پیامک تازه‌ای ارسال نشده است.",
   },
 };
@@ -248,8 +250,9 @@ export function DeskFeedPage() {
                 }
                 className="flex w-full items-center justify-between border-t border-(--edge) px-4 py-2 text-right text-[12.5px] transition-colors first:border-t-0 hover:bg-(--ice-1)/5"
               >
-                <span>
-                  ⚠ {w.customerName} — {w.message}
+                <span className="flex items-center gap-1.5 text-right">
+                  <WarningIcon size={13} className="shrink-0 text-(--amber)" />
+                  {w.customerName} — {w.message}
                 </span>
                 <span className="shrink-0 text-(--ice-3)">{toJalaliDateTimeDisplay(w.createdAt)}</span>
               </button>

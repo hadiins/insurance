@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { api } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { BellIcon } from "@phosphor-icons/react";
 import { subscribeToDataChanges } from "../../lib/dataEvents";
 
 interface IncompleteProfileSummaryDto {
@@ -73,7 +74,7 @@ export function NotificationBell() {
         title="اعلان‌ها"
         className="relative grid h-8 w-8 place-items-center rounded-(--r) border border-(--edge) text-[15px] text-(--ice-2) transition-colors hover:bg-(--hov) hover:text-(--ice)"
       >
-        🔔
+        <BellIcon size={16} weight="bold" />
         {total > 0 && (
           <span className="absolute -end-1 -top-1 grid min-w-4.5 place-items-center rounded-full bg-(--ember) px-1 text-[10.5px] font-bold leading-4.5 text-(--on-mint)">
             {fa(total)}

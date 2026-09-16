@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { MoneyInput } from "../../components/MoneyInput";
 import { Field, INPUT_CLASS } from "../../components/form";
+import { LockIcon } from "@phosphor-icons/react";
 
 interface AgencySettingsDto {
   code: string;
@@ -156,7 +157,10 @@ export function AgencySettingsPage() {
             {form.agencyCodeLocked ? (
               <div className="flex items-center gap-2">
                 <div className={`${inputClass} bg-(--fld)/50 text-(--ice-3)`}>{fa(form.agencyCode ?? "")}</div>
-                <span className="shrink-0 text-[11.5px] text-(--ice-3)">🔒 پس از اولین بیمه‌نامه قفل شده</span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-(--ice-3)">
+                  <LockIcon size={12} className="shrink-0" />
+                  پس از اولین بیمه‌نامه قفل شده
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-2">

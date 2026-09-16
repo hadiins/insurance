@@ -6,6 +6,7 @@ import { fa, money } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { CreditCardIcon, FileTextIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 
 type Mode = "payments" | "statement";
 
@@ -115,7 +116,7 @@ export function CustomerLookupPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(customers.length)} نتیجه</div>
           {customers.length === 0 ? (
             <EmptyState
-              icon="🔍"
+              icon={MagnifyingGlassIcon}
               title="مشتری‌ای یافت نشد."
               description="عبارت جستجو را تغییر دهید و دوباره امتحان کنید."
             />
@@ -157,7 +158,7 @@ export function CustomerLookupPage() {
               </div>
               {selected.policies.length === 0 ? (
                 <EmptyState
-                  icon="📄"
+                  icon={FileTextIcon}
                   title="بیمه‌نامه‌ای ندارد."
                   description="این مشتری هنوز بیمه‌نامه‌ای در سیستم ندارد."
                 />
@@ -186,7 +187,7 @@ export function CustomerLookupPage() {
             </>
           ) : selected.payments.length === 0 ? (
             <EmptyState
-              icon="💳"
+              icon={CreditCardIcon}
               title="پرداختی ثبت نشده."
               description="برای این مشتری هنوز پرداختی در سیستم ثبت نشده است."
             />

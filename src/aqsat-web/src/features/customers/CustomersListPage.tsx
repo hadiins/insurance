@@ -6,6 +6,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { UsersIcon } from "@phosphor-icons/react";
 
 interface CustomerListItemDto {
   id: string;
@@ -77,7 +78,7 @@ export function CustomersListPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(customers.length)} مشتری</div>
           {customers.length === 0 ? (
             <EmptyState
-              icon="👥"
+              icon={UsersIcon}
               title="مشتری‌ای یافت نشد."
               description={
                 search.trim()

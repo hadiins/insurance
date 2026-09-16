@@ -13,6 +13,7 @@ import {
 } from "../../components/form";
 import { useAssignReview, useDecideReview, useManualReviews, useRequestMoreInfo, useReviewers } from "./riskApi";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES, type ManualReviewDto } from "./riskTypes";
+import { FoldersIcon } from "@phosphor-icons/react";
 
 type StatusFilter = "" | "Pending" | "InReview" | "RequestMoreInfo" | "Approved" | "Rejected";
 
@@ -85,7 +86,7 @@ export function ManualReviewsPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(reviews.data.length)} پرونده</div>
           {reviews.data.length === 0 ? (
             <EmptyState
-              icon="🗂️"
+              icon={FoldersIcon}
               title="پرونده‌ای در این وضعیت نیست."
               description="هر ارزیابی‌ای که تصمیم آن «بررسی دستی» باشد، اینجا وارد می‌شود."
             />

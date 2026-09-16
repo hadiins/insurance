@@ -4,6 +4,7 @@ import { money } from "../../lib/persian";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { MetricCard } from "../../components/MetricCard";
 import { TrendBars } from "../../components/TrendBars";
+import { MoneyIcon, TrendDownIcon, TrendUpIcon } from "@phosphor-icons/react";
 
 interface PnlBreakdownRow {
   groupKey: string;
@@ -165,13 +166,13 @@ export function PnlPage() {
         <>
           <div className="mb-4.5 grid grid-cols-3 gap-4">
             <MetricCard
-              icon="💰"
+              icon={MoneyIcon}
               label="درآمد کل"
               value={result.totalIncome}
               previousValue={previousPeriod?.totalIncome}
             />
             <MetricCard
-              icon="📉"
+              icon={TrendDownIcon}
               label="هزینهٔ کل"
               value={result.totalExpense}
               previousValue={previousPeriod?.totalExpense}
@@ -179,7 +180,7 @@ export function PnlPage() {
               tone="amber"
             />
             <MetricCard
-              icon="📈"
+              icon={TrendUpIcon}
               label="سود خالص"
               value={result.netProfit}
               previousValue={previousPeriod?.netProfit}

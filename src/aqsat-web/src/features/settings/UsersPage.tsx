@@ -4,6 +4,7 @@ import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { INPUT_INLINE_SM } from "../../components/form";
+import { UsersIcon } from "@phosphor-icons/react";
 
 interface OrgUserDto {
   membershipId: string;
@@ -134,7 +135,7 @@ export function UsersPage() {
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : users.length === 0 ? (
         <EmptyState
-          icon="👥"
+          icon={UsersIcon}
           title="کاربری ثبت نشده"
           description="هنوز کاربری به این نمایندگی دسترسی ندارد؛ اولین کاربر را از فرم بالا اضافه کنید."
         />

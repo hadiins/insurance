@@ -1,4 +1,5 @@
 import * as signalR from "@microsoft/signalr";
+import { EyeIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { fa } from "../../lib/persian";
@@ -145,8 +146,9 @@ export function PresenceLockBar({ entityType, entityId }: { entityType: string; 
           <span>کسی دیگری این پرونده را باز نکرده</span>
         ) : (
           presence.map((p) => (
-            <span key={p.userId} className="rounded-full border border-(--edge-2) px-2 py-0.5">
-              {p.isEditing ? "✏️" : "👁"} {p.userDisplayName}
+            <span key={p.userId} className="inline-flex items-center gap-1 rounded-full border border-(--edge-2) px-2 py-0.5">
+              {p.isEditing ? <PencilSimpleIcon size={12} className="text-(--amber)" /> : <EyeIcon size={12} className="text-(--ice-3)" />}
+              {p.userDisplayName}
             </span>
           ))
         )}

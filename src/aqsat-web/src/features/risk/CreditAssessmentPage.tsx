@@ -4,6 +4,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa, toLatinDigits } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { CustomerRiskPanel } from "./CustomerRiskPanel";
+import { ChartBarIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 
 interface CustomerListItemDto {
   id: string;
@@ -100,7 +101,7 @@ export function CreditAssessmentPage() {
       ) : customers !== null ? (
         customers.length === 0 ? (
           <EmptyState
-            icon="🔍"
+            icon={MagnifyingGlassIcon}
             title="مشتری‌ای یافت نشد."
             description="عبارت جستجو را تغییر دهید و دوباره امتحان کنید."
           />
@@ -120,7 +121,7 @@ export function CreditAssessmentPage() {
         )
       ) : (
         <EmptyState
-          icon="📊"
+          icon={ChartBarIcon}
           title="مشتری را جست‌وجو کنید."
           description="پس از انتخاب مشتری، امتیاز اعتباری، عوامل مؤثر و سقف اعتبار او نمایش داده می‌شود."
         />

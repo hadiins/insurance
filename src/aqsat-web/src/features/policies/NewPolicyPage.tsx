@@ -11,6 +11,7 @@ import { addOneJalaliYear, toJalaliDateTimeDisplay, toJalaliDisplay } from "../.
 import { MoneyInput } from "../../components/MoneyInput";
 import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
 import { PolicyVerificationStep } from "./PolicyVerificationStep";
+import { WarningIcon } from "@phosphor-icons/react";
 import type { CreditReportDto } from "../../components/CreditReportCard";
 import { useNetworkRiskLookup } from "../risk/riskApi";
 import { NetworkRiskWizardSummary } from "../risk/NetworkRiskResultCard";
@@ -1292,8 +1293,9 @@ export function NewPolicyPage() {
           {scheduleResult && (
             <div className="mt-4">
               {scheduleResult.exceedsMaxInstallments && (
-                <div className="mb-2 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
-                  ⚠️ تعداد اقساط از سقف تنظیمشدهٔ نمایندگی بیشتر است.
+                <div className="mb-2 flex items-start gap-1.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+                  <WarningIcon size={14} weight="fill" className="mt-0.5 shrink-0" />
+                  تعداد اقساط از سقف تنظیمشدهٔ نمایندگی بیشتر است.
                 </div>
               )}
               <div className="mb-2 text-[12.5px] font-semibold text-(--mint)">{fa(scheduleResult.installments.length)} قسط ساخته شد</div>
@@ -1528,8 +1530,9 @@ export function NewPolicyPage() {
       {gapPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-(--r-lg) border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
-            <div className="mb-2 text-[14px] font-bold text-(--ember)">
-              ⚠️ {fa(gapPrompt.length)} شماره جا افتاده
+            <div className="mb-2 flex items-center gap-1.5 text-[14px] font-bold text-(--ember)">
+              <WarningIcon size={16} weight="fill" className="shrink-0" />
+              {fa(gapPrompt.length)} شماره جا افتاده
             </div>
             <div className="mb-4 text-[13.5px] tabular-nums text-(--ice-2)" dir="ltr">
               {gapPrompt.map(fa).join(" و ")}
@@ -1559,7 +1562,10 @@ export function NewPolicyPage() {
       {mismatchPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-(--r-lg) border border-(--ember)/30 bg-(--pane) p-5 shadow-xl">
-            <div className="mb-2 text-[14px] font-bold text-(--ember)">⚠️ عدم تطابق در شمارهٔ واردشده</div>
+            <div className="mb-2 flex items-center gap-1.5 text-[14px] font-bold text-(--ember)">
+              <WarningIcon size={16} weight="fill" className="shrink-0" />
+              عدم تطابق در شمارهٔ واردشده
+            </div>
             <ul className="mb-4 list-inside list-disc space-y-1 text-[12.5px] leading-relaxed text-(--ice-2)">
               {mismatchPrompt.map((w, i) => (
                 <li key={i}>{w}</li>

@@ -13,6 +13,7 @@ import { Table, Td, Th, Tr } from "../../components/Table";
 import { FILTER_SELECT } from "../../components/form";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
 import { EditInstallmentDialog, type EditInstallmentTarget } from "./EditInstallmentDialog";
+import { ReceiptIcon, WarningIcon } from "@phosphor-icons/react";
 
 interface WorklistFilterPayload {
   overdueOnly?: boolean;
@@ -142,7 +143,7 @@ export function InstallmentsWorklistPage() {
           onClick={() => setFilters({ ...filters, urgency: "Overdue" })}
           className="mb-4.5 flex cursor-pointer items-center gap-3 rounded-(--r) border border-(--ember)/25 bg-(--ember)/8 px-3.5 py-2.5 transition-colors hover:bg-(--ember)/12"
         >
-          <span className="text-[16px]">⚠</span>
+          <WarningIcon size={16} weight="fill" className="shrink-0 text-(--ember)" />
           <div className="flex-1 text-[12.5px] text-(--ice-2)">
             <b className="font-bold text-(--ember)">{fa(overdueBucket.count)} قسط معوق</b> با ماندهٔ باز{" "}
             <b className="font-bold text-(--ember)">{money(overdueBucket.balance)}</b> تومان — مهلت تسویه به بیمه‌گر گذشته است.
@@ -250,7 +251,7 @@ export function InstallmentsWorklistPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(rows.length)} قسط</div>
           {rows.length === 0 ? (
             <EmptyState
-              icon="🧾"
+              icon={ReceiptIcon}
               title="موردی یافت نشد"
               description={
                 hasActiveFilters

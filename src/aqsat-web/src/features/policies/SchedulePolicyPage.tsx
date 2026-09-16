@@ -7,6 +7,7 @@ import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { INPUT_CLASS } from "../../components/form";
+import { CalendarBlankIcon, WarningIcon } from "@phosphor-icons/react";
 
 interface CashBoxDto {
   id: string;
@@ -216,7 +217,7 @@ export function SchedulePolicyPage() {
         <div className="grid grid-cols-2 gap-4">
           {pending.length === 0 ? (
             <EmptyState
-              icon="🗓"
+              icon={CalendarBlankIcon}
               title="بیمه‌نامه‌ای در انتظار زمان‌بندی نیست"
               description="همهٔ بیمه‌نامه‌های صادرشده پیش‌پرداخت و تعداد اقساط خود را گرفته‌اند."
             />
@@ -295,8 +296,9 @@ export function SchedulePolicyPage() {
                 {result && (
                   <div className="mt-4 rounded-(--r) border border-(--mint)/30 bg-(--mint)/8 p-3">
                     {result.exceedsMaxInstallments && (
-                      <div className="mb-2 text-[12.5px] text-(--amber)">
-                        ⚠️ تعداد اقساط از سقف تنظیم‌شدهٔ نمایندگی بیشتر است.
+                      <div className="mb-2 flex items-start gap-1.5 text-[12.5px] text-(--amber)">
+                        <WarningIcon size={14} weight="fill" className="mt-0.5 shrink-0" />
+                        تعداد اقساط از سقف تنظیم‌شدهٔ نمایندگی بیشتر است.
                       </div>
                     )}
                     <div className="mb-2 text-[12.5px] font-semibold text-(--mint)">

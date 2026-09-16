@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { isoToJalaliText, jalaliTextToIso, toJalaliDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
+import { TrendUpIcon } from "@phosphor-icons/react";
 
 interface InsuranceLineDto {
   id: string;
@@ -78,7 +79,7 @@ export function AgencyCommissionRateSettingsPage() {
       <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         {rates !== null && rates.length === 0 ? (
           <EmptyState
-            icon="📈"
+            icon={TrendUpIcon}
             title="هنوز نرخی ثبت نشده است"
             description="نرخ کارمزد از بیمه‌گر به تفکیک رشته ثبت می‌شود و هنگام صدور در بیمه‌نامه قفل می‌شود؛ اولین نرخ را از فرم پایین اضافه کنید."
           />

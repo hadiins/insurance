@@ -5,6 +5,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { MoneyIcon, ReceiptIcon } from "@phosphor-icons/react";
 
 interface ReceiptRow {
   paymentId: string;
@@ -123,7 +124,7 @@ export function ReceiptsReportPage() {
           <div className="mb-4.5 grid grid-cols-2 gap-4">
             {report.byMethod.length === 0 ? (
               <EmptyState
-                icon="💵"
+                icon={MoneyIcon}
                 title="دریافتی‌ای در این بازه نیست"
                 description="در بازهٔ انتخابی دریافتی‌ای ثبت نشده است؛ بازهٔ زمانی را تغییر دهید."
               />
@@ -146,7 +147,7 @@ export function ReceiptsReportPage() {
 
             {report.byChequeStatus.length === 0 ? (
               <EmptyState
-                icon="🧾"
+                icon={ReceiptIcon}
                 title="چکی در این بازه نیست"
                 description="در بازهٔ انتخابی چکی ثبت نشده است."
               />
@@ -170,7 +171,7 @@ export function ReceiptsReportPage() {
 
           {report.rows.length === 0 ? (
             <EmptyState
-              icon="🧾"
+              icon={ReceiptIcon}
               title="دریافتی‌ای در این بازه نیست"
               description="در بازهٔ انتخابی دریافتی‌ای ثبت نشده است؛ بازهٔ زمانی را تغییر دهید."
             />

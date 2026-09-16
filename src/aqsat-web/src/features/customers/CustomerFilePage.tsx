@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { CreditReportCard, type CreditReportDto } from "../../components/CreditReportCard";
 import { CustomerRiskPanel } from "../risk/CustomerRiskPanel";
+import { CreditCardIcon, FileTextIcon, LinkIcon, LockIcon, ReceiptIcon } from "@phosphor-icons/react";
 
 interface CustomerFilePayload {
   customerId: string;
@@ -286,7 +287,7 @@ export function CustomerFilePage() {
           {section === "policies" &&
             (file.policies.length === 0 ? (
               <EmptyState
-                icon="📄"
+                icon={FileTextIcon}
                 title="بیمه‌نامه‌ای ثبت نشده."
                 description="این مشتری هنوز بیمه‌نامه‌ای در سیستم ندارد."
               />
@@ -318,7 +319,7 @@ export function CustomerFilePage() {
           {section === "payments" &&
             (file.payments.length === 0 ? (
               <EmptyState
-                icon="💳"
+                icon={CreditCardIcon}
                 title="پرداختی ثبت نشده."
                 description="برای این مشتری هنوز پرداختی در سیستم ثبت نشده است."
               />
@@ -348,7 +349,7 @@ export function CustomerFilePage() {
           {section === "collateral" &&
             (file.collateral.length === 0 ? (
               <EmptyState
-                icon="🔒"
+                icon={LockIcon}
                 title="وثیقه‌ای ثبت نشده."
                 description="برای بیمه‌نامه‌های این مشتری وثیقه‌ای ثبت نشده است."
               />
@@ -443,7 +444,7 @@ export function CustomerFilePage() {
                     </div>
                   ) : (
                     <EmptyState
-                      icon="🧾"
+                      icon={ReceiptIcon}
                       title="گزارش اعتباری‌ای برای این مشتری ثبت نشده."
                       description="با دکمهٔ «ارسال لینک پورتال به مشتری»، مشتری کارمزد را آنلاین میپردازد و استعلام چک برگشتی و تسهیلات به‌صورت خودکار اجرا و همین‌جا نمایش داده میشود."
                     />
@@ -462,7 +463,7 @@ export function CustomerFilePage() {
               {invitations !== null &&
                 (invitations.length === 0 ? (
                   <EmptyState
-                    icon="🔗"
+                    icon={LinkIcon}
                     title="هنوز لینکی برای این مشتری ساخته نشده."
                     description="با دکمهٔ بالا می‌توانید لینک پورتال بسازید و برای مشتری پیامک کنید."
                   />

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../../app/store/authStore";
 import { fa } from "../../lib/persian";
 import { beginRelogin, msUntilExpiry, SESSION_WARNING_MS } from "../../lib/sessionExpiry";
+import { XIcon } from "@phosphor-icons/react";
 
 /// B12 — mounted once in Shell next to MaintenanceBanner. The 8-hour JWT used to die silently:
 /// the first request after expiry threw, and the whole workspace was wiped on the spot. This
@@ -38,7 +39,7 @@ export function SessionExpiryBanner() {
           ورود مجدد
         </button>
         <button type="button" onClick={() => setDismissed(true)} className="hover:opacity-70" aria-label="بستن">
-          ✕
+          <XIcon size={14} weight="bold" />
         </button>
       </div>
     </div>

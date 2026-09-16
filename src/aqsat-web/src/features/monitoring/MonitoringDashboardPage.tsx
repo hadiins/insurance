@@ -9,6 +9,7 @@ import { Table, Td, Th, Tr } from "../../components/Table";
 import { SeverityBadge } from "./SeverityBadge";
 import { TimeRangeSelector } from "./TimeRangeSelector";
 import { HealthBanner } from "./HealthBanner";
+import { CompassIcon, CpuIcon, FireIcon, LightningIcon, TimerIcon, TrayArrowDownIcon, TrendUpIcon, WarningIcon } from "@phosphor-icons/react";
 import type {
   AlertOccurrenceDto,
   EndpointStatDto,
@@ -97,7 +98,7 @@ export function MonitoringDashboardPage() {
     return (
       <div className="mx-auto max-w-3xl py-10">
         <EmptyState
-          icon="⚠️"
+          icon={WarningIcon}
           title="بارگذاری داشبورد پایش ناموفق بود"
           description={overviewError}
           action={{ label: "تلاش دوباره", onClick: load }}
@@ -132,21 +133,21 @@ export function MonitoringDashboardPage() {
 
       {overview && (
         <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-          <MetricCard icon="📥" label="درخواست‌ها در بازه" value={overview.totalRequests} />
+          <MetricCard icon={TrayArrowDownIcon} label="درخواست‌ها در بازه" value={overview.totalRequests} />
           <MetricCard
-            icon="🔥"
+            icon={FireIcon}
             label="نرخ خطای سرور (۵xx)"
             value={overview.errorRatePercent}
             tone={overview.errorRatePercent > 5 ? "ember" : "mint"}
           />
           <MetricCard
-            icon="⚡"
+            icon={LightningIcon}
             label="بیشترین تأخیر P95 (میلی‌ثانیه)"
             value={overview.latencyP95Ms}
             tone={overview.latencyP95Ms > 3000 ? "amber" : "neutral"}
           />
           <MetricCard
-            icon="🧠"
+            icon={CpuIcon}
             label="حافظهٔ فرایند (مگابایت)"
             value={Math.round(server?.processMemoryMb ?? 0)}
             tone="neutral"
@@ -156,20 +157,20 @@ export function MonitoringDashboardPage() {
 
       {seriesError && !series ? (
         <EmptyState
-          icon="⚠️"
+          icon={WarningIcon}
           title="بارگذاری نمودارها ناموفق بود"
           description={seriesError}
           action={{ label: "تلاش دوباره", onClick: load }}
         />
       ) : series === null ? (
         <EmptyState
-          icon="📈"
+          icon={TrendUpIcon}
           title="در حال بارگذاری نمودارها…"
           description="نمونه‌بردار هر دقیقه یک ردیف متریک ثبت می‌کند؛ نمودارها پس از اولین نمونه پُر می‌شوند."
         />
       ) : series.length === 0 ? (
         <EmptyState
-          icon="📈"
+          icon={TrendUpIcon}
           title="در این بازه داده‌ای ثبت نشده است"
           description="بازهٔ بزرگ‌تری را انتخاب کنید یا مطمئن شوید کار پس‌زمینهٔ نمونه‌بردار فعال است."
         />
@@ -239,9 +240,9 @@ export function MonitoringDashboardPage() {
       <section className="space-y-3">
         <h2 className="text-[14px] font-bold text-(--ice)">پرترددترین مسیرهای API</h2>
         {endpoints === null ? (
-          <EmptyState icon="🧭" title="داده‌ای برای مسیرها ثبت نشده است" description="جدول پس از اولین دقیقهٔ ترافیک پُر می‌شود." />
+          <EmptyState icon={CompassIcon} title="داده‌ای برای مسیرها ثبت نشده است" description="جدول پس از اولین دقیقهٔ ترافیک پُر می‌شود." />
         ) : endpoints.length === 0 ? (
-          <EmptyState icon="🧭" title="در این بازه درخواستی ثبت نشده است" />
+          <EmptyState icon={CompassIcon} title="در این بازه درخواستی ثبت نشده است" />
         ) : (
           <Table>
             <thead>
@@ -300,7 +301,7 @@ function ResourcePanel({ server, error, onRetry }: { server: ServerStatusDto | n
     <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4">
       <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">منابع فرایند (لحظه‌ای)</div>
       {error && !server ? (
-        <EmptyState icon="⚠️" title="بارگذاری منابع ناموفق بود" description={error} action={{ label: "تلاش دوباره", onClick: onRetry }} />
+        <EmptyState icon={WarningIcon} title="بارگذاری منابع ناموفق بود" description={error} action={{ label: "تلاش دوباره", onClick: onRetry }} />
       ) : !server ? (
         <div className="grid h-56 place-items-center text-(--ice-3)">در حال بارگذاری…</div>
       ) : (
@@ -387,11 +388,11 @@ function JobsPanel({ jobs, error, onRetry }: { jobs: HangfireStatsDto | null; er
         )}
       </div>
       {error && !jobs ? (
-        <EmptyState icon="⚠️" title="بارگذاری کارها ناموفق بود" description={error} action={{ label: "تلاش دوباره", onClick: onRetry }} />
+        <EmptyState icon={WarningIcon} title="بارگذاری کارها ناموفق بود" description={error} action={{ label: "تلاش دوباره", onClick: onRetry }} />
       ) : !jobs ? (
         <div className="grid h-24 place-items-center text-(--ice-3)">در حال بارگذاری…</div>
       ) : jobs.jobs.length === 0 ? (
-        <EmptyState icon="⏱️" title="کاری ثبت نشده است" />
+        <EmptyState icon={TimerIcon} title="کاری ثبت نشده است" />
       ) : (
         <Table>
           <thead>

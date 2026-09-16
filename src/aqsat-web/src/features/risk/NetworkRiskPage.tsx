@@ -5,6 +5,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "../policies/PlateField";
 import { useNetworkRiskLookup } from "./riskApi";
 import { NetworkRiskResults } from "./NetworkRiskResultCard";
+import { GlobeIcon } from "@phosphor-icons/react";
 
 type Query = { nationalId: string } | { plate: string } | null;
 
@@ -99,7 +100,7 @@ export function NetworkRiskPage() {
 
       {query === null ? (
         <EmptyState
-          icon="🌐"
+          icon={GlobeIcon}
           title="کد ملی یا پلاک را وارد کنید."
           description="وضعیت اعتباری مشتری در نمایندگی‌های دیگر شبکه (امتیاز، معوقات، چک برگشتی و سابقهٔ پرداخت) نمایش داده می‌شود."
         />

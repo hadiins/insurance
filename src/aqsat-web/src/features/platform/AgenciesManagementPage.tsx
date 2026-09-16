@@ -6,6 +6,7 @@ import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { EmptyState } from "../../components/EmptyState";
 import type { RiskNetworkSettingsDto } from "../risk/riskTypes";
+import { BuildingsIcon } from "@phosphor-icons/react";
 
 interface AgencyListRowDto {
   id: string;
@@ -476,7 +477,7 @@ export function AgenciesManagementPage() {
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : pageData.rows.length === 0 ? (
           <EmptyState
-            icon="🏢"
+            icon={BuildingsIcon}
             title={hasActiveFilter ? "نمایندگی‌ای با این فیلترها یافت نشد" : "هنوز نمایندگی‌ای ساخته نشده"}
             description={
               hasActiveFilter

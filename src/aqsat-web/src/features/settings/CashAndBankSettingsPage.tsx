@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { money } from "../../lib/persian";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
+import { BankIcon, MoneyIcon } from "@phosphor-icons/react";
 
 interface CashBoxDto {
   id: string;
@@ -229,7 +230,7 @@ export function CashAndBankSettingsPage() {
         <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">صندوق‌های نقدی</div>
         {boxes !== null && boxes.length === 0 ? (
           <EmptyState
-            icon="💰"
+            icon={MoneyIcon}
             title="هنوز صندوقی ثبت نشده است"
             description="صندوق‌های نقدی نمایندگی در فرم‌های دریافت نمایش داده می‌شوند؛ اولین صندوق را از فرم پایین اضافه کنید."
           />
@@ -294,7 +295,7 @@ export function CashAndBankSettingsPage() {
         <div className="border-b border-(--edge) px-3 py-2.5 text-[12.5px] font-semibold text-(--ice-2)">حساب‌های بانکی</div>
         {accounts !== null && accounts.length === 0 ? (
           <EmptyState
-            icon="🏦"
+            icon={BankIcon}
             title="هنوز حساب بانکی ثبت نشده است"
             description="حساب‌های بانکی نمایندگی در فرم‌های دریافت نمایش داده می‌شوند؛ اولین حساب را از فرم پایین اضافه کنید."
           />
@@ -383,7 +384,7 @@ export function CashAndBankSettingsPage() {
         </div>
         {banks !== null && banks.length === 0 ? (
           <EmptyState
-            icon="🏛"
+            icon={BankIcon}
             title="هنوز بانکی ثبت نشده است"
             description="نام بانک‌ها هنگام ثبت چک به‌صورت کشویی نمایش داده می‌شود؛ اگر بانک موردنظر در فهرست نیست، از فرم پایین اضافه کنید."
           />

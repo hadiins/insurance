@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
+import { FoldersIcon } from "@phosphor-icons/react";
 
 interface ExpenseCategoryDto {
   id: string;
@@ -75,7 +76,7 @@ export function ExpenseCategorySettingsPage() {
       <div className="overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         {categories !== null && categories.length === 0 ? (
           <EmptyState
-            icon="🗂"
+            icon={FoldersIcon}
             title="هنوز دسته‌ای ثبت نشده است"
             description="دسته‌بندی هزینه‌ها را نمایندگی خودش تعریف می‌کند؛ اولین دسته را از فرم پایین اضافه کنید."
           />

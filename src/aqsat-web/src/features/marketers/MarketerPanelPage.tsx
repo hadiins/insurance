@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { money } from "../../lib/persian";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
+import { UsersIcon } from "@phosphor-icons/react";
 
 interface MarketerCustomerDto {
   customerId: string;
@@ -103,7 +104,7 @@ export function MarketerPanelPage() {
           </table>
           {customers?.length === 0 && (
             <EmptyState
-              icon="👥"
+              icon={UsersIcon}
               title="هنوز مشتری‌ای معرفی نکرده‌اید"
               description="با معرفی مشتریان جدید، آن‌ها و وضعیت اقساطشان از همین پنل قابل پیگیری خواهد بود."
             />

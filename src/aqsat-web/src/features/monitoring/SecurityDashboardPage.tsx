@@ -7,6 +7,7 @@ import { MetricCard } from "../../components/MetricCard";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { SeverityBadge } from "./SeverityBadge";
 import { TimeRangeSelector } from "./TimeRangeSelector";
+import { CheckIcon, EyeIcon, GaugeIcon, LockIcon, LockOpenIcon, ProhibitIcon, ShieldCheckIcon, SignInIcon, WarningIcon, XIcon } from "@phosphor-icons/react";
 import {
   SECURITY_TYPE_LABELS,
   type MonitoringOverviewDto,
@@ -87,7 +88,7 @@ export function SecurityDashboardPage() {
     return (
       <div className="mx-auto max-w-3xl py-10">
         <EmptyState
-          icon="⚠️"
+          icon={WarningIcon}
           title="بارگذاری داشبورد امنیت ناموفق بود"
           description={scoreError}
           action={{ label: "تلاش دوباره", onClick: load }}
@@ -120,14 +121,14 @@ export function SecurityDashboardPage() {
 
       <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <MetricCard
-          icon="🚪"
+          icon={SignInIcon}
           label={`ورود ناموفق در بازه`}
           value={summary?.failedLogins ?? 0}
           tone={(summary?.failedLogins ?? 0) > 10 ? "ember" : "neutral"}
         />
-        <MetricCard icon="🕵️" label={`فعالیت مشکوک در بازه`} value={summary?.suspiciousActivities ?? 0} tone="amber" />
-        <MetricCard icon="⛔" label={`دسترسی غیرمجاز در بازه`} value={summary?.permissionDenied ?? 0} tone="neutral" />
-        <MetricCard icon="🛡️" label={`رد سقف نرخ در بازه`} value={summary?.rateLimitRejections ?? 0} tone="neutral" />
+        <MetricCard icon={EyeIcon} label={`فعالیت مشکوک در بازه`} value={summary?.suspiciousActivities ?? 0} tone="amber" />
+        <MetricCard icon={ProhibitIcon} label={`دسترسی غیرمجاز در بازه`} value={summary?.permissionDenied ?? 0} tone="neutral" />
+        <MetricCard icon={GaugeIcon} label={`رد سقف نرخ در بازه`} value={summary?.rateLimitRejections ?? 0} tone="neutral" />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
@@ -142,7 +143,7 @@ export function SecurityDashboardPage() {
           </div>
           {eventsError && !events ? (
             <EmptyState
-              icon="⚠️"
+              icon={WarningIcon}
               title="بارگذاری رویدادها ناموفق بود"
               description={eventsError}
               action={{ label: "تلاش دوباره", onClick: load }}
@@ -151,7 +152,7 @@ export function SecurityDashboardPage() {
             <div className="grid h-40 place-items-center text-(--ice-3)">در حال بارگذاری…</div>
           ) : events.items.length === 0 ? (
             <EmptyState
-              icon="🕊️"
+              icon={ShieldCheckIcon}
               title="در این بازه رویداد امنیتی ثبت نشده است"
               description="ورودهای ناموفق، تلاش‌های دسترسی غیرمجاز و فعالیت‌های مشکوک اینجا فهرست می‌شوند."
             />
@@ -208,7 +209,7 @@ export function SecurityDashboardPage() {
             {server ? (
               server.https.enabled ? (
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[20px]">🔒</span>
+                  <LockIcon size={20} className="shrink-0 text-(--moss)" />
                   <div className="text-[12px] text-(--ice-2)">
                     فعال
                     <div className="text-[11px] text-(--ice-3) ltr" dir="ltr">{server.https.url}</div>
@@ -216,7 +217,7 @@ export function SecurityDashboardPage() {
                 </div>
               ) : (
                 <div className="flex items-start gap-2.5">
-                  <span className="text-[20px]">🔓</span>
+                  <LockOpenIcon size={20} className="mt-0.5 shrink-0 text-(--ember)" />
                   <div className="text-[12px] leading-relaxed text-(--ice-2)">
                     <b className="text-(--ember)">بدون HTTPS</b>
                     <div className="mt-1 text-[11px] text-(--ice-3)">
@@ -290,7 +291,11 @@ function ScoreCard({ score }: { score: SecurityScoreDto }) {
         {score.factors.map((f) => (
           <div key={f.label} className="flex items-center justify-between gap-3 text-[12px]">
             <span className="flex items-center gap-2 text-(--ice-2)">
-              <span className={f.ok ? "text-(--mint)" : "text-(--ember)"}>{f.ok ? "✔" : "✖"}</span>
+              {f.ok ? (
+                <CheckIcon size={13} weight="bold" className="shrink-0 text-(--mint)" />
+              ) : (
+                <XIcon size={13} weight="bold" className="shrink-0 text-(--ember)" />
+              )}
               {f.label}
             </span>
             {!f.ok && f.impact > 0 && (

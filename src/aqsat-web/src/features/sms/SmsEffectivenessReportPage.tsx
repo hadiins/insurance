@@ -5,6 +5,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { ChartBarIcon } from "@phosphor-icons/react";
 
 interface SmsEffectivenessSummaryDto {
   remindersSent: number;
@@ -255,7 +256,7 @@ export function SmsEffectivenessReportPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(pageData.totalCount)} قسط</div>
           {pageData.rows.length === 0 ? (
             <EmptyState
-              icon="📊"
+              icon={ChartBarIcon}
               title="یادآوری‌ای در این بازه نیست"
               description="در بازهٔ انتخابی یادآوری قسطی ارسال نشده است؛ بازهٔ زمانی را تغییر دهید."
             />

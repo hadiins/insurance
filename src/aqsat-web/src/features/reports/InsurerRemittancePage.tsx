@@ -5,6 +5,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Td, Th, Tr } from "../../components/Table";
+import { BankIcon, CheckCircleIcon, ReceiptIcon } from "@phosphor-icons/react";
 
 interface PendingRemittanceRow {
   policyId: string;
@@ -158,7 +159,7 @@ export function InsurerRemittancePage() {
       {byInsurer !== null && byInsurer.length === 0 ? (
         <div className="mb-4.5">
           <EmptyState
-            icon="🏦"
+            icon={BankIcon}
             title="بدهی واریزنشده‌ای به بیمه‌گران نیست"
             description="همهٔ دریافتی‌های جمع‌آوری‌شده به بیمه‌گران واریز شده است."
           />
@@ -199,7 +200,7 @@ export function InsurerRemittancePage() {
       {pending !== null && pending.length === 0 ? (
         <div className="mb-4.5">
           <EmptyState
-            icon="✅"
+            icon={CheckCircleIcon}
             title="همه چیز به بیمه‌گر واریز شده است"
             description="دریافتی واریزنشده‌ای برای انتخاب و ثبت پرداخت وجود ندارد."
           />
@@ -311,7 +312,7 @@ export function InsurerRemittancePage() {
 
       {past !== null && past.length === 0 ? (
         <EmptyState
-          icon="🧾"
+          icon={ReceiptIcon}
           title="هنوز پرداختی ثبت نشده است"
           description="پس از ثبت نخستین پرداخت به بیمه‌گر، تاریخچهٔ آن در این بخش نمایش داده می‌شود."
         />

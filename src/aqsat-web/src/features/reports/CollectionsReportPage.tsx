@@ -5,6 +5,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { CalendarBlankIcon } from "@phosphor-icons/react";
 
 interface CollectionsReportRow {
   policyNumber: string;
@@ -157,7 +158,7 @@ export function CollectionsReportPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(pageData.totalCount)} قسط</div>
           {pageData.rows.length === 0 ? (
             <EmptyState
-              icon="🗓"
+              icon={CalendarBlankIcon}
               title="قسطی در این بازه نیست"
               description="در بازهٔ انتخابی قسط سررسیدشده‌ای وجود ندارد؛ بازهٔ زمانی را تغییر دهید."
             />

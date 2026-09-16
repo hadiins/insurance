@@ -1,10 +1,14 @@
+import type { Icon } from "@phosphor-icons/react";
 import { fa, money } from "../lib/persian";
 
 /** Metric card (TailAdmin's EcommerceMetrics pattern, on our tokens): icon tile + label +
  * formatted value + optional trend badge comparing against a previous value. Clickable when
- * onClick is given — a metric that navigates to its source list. */
+ * onClick is given — a metric that navigates to its source list.
+ *
+ * `icon` takes the Phosphor component itself. The glyph stays neutral while the value
+ * carries the tone, so an alarming metric raises its voice once, not twice. */
 export function MetricCard({
-  icon,
+  icon: Icon,
   label,
   value,
   previousValue,
@@ -13,7 +17,7 @@ export function MetricCard({
   tone = "neutral",
   onClick,
 }: {
-  icon: string;
+  icon: Icon;
   label: string;
   value: number;
   previousValue?: number;
@@ -41,7 +45,9 @@ export function MetricCard({
       className={`rounded-(--r-lg) border border-(--edge) bg-(--pane) p-4.5 ${onClick ? "cursor-pointer transition-colors hover:bg-(--hov)" : ""}`}
     >
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-(--r) bg-(--fld) text-lg">{icon}</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-(--r) bg-(--fld)">
+          <Icon size={20} className="text-(--ice-2)" />
+        </div>
         {delta !== undefined && delta !== 0 && (
           <span
             className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
@@ -53,7 +59,7 @@ export function MetricCard({
           </span>
         )}
       </div>
-      <div className="text-[10.5px] tracking-[0.14em] text-(--ice-3)">{label}</div>
+      <div className="text-[11px] text-(--ice-3)">{label}</div>
       <div className={`mt-1.5 text-[20px] font-extrabold tabular-nums ${valueTone}`}>{money(value)}</div>
     </div>
   );

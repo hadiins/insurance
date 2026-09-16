@@ -1,3 +1,4 @@
+import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { fa, toLatinDigits } from "../lib/persian";
 import { isoToJalaliParts, isoToJalaliText, jalaliTextToIso, todayJalaliParts } from "../lib/jalali";
@@ -59,7 +60,7 @@ export function JalaliDateField({
           className="shrink-0 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 text-[14px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
           aria-label="نمایش تقویم"
         >
-          📅
+          <CalendarBlankIcon size={16} />
         </button>
       </div>
       {open && (

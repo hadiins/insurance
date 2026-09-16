@@ -5,6 +5,7 @@ import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import type { LogPageDto } from "./monitoringTypes";
+import { FileTextIcon, WarningIcon } from "@phosphor-icons/react";
 
 const LEVELS = ["Fatal", "Error", "Warning", "Information", "Debug"] as const;
 const LEVEL_LABELS: Record<string, string> = {
@@ -138,7 +139,7 @@ export function MonitoringLogsPage() {
 
       {error && !page ? (
         <EmptyState
-          icon="⚠️"
+          icon={WarningIcon}
           title="خواندن لاگ‌ها ناموفق بود"
           description={error}
           action={{ label: "تلاش دوباره", onClick: loadFirst }}
@@ -147,7 +148,7 @@ export function MonitoringLogsPage() {
         <div className="grid h-40 place-items-center text-(--ice-3)">در حال بارگذاری…</div>
       ) : page.entries.length === 0 ? (
         <EmptyState
-          icon="📄"
+          icon={FileTextIcon}
           title="لاگی با این فیلترها یافت نشد"
           description="فیلتر سطح را کاهش دهید یا بازهٔ بزرگ‌تری را انتخاب کنید."
           action={{ label: "نمایش همهٔ سطوح", onClick: () => setLevel("Debug") }}

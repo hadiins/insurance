@@ -5,6 +5,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { useHighRiskCustomers } from "../risk/riskApi";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES } from "../risk/riskTypes";
+import { ShieldCheckIcon } from "@phosphor-icons/react";
 
 /** «مشتریان پرریسک» — the operational list (overdue installments, bounced cheques) merged with
  * each customer's latest risk assessment (docs Phase 2A §6): risk-level first, then operational
@@ -47,7 +48,7 @@ export function HighRiskCustomersPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(query.data.length)} مشتری</div>
           {query.data.length === 0 ? (
             <EmptyState
-              icon="🛡️"
+              icon={ShieldCheckIcon}
               title="مشتری پرریسکی نیست."
               description="هیچ مشتری‌ای با قسط معوق، چک برگشتی یا سطح ریسک بالا در دفتر شما ثبت نشده است."
             />

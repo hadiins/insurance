@@ -5,6 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { CheckCircleIcon } from "@phosphor-icons/react";
 
 interface ImportMismatchRowDto {
   id: string;
@@ -50,7 +51,7 @@ export function ImportMismatchesPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(rows.length)} ردیف</div>
           {rows.length === 0 ? (
             <EmptyState
-              icon="✅"
+              icon={CheckCircleIcon}
               title="رکورد ناسازگاری نیست."
               description="همهٔ ردیف‌های این ورود اطلاعاتی با موفقیت وارد شده‌اند."
             />

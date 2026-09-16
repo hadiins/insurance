@@ -5,6 +5,7 @@ import { toJalaliDisplay } from "../../lib/jalali";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { EmptyState } from "../../components/EmptyState";
 import { Td, Th, Tr } from "../../components/Table";
+import { ArrowsClockwiseIcon, BankIcon } from "@phosphor-icons/react";
 
 interface FundBalanceDto {
   id: string;
@@ -154,7 +155,7 @@ export function CashFlowPage() {
       {balances !== null && allFunds.length === 0 ? (
         <div className="mb-4.5">
           <EmptyState
-            icon="🏦"
+            icon={BankIcon}
             title="صندوق یا حسابی ثبت نشده است"
             description="برای شروع، از «تنظیمات ← صندوق و بانک‌ها» صندوق یا حساب بانکی اضافه کنید."
           />
@@ -268,7 +269,7 @@ export function CashFlowPage() {
           </div>
           {movements !== null && movements.rows.length === 0 ? (
             <EmptyState
-              icon="🔄"
+              icon={ArrowsClockwiseIcon}
               title="در این بازه گردشی ثبت نشده است"
               description="برای این صندوق یا حساب در بازهٔ انتخابی دریافتی یا پرداختی‌ای ثبت نشده است."
             />

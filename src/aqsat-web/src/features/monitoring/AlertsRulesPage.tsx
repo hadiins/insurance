@@ -5,6 +5,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { Field } from "../../components/form";
 import { AlertList } from "./MonitoringDashboardPage";
+import { BellIcon, CheckIcon, ClipboardTextIcon, MinusIcon, WarningIcon } from "@phosphor-icons/react";
 import {
   ALERT_COMPARATOR_LABELS,
   ALERT_METRIC_LABELS,
@@ -167,7 +168,7 @@ export function AlertsRulesPage() {
         <h2 className="text-[14px] font-bold text-(--ice)">هشدارهای فعال و اخیر</h2>
         {error && !alerts ? (
           <EmptyState
-            icon="⚠️"
+            icon={WarningIcon}
             title="بارگذاری هشدارها ناموفق بود"
             description={error}
             action={{ label: "تلاش دوباره", onClick: load }}
@@ -176,7 +177,7 @@ export function AlertsRulesPage() {
           <div className="grid h-32 place-items-center text-(--ice-3)">در حال بارگذاری…</div>
         ) : alerts.length === 0 ? (
           <EmptyState
-            icon="🔔"
+            icon={BellIcon}
             title="هشداری ثبت نشده است"
             description="وقتی یکی از قوانین فعال شود، اینجا دیده می‌شود."
           />
@@ -189,7 +190,7 @@ export function AlertsRulesPage() {
         <h2 className="text-[14px] font-bold text-(--ice)">قوانین هشدار</h2>
         {error && !rules ? (
           <EmptyState
-            icon="⚠️"
+            icon={WarningIcon}
             title="بارگذاری قوانین ناموفق بود"
             description={error}
             action={{ label: "تلاش دوباره", onClick: load }}
@@ -198,7 +199,7 @@ export function AlertsRulesPage() {
           <div className="grid h-32 place-items-center text-(--ice-3)">در حال بارگذاری…</div>
         ) : rules.length === 0 ? (
           <EmptyState
-            icon="📋"
+            icon={ClipboardTextIcon}
             title="قانونی تعریف نشده است"
             description="قوانین پیش‌فرض هنگام راه‌اندازی ثبت می‌شوند؛ می‌توانید قانون دلخواه بسازید."
             action={{ label: "قانون جدید", onClick: startCreate }}
@@ -228,7 +229,13 @@ export function AlertsRulesPage() {
                   <Td className={rule.severity === "Critical" ? "font-bold text-(--ember)" : "text-(--ice-2)"}>
                     {rule.severity === "Critical" ? "بحرانی" : rule.severity === "Warning" ? "هشدار" : "اطلاع"}
                   </Td>
-                  <Td>{rule.smsNotify ? "✅" : "—"}</Td>
+                  <Td>
+                    {rule.smsNotify ? (
+                      <CheckIcon size={14} weight="bold" className="text-(--moss)" />
+                    ) : (
+                      <MinusIcon size={14} className="text-(--ice-3)" />
+                    )}
+                  </Td>
                   <Td>
                     <button
                       type="button"

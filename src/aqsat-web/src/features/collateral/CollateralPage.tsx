@@ -12,6 +12,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EmptyState } from "../../components/EmptyState";
 import { FILTER_SELECT, INPUT_INLINE_SM } from "../../components/form";
+import { ReceiptIcon } from "@phosphor-icons/react";
 
 interface CollateralFilterPayload {
   type?: string;
@@ -278,7 +279,7 @@ export function CollateralPage() {
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : items.length === 0 ? (
         <EmptyState
-          icon="🧾"
+          icon={ReceiptIcon}
           title="موردی یافت نشد"
           description={
             typeFilter || statusFilter || upcomingOnly

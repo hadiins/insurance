@@ -7,6 +7,7 @@ import { MoneyInput } from "../../components/MoneyInput";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { RecordPaymentDialog } from "../today/RecordPaymentDialog";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 
 interface PolicyListItemDto {
   id: string;
@@ -143,7 +144,7 @@ export function RecordReceiptPage() {
         {results &&
           (results.length === 0 ? (
             <EmptyState
-              icon="🔍"
+              icon={MagnifyingGlassIcon}
               title="نتیجه‌ای یافت نشد"
               description="هیچ بیمه‌نامه‌ای با این عبارت مطابقت ندارد. شمارهٔ بیمه‌نامه یا نام دیگری را جستجو کنید."
             />

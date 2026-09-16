@@ -9,6 +9,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { FILTER_SELECT } from "../../components/form";
+import { FileTextIcon } from "@phosphor-icons/react";
 
 interface PolicyListFilterPayload {
   status?: string;
@@ -192,7 +193,7 @@ export function PoliciesListPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(items.length)} بیمه‌نامه</div>
           {items.length === 0 ? (
             <EmptyState
-              icon="📄"
+              icon={FileTextIcon}
               title="بیمه‌نامه‌ای یافت نشد"
               description={
                 search || status || installmentFilter

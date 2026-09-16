@@ -4,6 +4,7 @@ import { fa } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { TrayIcon } from "@phosphor-icons/react";
 
 interface ReminderLogDto {
   id: string;
@@ -50,7 +51,7 @@ export function SmsOutboxPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(log.length)} پیامک</div>
           {log.length === 0 ? (
             <EmptyState
-              icon="📭"
+              icon={TrayIcon}
               title="هنوز پیامکی ارسال نشده."
               description="پس از ارسال نخستین یادآوری، گزارش آن در این‌جا نمایش داده می‌شود."
             />

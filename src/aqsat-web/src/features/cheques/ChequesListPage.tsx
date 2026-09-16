@@ -9,6 +9,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EmptyState } from "../../components/EmptyState";
 import { FILTER_SELECT } from "../../components/form";
+import { ReceiptIcon } from "@phosphor-icons/react";
 
 interface ChequesFilterPayload {
   status?: string;
@@ -164,7 +165,7 @@ export function ChequesListPage() {
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : visible.length === 0 ? (
         <EmptyState
-          icon="🧾"
+          icon={ReceiptIcon}
           title="چکی یافت نشد"
           description={
             hasActiveFilters

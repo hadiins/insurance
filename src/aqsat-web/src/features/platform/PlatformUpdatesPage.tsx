@@ -4,6 +4,7 @@ import { api, ApiError, getToken } from "../../lib/api";
 import { fa } from "../../lib/persian";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
+import { ArrowsClockwiseIcon, ClockIcon, PackageIcon, RecordIcon, WarningIcon, XCircleIcon } from "@phosphor-icons/react";
 
 interface PlatformStatusDto {
   currentVersion: string;
@@ -210,10 +211,13 @@ export function PlatformUpdatesPage() {
 
       {status && (
         <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">نسخهٔ فعلی</div>
+          <div className="mb-1 text-[10.5px] text-(--ice-3)">نسخهٔ فعلی</div>
           <div className="text-[20px] font-extrabold text-(--ice)">{status.currentVersion}</div>
           {status.maintenanceModeActive && (
-            <div className="mt-2 text-[12.5px] font-semibold text-(--amber)">🔵 سامانه در حال به‌روزرسانی است</div>
+            <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-(--amber)">
+              <RecordIcon size={13} weight="fill" className="shrink-0" />
+              سامانه در حال به‌روزرسانی است
+            </div>
           )}
         </div>
       )}
@@ -229,16 +233,25 @@ export function PlatformUpdatesPage() {
           <div className="text-[12.5px] text-(--ice-3)">
             مرحلهٔ فعلی: {STAGE_LABEL[displayedStage ?? ""] ?? displayedStage}
           </div>
-          <div className="mt-3 text-[11.5px] text-(--ice-3)">⚠️ بستن این صفحه به‌روزرسانی را متوقف نمی‌کند</div>
+          <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-(--ice-3)">
+            <WarningIcon size={13} className="shrink-0 text-(--amber)" />
+            بستن این صفحه به‌روزرسانی را متوقف نمی‌کند
+          </div>
         </div>
       )}
 
       {displayedRun && (displayedRun.status === "Failed" || displayedRun.status === "RolledBack") && (
         <div className="mb-4.5 rounded-(--r-lg) border border-(--ember)/30 bg-(--ember)/8 p-5">
-          <div className="mb-1 text-[14px] font-bold text-(--ember)">❌ به‌روزرسانی ناموفق بود</div>
+          <div className="mb-1 flex items-center gap-1.5 text-[14px] font-bold text-(--ember)">
+            <XCircleIcon size={17} weight="fill" className="shrink-0" />
+            به‌روزرسانی ناموفق بود
+          </div>
           <div className="mb-2 text-[12.5px] text-(--ice-2)">{displayedRun.errorMessage}</div>
           {displayedRun.status === "RolledBack" && (
-            <div className="mb-3 text-[12.5px] text-(--mint)">🔄 بازگشت خودکار انجام شد — نسخهٔ {displayedRun.fromVersion} فعال است</div>
+            <div className="mb-3 flex items-center gap-1.5 text-[12.5px] text-(--mint)">
+              <ArrowsClockwiseIcon size={14} weight="bold" className="shrink-0" />
+              بازگشت خودکار انجام شد — نسخهٔ {displayedRun.fromVersion} فعال است
+            </div>
           )}
           <button
             type="button"
@@ -256,7 +269,7 @@ export function PlatformUpdatesPage() {
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : packages.length === 0 ? (
           <EmptyState
-            icon="📦"
+            icon={PackageIcon}
             title="نسخهٔ جدیدی موجود نیست"
             description="به‌روزترین نسخهٔ منتشرشده در حال حاضر روی سامانه در حال اجراست."
           />
@@ -378,7 +391,7 @@ export function PlatformUpdatesPage() {
           <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
         ) : history.length === 0 ? (
           <EmptyState
-            icon="🕘"
+            icon={ClockIcon}
             title="هیچ به‌روزرسانی‌ای ثبت نشده"
             description="هنوز به‌روزرسانی‌ای روی این سامانه اجرا نشده است."
           />

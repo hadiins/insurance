@@ -9,6 +9,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { EmptyState } from "../../components/EmptyState";
 import { INPUT_INLINE_SM } from "../../components/form";
+import { AlarmIcon } from "@phosphor-icons/react";
 
 interface InsuranceLineDto {
   id: string;
@@ -230,7 +231,7 @@ export function RenewalWatchesPage() {
         <div className="text-[12.5px] text-(--ice-3)">در حال بارگذاری…</div>
       ) : watches.length === 0 ? (
         <EmptyState
-          icon="⏰"
+          icon={AlarmIcon}
           title="موردی یافت نشد"
           description={
             statusFilter

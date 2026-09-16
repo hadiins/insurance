@@ -7,6 +7,7 @@ import { Table, Td, Th, Tr } from "../../components/Table";
 import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
 import { useAssessCustomer, useCreditLimit, useCustomerRisk, useRiskHistory, useSetCreditLimit } from "./riskApi";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES, type RiskAssessmentDto } from "./riskTypes";
+import { ChartBarIcon, ClockIcon } from "@phosphor-icons/react";
 
 /** The whole «اعتبار و ریسک» view of one customer (docs Phase 2A §7/§25/§26) — used both by the
  * customer file's tab and the standalone assessment page. Loading / error / empty states are all
@@ -45,7 +46,7 @@ export function CustomerRiskPanel({ customerId }: { customerId: string }) {
 
       {!data.hasAssessment ? (
         <EmptyState
-          icon="📊"
+          icon={ChartBarIcon}
           title={data.insufficientData ? "اطلاعات کافی برای ارزیابی این مشتری وجود ندارد." : "هنوز ارزیابی اعتباری انجام نشده."}
           description={
             data.insufficientData
@@ -86,7 +87,7 @@ export function CustomerRiskPanel({ customerId }: { customerId: string }) {
         )}
         {history.data &&
           (history.data.length === 0 ? (
-            <EmptyState icon="🕓" title="ارزیابی‌ای ثبت نشده." description="پس از نخستین ارزیابی، سابقهٔ آن اینجا نمایش داده میشود." />
+            <EmptyState icon={ClockIcon} title="ارزیابی‌ای ثبت نشده." description="پس از نخستین ارزیابی، سابقهٔ آن اینجا نمایش داده میشود." />
           ) : (
             <Table>
               <thead>

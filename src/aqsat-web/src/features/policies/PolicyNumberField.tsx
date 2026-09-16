@@ -1,3 +1,4 @@
+import { CheckCircleIcon } from "@phosphor-icons/react";
 import { fa } from "../../lib/persian";
 import { toJalaliDisplay } from "../../lib/jalali";
 
@@ -115,8 +116,9 @@ export function PolicyNumberField({
                     </div>
                   )}
                   {composedNumber && (
-                    <div className="mt-2 text-[12.5px] text-(--mint)">
-                      ✅ <span className="tabular-nums" dir="ltr">{composedNumber}</span>
+                    <div className="mt-2 flex items-center gap-1.5 text-[12.5px] text-(--mint)">
+                      <CheckCircleIcon size={14} className="shrink-0" />
+                      <span className="tabular-nums" dir="ltr">{composedNumber}</span>
                     </div>
                   )}
                 </>

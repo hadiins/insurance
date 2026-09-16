@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { CheckCircleIcon } from "@phosphor-icons/react";
 
 interface MissingSerialsReportDto {
   year: number;
@@ -118,7 +119,10 @@ export function MissingSerialsPage() {
                 </span>
               </div>
               {result.missingCount === 0 ? (
-                <div className="text-[13.5px] text-(--mint)">✅ هیچ شماره‌ای جا نیفتاده است.</div>
+                <div className="flex items-center gap-1.5 text-[13.5px] text-(--mint)">
+                  <CheckCircleIcon size={15} weight="fill" className="shrink-0" />
+                  هیچ شماره‌ای جا نیفتاده است.
+                </div>
               ) : (
                 <div className="grid grid-cols-6 gap-2 tabular-nums" dir="ltr">
                   {result.missing.map((s) => (

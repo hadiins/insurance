@@ -5,6 +5,7 @@ import { fa } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { useMarkWarningRead, useRiskWarnings } from "./riskApi";
+import { BellIcon, WarningIcon } from "@phosphor-icons/react";
 
 /** «هشدارها» (docs Phase 2A §19) — the early-warning feed: level escalation, score drops,
  * near-limit debt, rapid debt growth, new bounced cheques. Messages were composed at write time
@@ -59,7 +60,7 @@ export function RiskWarningsPage() {
           <div className="mb-2 text-[11.5px] text-(--ice-3)">{fa(warnings.data.length)} هشدار</div>
           {warnings.data.length === 0 ? (
             <EmptyState
-              icon="🔔"
+              icon={BellIcon}
               title={unreadOnly ? "هشدار خوانده‌نشده‌ای نیست." : "هشداری ثبت نشده."}
               description="هشدارها هنگام ارزیابی مجدد مشتریان ساخته می‌شوند — هر تغییر مهم در وضعیت اعتباری اینجا گزارش می‌شود."
             />
@@ -72,7 +73,7 @@ export function RiskWarningsPage() {
                     w.isRead ? "opacity-65" : ""
                   }`}
                 >
-                  <span className="mt-0.5 text-[14px]">⚠</span>
+                  <WarningIcon size={16} weight="fill" className="mt-0.5 shrink-0 text-(--amber)" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-(--amber)/40 bg-(--amber)/10 px-2 py-0.5 text-[11px] font-semibold text-(--amber)">

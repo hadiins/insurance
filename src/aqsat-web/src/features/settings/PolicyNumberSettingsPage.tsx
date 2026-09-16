@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
+import { HashIcon } from "@phosphor-icons/react";
 
 interface InsuranceLineDto {
   id: string;
@@ -137,7 +138,7 @@ export function PolicyNumberSettingsPage() {
       <div className="mb-4.5 overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)">
         {codes !== null && codes.length === 0 ? (
           <EmptyState
-            icon="🔢"
+            icon={HashIcon}
             title="هنوز کدی ثبت نشده است"
             description="کد هر رشتهٔ بیمه‌ای بخشی از شمارهٔ بیمه‌نامه را می‌سازد؛ اولین کد را از فرم پایین ثبت کنید."
           />

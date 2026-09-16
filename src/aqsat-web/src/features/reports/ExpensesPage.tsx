@@ -8,6 +8,7 @@ import { MoneyInput } from "../../components/MoneyInput";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { INPUT_CLASS } from "../../components/form";
+import { ReceiptIcon } from "@phosphor-icons/react";
 
 interface ExpenseCategoryDto {
   id: string;
@@ -302,7 +303,7 @@ export function ExpensesPage() {
           {report.byCategory.length === 0 ? (
             <div className="mb-4.5">
               <EmptyState
-                icon="🧾"
+                icon={ReceiptIcon}
                 title="هزینه‌ای در این بازه نیست"
                 description="در بازهٔ انتخابی هزینه‌ای ثبت نشده است؛ بازهٔ زمانی را تغییر دهید."
               />
@@ -326,7 +327,7 @@ export function ExpensesPage() {
 
           {report.rows.length === 0 ? (
             <EmptyState
-              icon="🧾"
+              icon={ReceiptIcon}
               title="هزینه‌ای در این بازه نیست"
               description="در بازهٔ انتخابی هزینه‌ای ثبت نشده است؛ بازهٔ زمانی را تغییر دهید."
             />
