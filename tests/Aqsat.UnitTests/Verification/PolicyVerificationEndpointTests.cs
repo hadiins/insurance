@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -328,7 +329,7 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         // 8. A manual re-receipt of the same down payment on the same day is idempotent — no second row.
         var manual = await h.Client.PostAsJsonAsync(
             $"/api/policies/{h.PolicyId}/receive-down-payment",
-            new ReceiveDownPaymentRequest(DateOnly.FromDateTime(DateTime.Now), null));
+            new ReceiveDownPaymentRequest(IranClock.Today(), null));
         manual.EnsureSuccessStatusCode();
         AgencyContext.Current = h.Fixture.AgencyAId;
         Assert.Equal(1, await verify.Payments.AsNoTracking().CountAsync(p => p.InstallmentIdHint == h.PolicyId));
@@ -619,9 +620,6 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         public Task<bool?> IsHolidayAsync(DateOnly date, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult<bool?>(null);
 
-        public Task<ShahkarResult?> ShahkarLiteAsync(string nationalId, string mobile, Guid agencyId, CancellationToken ct = default) =>
-            Task.FromResult<ShahkarResult?>(null);
-
         public Task<string?> ChequeColorAsync(string sayadId, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult<string?>(null);
 
@@ -629,9 +627,6 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
             Task.FromResult(true);
 
         public Task<bool> SmsOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default) =>
-            Task.FromResult(true);
-
-        public Task<bool> CallOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult(true);
     }
 }

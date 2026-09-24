@@ -56,9 +56,13 @@ public static class DependencyInjection
         services.AddSingleton<EfCommandDurationInterceptor>();
         services.AddScoped<SecurityEventWriter>();
 
-        // docs/TASKS.md Task 14 — real api.ir-backed IHolidayChecker, replacing the Friday-only stub
-        // (which ApiIrHolidayChecker still falls back to). Scoped, not singleton, because it now
-        // depends on AppDbContext (for cost logging) via IApiIrClient.
+        // Owner decision 2026-09-23 (docs/PHASE-1-SPEC.md §6): the paid api.ir holiday lookup
+        // (IsHoliday, 150 Toman per distinct date) is NOT called — the registered IHolidayChecker is
+        // the Friday-only WeekendOnlyHolidayChecker below, so a deadline shifts on Fridays only and
+        // no IsHoliday call is ever billed. The api.ir path is parked, not deleted:
+        // IApiIrClient.IsHolidayAsync is still implemented and tested, so switching the paid lookup
+        // back on means restoring the thin ApiIrHolidayChecker adapter and this registration line —
+        // no schema change, no data migration.
         services.AddMemoryCache();
         services.Configure<ApiIrOptions>(configuration.GetSection(ApiIrOptions.SectionName));
         services.AddHttpClient<IApiIrClient, ApiIrClient>((sp, http) =>
@@ -93,7 +97,7 @@ public static class DependencyInjection
             var baseUrl = sp.GetRequiredService<IConfiguration>()["Updater:BaseUrl"] ?? "http://aqsat-updater:8081";
             http.BaseAddress = new Uri(baseUrl);
         });
-        services.AddScoped<IHolidayChecker, ApiIrHolidayChecker>();
+        services.AddScoped<IHolidayChecker, Aqsat.Infrastructure.Schedule.WeekendOnlyHolidayChecker>();
 
         services.AddScoped<ILockService, RecordLockService>();
         services.AddSingleton<PresenceConnectionRegistry>();
@@ -112,10 +116,42 @@ public static class DependencyInjection
         services.AddScoped<Monitoring.AlertEvaluationService>();
         services.AddScoped<Monitoring.MetricsSamplerJob>();
         services.AddScoped<Aqsat.Infrastructure.Payments.PaymentReversalService>();
-        // The portal's gateway abstraction — Mock is the only implementation for now; ZarinPal is a
-        // separate future task (no new packages without asking). Registered open: the service picks
-        // by Provider, so later implementations just add themselves here.
-        services.AddScoped<Aqsat.Application.Payments.IPaymentGateway, Aqsat.Infrastructure.Payments.MockPaymentGateway>();
+        // The portal's gateway abstraction, registered open: the services inject
+        // IEnumerable<IPaymentGateway> and pick by Provider, so wiring a PSP is one block here.
+        //
+        // Mock stays first and needs no credential — a fresh install must still complete the whole
+        // portal flow before any PSP account exists. The two real PSPs are typed HttpClients
+        // (pooled handlers + standard resilience, same pattern as ApiIrClient above) whose
+        // BaseAddress comes from configuration, which is what lets زرينپال be pointed at its
+        // sandbox host without a code change. Each is then re-registered behind the interface so
+        // all three remain discoverable through the single IEnumerable the services already take.
+        services.AddScoped<Aqsat.Infrastructure.Payments.GatewayPaymentCoordinator>();
+        services.AddScoped<Aqsat.Application.Payments.IPaymentGateway,
+            Aqsat.Infrastructure.Payments.MockPaymentGateway>();
+
+        services.Configure<Aqsat.Infrastructure.Payments.GooyaPayOptions>(
+            configuration.GetSection(Aqsat.Infrastructure.Payments.GooyaPayOptions.SectionName));
+        services.AddHttpClient<Aqsat.Infrastructure.Payments.GooyaPayPaymentGateway>((sp, http) =>
+            {
+                var gatewayOptions = sp.GetRequiredService<IOptions<Aqsat.Infrastructure.Payments.GooyaPayOptions>>().Value;
+                http.BaseAddress = new Uri(gatewayOptions.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(gatewayOptions.TimeoutSeconds);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<Aqsat.Application.Payments.IPaymentGateway>(
+            sp => sp.GetRequiredService<Aqsat.Infrastructure.Payments.GooyaPayPaymentGateway>());
+
+        services.Configure<Aqsat.Infrastructure.Payments.ZarinPalOptions>(
+            configuration.GetSection(Aqsat.Infrastructure.Payments.ZarinPalOptions.SectionName));
+        services.AddHttpClient<Aqsat.Infrastructure.Payments.ZarinPalPaymentGateway>((sp, http) =>
+            {
+                var gatewayOptions = sp.GetRequiredService<IOptions<Aqsat.Infrastructure.Payments.ZarinPalOptions>>().Value;
+                http.BaseAddress = new Uri(gatewayOptions.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(gatewayOptions.TimeoutSeconds);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<Aqsat.Application.Payments.IPaymentGateway>(
+            sp => sp.GetRequiredService<Aqsat.Infrastructure.Payments.ZarinPalPaymentGateway>());
         services.AddScoped<Aqsat.Infrastructure.Portal.PortalInvitationService>();
         services.AddScoped<Aqsat.Infrastructure.Portal.PolicyVerificationService>();
         services.AddScoped<Aqsat.Infrastructure.Portal.InstallmentPaymentLinkService>();

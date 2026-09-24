@@ -493,9 +493,6 @@ public class PortalInvitationEndpointTests : IClassFixture<WebApplicationFactory
         public Task<bool?> IsHolidayAsync(DateOnly date, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult<bool?>(null);
 
-        public Task<Aqsat.Application.ApiIr.ShahkarResult?> ShahkarLiteAsync(string nationalId, string mobile, Guid agencyId, CancellationToken ct = default) =>
-            Task.FromResult<Aqsat.Application.ApiIr.ShahkarResult?>(null);
-
         public Task<string?> ChequeColorAsync(string sayadId, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult<string?>(null);
 
@@ -503,9 +500,6 @@ public class PortalInvitationEndpointTests : IClassFixture<WebApplicationFactory
             Task.FromResult(true);
 
         public Task<bool> SmsOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default) =>
-            Task.FromResult(true);
-
-        public Task<bool> CallOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default) =>
             Task.FromResult(true);
     }
 }

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -84,7 +85,7 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
         context.Organizations.Add(org);
         await context.SaveChangesAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         for (var day = 0; day < 3; day++)
         {
             context.AgencyStatsDaily.Add(new AgencyStatsDaily
@@ -118,8 +119,13 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
             new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SendSms", Success = true, CostToman = 115m, CalledAt = iranNow },
             new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SendSms", Success = true, CostToman = 115m, CalledAt = iranNow },
             new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "SmsOTP", Success = true, CostToman = 115m, CalledAt = iranNow },
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ShahkarLite", Success = true, CostToman = 550m, CalledAt = iranNow },
-            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ChequeColor", Success = true, CostToman = 1100m, CalledAt = iranNow });
+            // One paid credit inquiry buys the whole report — ChequeColor plus the report pair
+            // (UnpaidCheque, ActiveLoans). All three belong in the inquiry bucket, otherwise the
+            // agency's most expensive calls (1,100 + 5,700 + 6,100) go unaccounted, which is the
+            // regression this seeding pins.
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ChequeColor", Success = true, CostToman = 1100m, CalledAt = iranNow },
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "UnpaidCheque", Success = true, CostToman = 5700m, CalledAt = iranNow },
+            new ApiIrCallLog { AgencyId = agencyA.AgencyId, Service = "ActiveLoans", Success = true, CostToman = 6100m, CalledAt = iranNow });
         context.CustomerPortalInvitations.Add(new CustomerPortalInvitation
         {
             AgencyId = agencyA.AgencyId,
@@ -168,6 +174,17 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
             Status = PolicyStatus.Active,
         });
         await context.SaveChangesAsync();
+
+        // Pin the fixture itself before exercising the endpoint: the shared test database is
+        // persistent, but this agency is freshly keyed, so any extra inquiry row here would point
+        // to the test setup rather than the reporting query.
+        var seededInquiryCalls = await context.ApiIrCallLogs.AsNoTracking()
+            .Where(l => l.AgencyId == agencyA.AgencyId)
+            .Where(l => l.Service == "ChequeColor" || l.Service == "UnpaidCheque" || l.Service == "ActiveLoans")
+            .ToListAsync();
+        Assert.Equal(3, seededInquiryCalls.Count);
+        Assert.Equal(12_900m, seededInquiryCalls.Sum(l => l.CostToman));
+
         return (agencyA.AgencyId, agencyA.CustomerId);
     }
 
@@ -240,8 +257,8 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
         Assert.Equal(345m, profile.SmsCostToman);
         Assert.Equal(1, profile.InquiryPaymentsTotal);
         Assert.Equal(25_000m, profile.InquiryRevenueToman);
-        Assert.Equal(2, profile.InquiryCallsTotal);
-        Assert.Equal(1650m, profile.InquiryCallCostToman);
+        Assert.Equal(3, profile.InquiryCallsTotal);
+        Assert.Equal(12900m, profile.InquiryCallCostToman);
         Assert.Equal(12, profile.MonthlyTrend.Count);
         // The current Jalali month bucket must carry today's activity.
         var current = profile.MonthlyTrend[^1];
@@ -296,7 +313,7 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
         await job.RunAsync().WaitAsync(TimeSpan.FromMinutes(5));
 
         await using var verify = TestDbContextFactory.Create();
-        var today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromMinutes(210)).DateTime);
+        var today = IranClock.Today();
         var todayRow = await verify.AgencyStatsDaily.AsNoTracking()
             .SingleOrDefaultAsync(s => s.AgencyId == agencyId && s.StatDate == today);
 
@@ -305,7 +322,7 @@ public class AgencyManagementEndpointTests : IClassFixture<WebApplicationFactory
         Assert.True(todayRow.SmsSentCount >= 3);
         Assert.Equal(1, todayRow.InquiryPaymentsCount);
         Assert.Equal(25_000m, todayRow.InquiryRevenueToman);
-        Assert.Equal(2, todayRow.InquiryCallsCount);
+        Assert.Equal(3, todayRow.InquiryCallsCount);
     }
 
     [Fact]

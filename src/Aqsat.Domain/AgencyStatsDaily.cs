@@ -29,7 +29,7 @@ public class AgencyStatsDaily : SoftDeletableEntity
     public int InquiryPaymentsCount { get; set; }
     public decimal InquiryRevenueToman { get; set; }
 
-    /// <summary>Actual api.ir inquiry executions (ShahkarLite, ChequeColor).</summary>
+    /// <summary>Actual api.ir inquiry executions (ChequeColor, UnpaidCheque, ActiveLoans).</summary>
     public int InquiryCallsCount { get; set; }
     public decimal InquiryCallCostToman { get; set; }
 }

@@ -44,9 +44,10 @@ public static class DueDateCalculator
     }
 
     /// <summary>
-    /// The deadline shifts on a holiday, never the due date itself (§3.1, verbatim). holidayChecker
-    /// is a placeholder (Aqsat.Infrastructure.Schedule.WeekendOnlyHolidayChecker) until Task 12
-    /// wires the real api.ir IsHoliday service — see docs/PHASE-1-SPEC.md §1's "Blocked" table.
+    /// The deadline shifts on a holiday, never the due date itself (§3.1, verbatim). The checker DI
+    /// supplies is Aqsat.Infrastructure.Schedule.WeekendOnlyHolidayChecker — Friday only, because the
+    /// paid api.ir IsHoliday lookup is parked (owner decision 2026-09-23, docs/PHASE-1-SPEC.md §6) —
+    /// so an official holiday falling on a non-Friday does not delay a deadline today.
     /// </summary>
     public static async Task<DateOnly> CalculateSettlementDeadlineAsync(
         DateOnly dueDate, int settlementDeadlineDays, bool shiftOnHoliday, IHolidayChecker holidayChecker, CancellationToken ct = default)

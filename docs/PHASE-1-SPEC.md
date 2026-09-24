@@ -428,12 +428,31 @@ Base `https://s.api.ir` · Bearer · POST/JSON · envelope
 
 | Service | Endpoint | Toman | Cache |
 |---|---|---:|---|
-| ShahkarLite | `/api/sw1/ShahkarLite` | 550 | forever |
 | SendSms | `/api/sw1/SendSms` | 115 | — |
 | SmsOTP | `/api/sw1/SmsOTP` | 115 | — |
-| IsHoliday | `/api/sw1/IsHoliday` | 150 | to midnight |
 | ChequeColor | `/api/sw1/ChequeColor` | 1,100 | 30 days |
-| CallOTP | `/api/sw1/CallOTP` | 95 | — |
+| UnpaidCheque | `/api/sw1/UnpaidCheque` | 5,700 | — |
+| ActiveLoans | `/api/sw1/ActiveLoans` | 6,100 | — |
+
+**`UnpaidCheque` (استعلام تعداد چک برگشتی) and `ActiveLoans` (استعلام تسهیلات فعال بانکی)** are the
+credit-report pair: one paid portal invitation buys both, both land on the same `CreditReport` row
+(`PolicyVerificationService`), and both are counted in the agency's inquiry bucket
+(`AgencyStatsService`) — they are the most expensive calls in the account, so leaving them out of
+that bucket under-reports real spend. Their owner-confirmed tariffs are recorded as constants in
+`ApiIrClient` and shown on the API.ir settings page.
+
+### 6.1 Owner decision 2026-09-23 — services deliberately not called
+
+The account does not carry these, so the product must not generate their traffic:
+
+| Service | Endpoint | Toman | Status |
+|---|---|---:|---|
+| ShahkarLite | `/api/sw1/ShahkarLite` | 550 | **Removed from the codebase** — it had no caller anywhere in the product. |
+| CallOTP | `/api/sw1/CallOTP` | 95 | **Removed from the codebase** — no caller either; one-time codes go out by SMS only. |
+| IsHoliday | `/api/sw1/IsHoliday` | 150 | **Parked, not removed** — `IApiIrClient.IsHolidayAsync` is still implemented and tested, but nothing calls it, so nothing is billed. Consequence to accept: the registered `IHolidayChecker` is `WeekendOnlyHolidayChecker` (Friday only), so a settlement deadline currently shifts on Fridays only and **not** on an official holiday that falls on another weekday. |
+
+Switching the paid holiday lookup back on is the thin adapter plus one registration line in
+`DependencyInjection.cs` — never a schema change.
 
 **Develop against `/api/Sandbox/Echo`.** Paid endpoints require an explicit config flag.
 

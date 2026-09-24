@@ -26,6 +26,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         var handler = new RecordingHandler(HttpStatusCode.OK, """{"echo":true}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: false);
@@ -48,18 +49,19 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         // api.ir's own docs warn success:false can appear alongside populated data — a client that
         // only checks for Data presence would wrongly treat this as success (CLAUDE.md rule 18).
-        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"isMatched":true},"success":false,"code":400,"message":"nope"}""");
+        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"color":"blue"},"success":false,"code":400,"message":"nope"}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: true);
 
-        var result = await client.ShahkarLiteAsync("0072345453", "09121234567", agencyA.AgencyId);
+        var result = await client.ChequeColorAsync("1234567890123456789012345", agencyA.AgencyId);
 
         Assert.Null(result);
-        Assert.Equal("/api/sw1/ShahkarLite", handler.LastRequestPath);
+        Assert.Equal("/api/sw1/ChequeColor", handler.LastRequestPath);
 
-        var log = await context.ApiIrCallLogs.AsNoTracking().SingleAsync(l => l.Service == "ShahkarLite");
+        var log = await context.ApiIrCallLogs.AsNoTracking().SingleAsync(l => l.Service == "ChequeColor");
         Assert.False(log.Success);
         Assert.False(log.WasSandboxed);
     }
@@ -71,18 +73,51 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
-        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"isMatched":true},"success":true,"code":200,"message":null}""");
+        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"color":"blue"},"success":true,"code":200,"message":null}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: true);
 
-        var first = await client.ShahkarLiteAsync("0072345453", "09121234567", agencyA.AgencyId);
-        Assert.NotNull(first);
-        Assert.True(first!.Value.Matched);
+        var first = await client.ChequeColorAsync("1234567890123456789012345", agencyA.AgencyId);
+        Assert.Equal("blue", first);
 
         handler.CallCount = 0;
-        var second = await client.ShahkarLiteAsync("0072345453", "09121234567", agencyA.AgencyId);
-        Assert.True(second!.Value.Matched);
-        Assert.Equal(0, handler.CallCount); // cached forever — no second HTTP call.
+        var second = await client.ChequeColorAsync("1234567890123456789012345", agencyA.AgencyId);
+        Assert.Equal("blue", second);
+        Assert.Equal(0, handler.CallCount); // 30-day cache (rule 26) — no second HTTP call.
+    }
+
+    [Fact]
+    public async Task IsHoliday_is_parked_yet_still_parses_and_caches_to_midnight()
+    {
+        // The paid holiday lookup has no caller any more (owner decision 2026-09-23, see
+        // docs/PHASE-1-SPEC.md §6) — the registered IHolidayChecker is the Friday-only weekend
+        // checker. This test is what keeps the "still implemented, still tested" claim honest: the
+        // method still routes, still reads the envelope's data.isHoliday, and still caches per date,
+        // so switching it back on is the thin adapter plus one DI line, not a rewrite.
+        await using var context = TestDbContextFactory.Create();
+        var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
+        AgencyContext.Current = agencyA.AgencyId;
+        await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
+
+        // Two days out, not "today": the cache entry expires at the queried date's midnight, and a
+        // past date would be expired the instant it is written (the second call would go back out).
+        var date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
+        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"isHoliday":true},"success":true,"code":200,"message":null}""");
+        var client = BuildClient(context, handler, allowPaidEndpoints: true);
+
+        var first = await client.IsHolidayAsync(date, agencyA.AgencyId);
+        Assert.True(first);
+        Assert.Equal("/api/sw1/IsHoliday", handler.LastRequestPath);
+
+        handler.CallCount = 0;
+        var second = await client.IsHolidayAsync(date, agencyA.AgencyId);
+        Assert.True(second);
+        Assert.Equal(0, handler.CallCount); // cached to midnight — no second HTTP call.
+
+        var log = await context.ApiIrCallLogs.AsNoTracking().SingleAsync(l => l.Service == "IsHoliday");
+        Assert.Equal(150m, log.CostToman); // would-be cost, logged even while nothing calls it in prod.
     }
 
     [Fact]
@@ -92,6 +127,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":731243,"success":true,"code":200,"message":null}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: true);
@@ -117,6 +153,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":731243,"success":true,"code":200,"message":null}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: true);
@@ -134,17 +171,18 @@ public class ApiIrClientTests
         AgencyContext.Current = agencyA.AgencyId;
 
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
         context.ApiIrSettings.Add(new ApiIrSettings { ApiKey = "row-key", AllowPaidEndpoints = true });
         await context.SaveChangesAsync();
 
         // Config says sandbox + test-key; the DB row says real endpoint + row-key — the row wins.
-        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"isMatched":true},"success":true,"code":200,"message":null}""");
+        var handler = new RecordingHandler(HttpStatusCode.OK, """{"data":{"color":"blue"},"success":true,"code":200,"message":null}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: false);
 
-        var result = await client.ShahkarLiteAsync("0072345453", "09121234567", agencyA.AgencyId);
+        var result = await client.ChequeColorAsync("1234567890123456789012345", agencyA.AgencyId);
 
-        Assert.True(result!.Value.Matched);
-        Assert.Equal("/api/sw1/ShahkarLite", handler.LastRequestPath);
+        Assert.Equal("blue", result);
+        Assert.Equal("/api/sw1/ChequeColor", handler.LastRequestPath);
         Assert.Equal("Bearer row-key", handler.LastAuthHeader);
     }
 
@@ -156,6 +194,7 @@ public class ApiIrClientTests
         AgencyContext.Current = agencyA.AgencyId;
 
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
         context.ApiIrSettings.Add(new ApiIrSettings { ApiKey = "", AllowPaidEndpoints = false });
         await context.SaveChangesAsync();
 
@@ -175,6 +214,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         var handler = new RecordingHandler(HttpStatusCode.OK, """{"echo":true}""");
         var client = BuildClient(context, handler, allowPaidEndpoints: false);
@@ -204,8 +244,9 @@ public class ApiIrClientTests
         {
             Assert.True(l.WasSandboxed);
             Assert.True(l.Success);
-            Assert.Equal(1_100m, l.CostToman);
         });
+        Assert.Equal(5_700m, logs.Single(l => l.Service == "UnpaidCheque").CostToman);
+        Assert.Equal(6_100m, logs.Single(l => l.Service == "ActiveLoans").CostToman);
     }
 
     [Fact]
@@ -215,6 +256,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         // rule 18 — api.ir pairs success:false with populated data; data presence is not success.
         var handler = new RecordingHandler(
@@ -238,6 +280,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         // The OpenAPI spec types the loan amounts integer|string — api.ir actually sends strings.
         var handler = new RecordingHandler(
@@ -262,6 +305,7 @@ public class ApiIrClientTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
         await ClearApiIrSettingsAsync(context);
+        await ClearApiIrCallLogsAsync(context);
 
         // api.ir answers info:null for a person with no active facilities — the count is still real
         // and must not be flattened into "sandboxed/no answer".
@@ -281,6 +325,11 @@ public class ApiIrClientTests
     // sandbox/real routing. Each test drops the table's rows before seeding its own state.
     private static async Task ClearApiIrSettingsAsync(AppDbContext context) =>
         await context.Database.ExecuteSqlRawAsync("DELETE FROM ApiIrSettings");
+
+    // Call logs accumulate across tests in this class (the assembly-wide cleanup only runs once at
+    // load), so asserting on them with SingleAsync needs a per-test wipe to stay order-independent.
+    private static async Task ClearApiIrCallLogsAsync(AppDbContext context) =>
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM ApiIrCallLogs");
 
     private static ApiIrClient BuildClient(AppDbContext context, HttpMessageHandler handler, bool allowPaidEndpoints)
     {

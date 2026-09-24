@@ -8,13 +8,18 @@ interface ApiIrSettingsDto {
   updatedAt: string | null;
 }
 
-/** The Phase-1 services and their per-call prices (تومان) — mirrors ApiIrClient's cost constants. */
-const ENDPOINTS: Array<{ name: string; cost: string; note: string }> = [
-  { name: "ShahkarLite", cost: "۵۵۰", note: "تطبیق کد ملی و شمارهٔ همراه" },
+/** The api.ir services this installation actually calls, with their per-call prices (تومان) —
+ * mirrors ApiIrClient's cost constants. ShahkarLite and CallOTP were removed outright by owner
+ * decision 2026-09-23 (no caller anywhere in the product, so the account was never billed for them).
+ * IsHoliday is still implemented but deliberately not called, so it is listed as inactive. The two
+ * credit inquiries are the pair that one paid portal invitation buys. */
+const ENDPOINTS: Array<{ name: string; cost: string; note: string; active?: boolean }> = [
   { name: "SendSms", cost: "۱۱۵", note: "ارسال پیامک (یادآوری اقساط، اطلاعرسانی)" },
-  { name: "SmsOTP / CallOTP", cost: "۱۱۵ / ۹۵", note: "کد یکبارمصرف پیامکی و تماسی" },
-  { name: "IsHoliday", cost: "۱۵۰", note: "تشخیص تعطیلی رسمی برای سررسید اقساط" },
+  { name: "SmsOTP", cost: "۱۱۵", note: "کد یکبارمصرف پیامکی" },
   { name: "ChequeColor", cost: "۱٬۱۰۰", note: "وضعیت چک صیادی" },
+  { name: "UnpaidCheque", cost: "۵٬۷۰۰", note: "استعلام تعداد چک برگشتی (پرو)" },
+  { name: "ActiveLoans", cost: "۶٬۱۰۰", note: "استعلام تسهیلات فعال بانکی" },
+  { name: "IsHoliday", cost: "۱۵۰", note: "تشخیص تعطیلی رسمی — در این نسخه فراخوانی نمیشود", active: false },
 ];
 
 export function ApiIrSettingsPage() {
@@ -140,9 +145,22 @@ export function ApiIrSettingsPage() {
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">سرویسها و تعرفه هر تماس (تومان)</div>
         <div className="space-y-2">
           {ENDPOINTS.map((endpoint) => (
-            <div key={endpoint.name} className="flex items-center justify-between rounded-(--r) bg-(--fld) px-3 py-2">
+            <div
+              key={endpoint.name}
+              className={
+                "flex items-center justify-between rounded-(--r) bg-(--fld) px-3 py-2" +
+                (endpoint.active === false ? " opacity-50" : "")
+              }
+            >
               <div>
-                <div className="text-[12.5px] font-semibold text-(--ice)">{endpoint.name}</div>
+                <div className="text-[12.5px] font-semibold text-(--ice)">
+                  {endpoint.name}
+                  {endpoint.active === false && (
+                    <span className="ms-2 rounded-(--r-sharp) bg-(--edge-2) px-1.5 py-0.5 text-[10.5px] font-normal text-(--ice-3)">
+                      غیرفعال
+                    </span>
+                  )}
+                </div>
                 <div className="text-[11.5px] text-(--ice-3)">{endpoint.note}</div>
               </div>
               <div className="text-[13.5px] font-bold text-(--ice-2)">{endpoint.cost}</div>

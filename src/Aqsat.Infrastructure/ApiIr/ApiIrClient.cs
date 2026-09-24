@@ -21,18 +21,21 @@ namespace Aqsat.Infrastructure.ApiIr;
 public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, IMemoryCache cache, IOptions<ApiIrOptions> options, ILogger<ApiIrClient> logger)
     : IApiIrClient
 {
-    private const decimal ShahkarCost = 550m;
     private const decimal SendSmsCost = 115m;
     private const decimal SmsOtpCost = 115m;
-    private const decimal IsHolidayCost = 150m;
     private const decimal ChequeColorCost = 1_100m;
-    private const decimal CallOtpCost = 95m;
 
-    // api.ir's own price list puts both credit-inquiry services in the same bracket as ChequeColor;
-    // sandboxed calls never charge, so these only matter for the call-log cost accounting once a
-    // real key exists — re-check against the panel before production activation.
-    private const decimal UnpaidChequeCost = 1_100m;
-    private const decimal ActiveLoansCost = 1_100m;
+    // The one capability that is fully implemented and tested yet called by nobody (owner decision
+    // 2026-09-23, docs/PHASE-1-SPEC.md §6): the registered IHolidayChecker is the Friday-only
+    // WeekendOnlyHolidayChecker, so this 150-Toman lookup is never billed. The constant stays so the
+    // call-log accounting is already correct the moment the lookup is switched back on.
+    private const decimal IsHolidayCost = 150m;
+
+    // api.ir owner-confirmed per-call prices (toman), 2026-09-23. These values are recorded in
+    // ApiIrCallLog for every accepted call, including the explicit sandbox-echo acknowledgement,
+    // so agency spend reporting remains complete before paid endpoints are enabled.
+    private const decimal UnpaidChequeCost = 5_700m;
+    private const decimal ActiveLoansCost = 6_100m;
 
     // api.ir's envelope keys are lowerCamelCase; the DTOs here are PascalCase for C# convention.
     private static readonly JsonSerializerOptions EnvelopeJsonOptions = new(JsonSerializerDefaults.Web)
@@ -40,6 +43,10 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
 
+    /// <summary>PARKED — no caller by owner decision (docs/PHASE-1-SPEC.md §6); the registered
+    /// IHolidayChecker is the Friday-only WeekendOnlyHolidayChecker, and the adapter that used to
+    /// call this method is gone. Kept, tested and sandbox-routable so switching the paid lookup back
+    /// on never needs a code change here.</summary>
     public async Task<bool?> IsHolidayAsync(DateOnly date, Guid agencyId, CancellationToken ct = default)
     {
         var cacheKey = $"apiir:isholiday:{date:yyyy-MM-dd}";
@@ -60,27 +67,6 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         var midnight = date.ToDateTime(TimeOnly.MinValue).AddDays(1);
         cache.Set(cacheKey, isHoliday, new DateTimeOffset(midnight, TimeSpan.Zero));
         return isHoliday;
-    }
-
-    public async Task<ShahkarResult?> ShahkarLiteAsync(string nationalId, string mobile, Guid agencyId, CancellationToken ct = default)
-    {
-        var cacheKey = $"apiir:shahkar:{nationalId}:{mobile}";
-        if (cache.TryGetValue(cacheKey, out ShahkarResult cached))
-        {
-            return cached;
-        }
-
-        var (shahkarSuccess, result) = await CallAsync<ShahkarLiteResponse>(
-            "/api/sw1/ShahkarLite", new { mobile, nationalCode = nationalId }, "ShahkarLite", ShahkarCost,
-            isPaidEndpoint: true, agencyId, ct);
-        if (!shahkarSuccess || result is null)
-        {
-            return null;
-        }
-
-        var shahkar = new ShahkarResult(result.IsMatched);
-        cache.Set(cacheKey, shahkar); // forever (rule 26) — no absolute/sliding expiration.
-        return shahkar;
     }
 
     public async Task<string?> ChequeColorAsync(string sayadId, Guid agencyId, CancellationToken ct = default)
@@ -120,13 +106,6 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
         // code; we only deliver it. The endpoint requires `code`, so it is part of the body.
         var (success, _) = await CallAsync<SendResponse>(
             "/api/sw1/SmsOTP", new { mobile, code }, "SmsOTP", SmsOtpCost, isPaidEndpoint: true, agencyId, ct);
-        return success;
-    }
-
-    public async Task<bool> CallOtpAsync(string mobile, Guid agencyId, CancellationToken ct = default)
-    {
-        var (success, _) = await CallAsync<SendResponse>(
-            "/api/sw1/CallOTP", new { mobile }, "CallOTP", CallOtpCost, isPaidEndpoint: true, agencyId, ct);
         return success;
     }
 
@@ -223,6 +202,18 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
                     logger.LogWarning("api.ir {Service} rejected the call: {Message}", service, failureMessage);
                 }
             }
+            else
+            {
+                // A non-2xx previously vanished without a trace: success stayed false while the
+                // reason (401 bad key, 403 service not granted, 429 throttle) lived only in the
+                // response body — today's "accepted but never delivered" OTP hunt hit exactly
+                // this gap. Drain the body (connection reuse) and log a truncated reason.
+                var errorBody = await response.Content.ReadAsStringAsync(ct);
+                logger.LogWarning(
+                    "api.ir {Service} returned non-success status {StatusCode}: {Body}",
+                    service, (int)response.StatusCode,
+                    errorBody.Length > 300 ? errorBody[..300] : errorBody);
+            }
         }
         catch (Exception ex) when (ct.IsCancellationRequested is false)
         {
@@ -233,7 +224,7 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
             success = false;
         }
 
-        dbContext.ApiIrCallLogs.Add(new ApiIrCallLog
+        var logEntry = dbContext.ApiIrCallLogs.Add(new ApiIrCallLog
         {
             AgencyId = agencyId,
             Service = service,
@@ -242,7 +233,21 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
             WasSandboxed = wasSandboxed,
             CalledAt = DateTimeOffset.UtcNow,
         });
-        await dbContext.SaveChangesAsync(ct);
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            // The api.ir call itself already completed; this row is only cost/audit metadata.
+            // A broken log write (RLS policy drift on a rebuilt database — error 33504, transient
+            // DB blip) must never surface as a 500 to the caller: an anonymous OTP request has no
+            // SESSION_CONTEXT AgencyId, so an exempt-but-still-blocked table rejects the insert
+            // AFTER the SMS was actually sent. Detach so the poisoned entry cannot fail a later
+            // SaveChanges in the same scope, and degrade loudly (rule 15: log, never swallow).
+            logEntry.State = EntityState.Detached;
+            logger.LogWarning(ex, "Could not write ApiIrCallLog for {Service} — cost accounting for this call is lost", service);
+        }
 
         return (success, data);
     }
@@ -388,7 +393,6 @@ public sealed class ApiIrClient(HttpClient httpClient, AppDbContext dbContext, I
     }
 
     private sealed record IsHolidayResponse(bool IsHoliday);
-    private sealed record ShahkarLiteResponse(bool IsMatched);
     private sealed record ChequeColorResponse(string? Color);
     private sealed record SendResponse(string? MessageId);
 

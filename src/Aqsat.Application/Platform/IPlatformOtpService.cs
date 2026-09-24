@@ -2,7 +2,7 @@ namespace Aqsat.Application.Platform;
 
 /// <summary>
 /// docs/UPDATE-SYSTEM.md rule 2 — two-factor is mandatory before an update can start, a password
-/// alone is not enough. IApiIrClient's SmsOtpAsync/CallOtpAsync are one-way "we sent something"
+/// alone is not enough. IApiIrClient's SmsOtpAsync is a one-way "we sent something"
 /// calls with no verification counterpart, so this service owns generating and checking the code
 /// itself rather than trusting api.ir to do it — plain SendSmsAsync carries our own generated code.
 /// </summary>

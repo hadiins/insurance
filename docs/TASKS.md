@@ -151,7 +151,8 @@ due date → its settlement deadline shifts, holiday rule reapplied.
 
 ### [x] Task 10 — Settlement countdown ⭐
 
-Query per 3.3 · urgency classification · holiday shift via `IsHoliday` (cached) ·
+Query per 3.3 · urgency classification · holiday shift via `IHolidayChecker` (the registered
+implementation is the Friday-only weekend checker — the paid `IsHoliday` lookup is parked, §6) ·
 **SHORTFALL = owed − collected** as the dominant element on the dashboard · daily Hangfire
 recalculation.
 
@@ -207,7 +208,8 @@ circuit breaker · cost logging · **Sandbox by default, paid endpoints behind a
 
 Then the daily reminder job per 3.7, **conditional at send time**, plus manual filtered sending
 (niaz #13): filter → **preview count and cost** → confirm → send. Templates with placeholders,
-per-installment send log, delivery report, CallOTP fallback.
+per-installment send log, delivery report. (A CallOTP voice fallback was dropped on 2026-09-23 with
+the rest of the uncalled api.ir services — see docs/PHASE-1-SPEC.md §6.)
 
 **Check — this is a cost test, not a feature test:** seed 100 installments, settle 85 before the
 second window, run the job. **Exactly 15 second reminders. Not 100.** If it is 100, the sequence was

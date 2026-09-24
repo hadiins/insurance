@@ -46,8 +46,18 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
 {
     private const string SmsServiceSend = "SendSms";
     private const string SmsServiceOtp = "SmsOTP";
-    private const string InquiryServiceShahkar = "ShahkarLite";
     private const string InquiryServiceCheque = "ChequeColor";
+
+    // The credit-report pair (docs/PHASE-1-SPEC.md §6): one paid invitation buys both inquiries, so
+    // omitting them here would under-report the agency's real inquiry cost by design — and they are
+    // the most expensive calls in the account (1,100 each).
+    private const string InquiryServiceUnpaidCheque = "UnpaidCheque";
+    private const string InquiryServiceActiveLoans = "ActiveLoans";
+
+    /// <summary>In-memory counterpart of the EF predicate below (a static method cannot be
+    /// translated by EF Core, so the query spells the same three comparisons out).</summary>
+    private static bool IsInquiryService(string service) =>
+        service == InquiryServiceCheque || service == InquiryServiceUnpaidCheque || service == InquiryServiceActiveLoans;
 
     /// <summary>Iran abolished DST in 2022 — a fixed +3:30 offset is the correct day boundary.</summary>
     private static readonly TimeSpan IranOffset = TimeSpan.FromHours(3.5);
@@ -63,25 +73,29 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             var policiesThisMonth = await dbContext.Policies.AsNoTracking()
                 .CountAsync(p => p.IssueDate >= monthStart, ct);
 
+            // Explicit AgencyId bounds — RLS alone cannot scope the OWNER's session (it is
+            // deliberately agency-less, CLAUDE.md rule 17), so the owner's read of one agency's
+            // profile would otherwise sum every agency's call logs.
             var smsAgg = await dbContext.ApiIrCallLogs.AsNoTracking()
-                .Where(l => l.Service == SmsServiceSend || l.Service == SmsServiceOtp)
+                .Where(l => l.AgencyId == agencyId && (l.Service == SmsServiceSend || l.Service == SmsServiceOtp))
                 .GroupBy(_ => 1)
                 .Select(g => new { Count = g.Count(), Cost = g.Sum(x => x.CostToman) })
                 .FirstOrDefaultAsync(ct);
 
             var inquiryCallAgg = await dbContext.ApiIrCallLogs.AsNoTracking()
-                .Where(l => l.Service == InquiryServiceShahkar || l.Service == InquiryServiceCheque)
+                .Where(l => l.AgencyId == agencyId
+                    && (l.Service == InquiryServiceCheque || l.Service == InquiryServiceUnpaidCheque || l.Service == InquiryServiceActiveLoans))
                 .GroupBy(_ => 1)
                 .Select(g => new { Count = g.Count(), Cost = g.Sum(x => x.CostToman) })
                 .FirstOrDefaultAsync(ct);
 
             var paymentAgg = await dbContext.CustomerPortalInvitations.AsNoTracking()
-                .Where(i => i.Status == PortalInvitationStatus.Paid && i.PaidAtUtc != null)
+                .Where(i => i.AgencyId == agencyId && i.Status == PortalInvitationStatus.Paid && i.PaidAtUtc != null)
                 .GroupBy(_ => 1)
                 .Select(g => new { Count = g.Count(), Revenue = g.Sum(x => x.PaidAmountToman ?? 0) })
                 .FirstOrDefaultAsync(ct);
 
-            var trend = await ComputeMonthlyTrendAsync(trendMonths, ct);
+            var trend = await ComputeMonthlyTrendAsync(agencyId, trendMonths, ct);
 
             return new AgencyLiveStats(
                 policiesTotal,
@@ -126,7 +140,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             var utcTo = new DateTimeOffset(to.ToDateTime(TimeOnly.MinValue), IranOffset).ToUniversalTime().AddDays(1);
 
             var callRows = await dbContext.ApiIrCallLogs.AsNoTracking()
-                .Where(l => l.CalledAt >= utcFrom && l.CalledAt <= utcTo)
+                .Where(l => l.AgencyId == agencyId && l.CalledAt >= utcFrom && l.CalledAt <= utcTo)
                 .Select(l => new { l.Service, l.CalledAt, l.CostToman })
                 .ToListAsync(ct);
             foreach (var row in callRows)
@@ -146,7 +160,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
                         SmsCostToman = bucket.SmsCostToman + row.CostToman,
                     };
                 }
-                else if (row.Service == InquiryServiceShahkar || row.Service == InquiryServiceCheque)
+                else if (IsInquiryService(row.Service))
                 {
                     byDay[day] = bucket with
                     {
@@ -157,7 +171,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             }
 
             var paymentRows = await dbContext.CustomerPortalInvitations.AsNoTracking()
-                .Where(i => i.Status == PortalInvitationStatus.Paid
+                .Where(i => i.AgencyId == agencyId && i.Status == PortalInvitationStatus.Paid
                     && i.PaidAtUtc != null && i.PaidAtUtc >= utcFrom && i.PaidAtUtc <= utcTo)
                 .Select(i => new { PaidAt = i.PaidAtUtc!.Value, Amount = i.PaidAmountToman ?? 0 })
                 .ToListAsync(ct);
@@ -190,7 +204,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             var candidates = new List<DateOnly>();
 
             var firstPolicy = await dbContext.Policies.AsNoTracking()
-                .Where(p => p.IssueDate != default)
+                .Where(p => p.AgencyId == agencyId && p.IssueDate != default)
                 .OrderBy(p => p.IssueDate)
                 .Select(p => (DateOnly?)p.IssueDate)
                 .FirstOrDefaultAsync(ct);
@@ -200,6 +214,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             }
 
             var firstCall = await dbContext.ApiIrCallLogs.AsNoTracking()
+                .Where(l => l.AgencyId == agencyId)
                 .OrderBy(l => l.CalledAt)
                 .Select(l => (DateTimeOffset?)l.CalledAt)
                 .FirstOrDefaultAsync(ct);
@@ -209,7 +224,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             }
 
             var firstPayment = await dbContext.CustomerPortalInvitations.AsNoTracking()
-                .Where(i => i.Status == PortalInvitationStatus.Paid && i.PaidAtUtc != null)
+                .Where(i => i.AgencyId == agencyId && i.Status == PortalInvitationStatus.Paid && i.PaidAtUtc != null)
                 .OrderBy(i => i.PaidAtUtc)
                 .Select(i => i.PaidAtUtc!.Value)
                 .FirstOrDefaultAsync(ct);
@@ -224,7 +239,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
 
     /// <summary>Trend bucketed by Jalali months — Persian users read روند ماهانه in فروردین…اسفند,
     /// and the Year/Month in each row is a Jalali year/month number.</summary>
-    private async Task<IReadOnlyList<AgencyMonthlyStats>> ComputeMonthlyTrendAsync(int months, CancellationToken ct)
+    private async Task<IReadOnlyList<AgencyMonthlyStats>> ComputeMonthlyTrendAsync(Guid agencyId, int months, CancellationToken ct)
     {
         var iranToday = DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(IranOffset).DateTime);
         var currentKey = JalaliDate.MonthKey(iranToday);
@@ -238,18 +253,18 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
         var targetKeys = Enumerable.Range(0, months).Select(i => firstKey + i).ToHashSet();
 
         var policyByDay = await dbContext.Policies.AsNoTracking()
-            .Where(p => p.IssueDate >= windowStart)
+            .Where(p => p.AgencyId == agencyId && p.IssueDate >= windowStart)
             .GroupBy(p => p.IssueDate)
             .Select(g => new { Day = g.Key, Count = g.Count() })
             .ToListAsync(ct);
 
         var callRows = await dbContext.ApiIrCallLogs.AsNoTracking()
-            .Where(l => l.CalledAt >= utcStart)
+            .Where(l => l.AgencyId == agencyId && l.CalledAt >= utcStart)
             .Select(l => new { l.Service, l.CalledAt })
             .ToListAsync(ct);
 
         var paymentRows = await dbContext.CustomerPortalInvitations.AsNoTracking()
-            .Where(i => i.Status == PortalInvitationStatus.Paid && i.PaidAtUtc != null && i.PaidAtUtc >= utcStart)
+            .Where(i => i.AgencyId == agencyId && i.Status == PortalInvitationStatus.Paid && i.PaidAtUtc != null && i.PaidAtUtc >= utcStart)
             .Select(i => new { PaidAt = i.PaidAtUtc!.Value, Amount = i.PaidAmountToman ?? 0 })
             .ToListAsync(ct);
 
@@ -276,7 +291,7 @@ public sealed class AgencyStatsService(AppDbContext dbContext)
             {
                 buckets[key] = (bucket.Policies, bucket.Sms + 1, bucket.Payments, bucket.Revenue, bucket.InquiryCalls);
             }
-            else if (row.Service == InquiryServiceShahkar || row.Service == InquiryServiceCheque)
+            else if (IsInquiryService(row.Service))
             {
                 buckets[key] = (bucket.Policies, bucket.Sms, bucket.Payments, bucket.Revenue, bucket.InquiryCalls + 1);
             }
