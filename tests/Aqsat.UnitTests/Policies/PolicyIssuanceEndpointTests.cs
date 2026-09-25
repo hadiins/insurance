@@ -1,4 +1,8 @@
 using System.Net;
+using Aqsat.Application.Common;
+using Aqsat.Application.Schedule;
+
+
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -199,6 +203,100 @@ public class PolicyIssuanceEndpointTests : IClassFixture<WebApplicationFactory<P
         Assert.Equal("درخواست ارسالی نامعتبر است.", problem!.Title);
     }
 
+    [Fact]
+    public async Task Unknown_payment_type_is_rejected_and_omitted_installment_mode_always_arms_verification()
+    {
+        var (client, lineId, _) = await SeedAsync();
+        var today = IranClock.Today();
+
+        var invalid = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-BAD-{Guid.NewGuid():N}"[..16], lineId, null, "مشتری تست", null, null,
+            Vehicle: new VehicleInput("11الف111", null, null, null, null, null), Property: null,
+            today, today, today.AddYears(1), 1_000_000m, 0m, null, null, false,
+            PaymentType: "installment-but-skip-verification"));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("نوع پرداخت", await invalid.Content.ReadAsStringAsync());
+
+        var implicitInstallment = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-IMP-{Guid.NewGuid():N}"[..16], lineId, null, "مشتری تست", null, null,
+            Vehicle: new VehicleInput("22ب222", null, null, null, null, null), Property: null,
+            today, today, today.AddYears(1), 1_000_000m, 0m, null, null, false));
+        implicitInstallment.EnsureSuccessStatusCode();
+        var result = await implicitInstallment.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+        AgencyContext.Current = (await client.GetFromJsonAsync<MeResponse>("/api/auth/me"))!.ActiveOrganizationId;
+        await using var verify = TestDbContextFactory.Create();
+        var row = await verify.Policies.AsNoTracking().SingleAsync(p => p.Id == result!.PolicyId);
+        Assert.True(row.IsInstallment);
+        Assert.True(row.RequiresVerification);
+    }
+
+    [Fact]
+    public async Task Cash_full_payment_must_equal_total_and_cannot_be_scheduled_or_paid_after_cancel()
+    {
+        var (client, lineId, _) = await SeedAsync();
+        var today = IranClock.Today();
+        var created = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-CASH-{Guid.NewGuid():N}"[..16], lineId, null, "مشتری نقدی", null, null,
+            Vehicle: new VehicleInput("33ج333", null, null, null, null, null), Property: null,
+            today, today, today.AddYears(1), 1_000_000m, 100_000m, null, null, false,
+            PaymentType: "cash"));
+        created.EnsureSuccessStatusCode();
+        var result = await created.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+
+        var schedule = await client.PostAsJsonAsync($"/api/policies/{result!.PolicyId}/schedule",
+            new ScheduleRequest(0m, 1));
+        Assert.Equal(HttpStatusCode.BadRequest, schedule.StatusCode);
+
+        var boxes = await client.GetFromJsonAsync<List<CashBoxDto>>("/api/settings/cash-and-bank/cash-boxes");
+        var cashBoxId = Assert.Single(boxes!.Where(c => c.IsActive)).Id;
+        var shortPay = await client.PostAsJsonAsync($"/api/policies/{result.PolicyId}/record-full-payment",
+            new RecordFullPaymentRequest(1, today, "نقدی", null,
+                MethodType: Aqsat.Domain.Enums.PaymentMethod.Cash, CashBoxId: cashBoxId));
+        Assert.Equal(HttpStatusCode.BadRequest, shortPay.StatusCode);
+
+        var fullPay = await client.PostAsJsonAsync($"/api/policies/{result.PolicyId}/record-full-payment",
+            new RecordFullPaymentRequest(1_100_000m, today, "نقدی", null,
+                MethodType: Aqsat.Domain.Enums.PaymentMethod.Cash, CashBoxId: cashBoxId));
+        fullPay.EnsureSuccessStatusCode();
+        var finalize = await client.PostAsync($"/api/policies/{result.PolicyId}/finalize", null);
+        finalize.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Vehicle_manufacture_year_accepts_jalali_and_gregorian_and_stores_gregorian()
+    {
+        var (client, lineId, _) = await SeedAsync();
+        var today = IranClock.Today();
+
+        async Task<int?> CreateAsync(int inputYear, string plate)
+        {
+            var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+                $"POL-YR-{Guid.NewGuid():N}"[..16], lineId, null, "مشتری سال خودرو", null, null,
+                Vehicle: new VehicleInput(plate, null, null, null, null, null,
+                    ManufactureYear: inputYear),
+                Property: null, today, today, today.AddYears(1),
+                1_000_000m, 0m, null, null, false, PaymentType: "cash"));
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+            AgencyContext.Current = (await client.GetFromJsonAsync<MeResponse>("/api/auth/me"))!.ActiveOrganizationId;
+            await using var verify = TestDbContextFactory.Create();
+            return await verify.Vehicles.AsNoTracking()
+                .Where(v => v.Id == verify.Policies.Where(p => p.Id == result!.PolicyId).Select(p => p.VehicleId).Single())
+                .Select(v => v.ManufactureYear).SingleAsync();
+        }
+
+        Assert.Equal(2025, await CreateAsync(1404, "11الف111"));
+        Assert.Equal(2025, await CreateAsync(2025, "22ب222"));
+
+        var invalid = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-YR-{Guid.NewGuid():N}"[..16], lineId, null, "مشتری سال نامعتبر", null, null,
+            Vehicle: new VehicleInput("33ج333", null, null, null, null, null, ManufactureYear: 1200),
+            Property: null, today, today, today.AddYears(1),
+            1_000_000m, 0m, null, null, false, PaymentType: "cash"));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("شمسی یا میلادی", await invalid.Content.ReadAsStringAsync());
+    }
+
     private async Task<(HttpClient Client, Guid SalisLineId, Guid AtashLineId)> SeedAsync()
     {
         await using var seedContext = TestDbContextFactory.Create();
@@ -221,6 +319,18 @@ public class PolicyIssuanceEndpointTests : IClassFixture<WebApplicationFactory<P
 
         return (client, salisLineId, atashLineId);
     }
+
+    [Fact]
+    public void Policy_end_date_is_one_jalali_year_from_start_not_from_issue_date()
+    {
+        // 2025-03-20 is 1403/12/30; +12 Jalali months is 1404/12/30, not a Gregorian year.
+        Assert.Equal(new DateOnly(2026, 3, 20),
+            DueDateCalculator.CalculatePolicyEndDate(new DateOnly(2025, 3, 20)));
+        Assert.Equal(new DateOnly(2029, 3, 20),
+            DueDateCalculator.CalculatePolicyEndDate(new DateOnly(2028, 3, 20)));
+    }
+
+    private sealed record CashBoxDto(Guid Id, string Name, bool IsActive);
 
     private sealed record ProblemDetailsDto(string Title);
 }

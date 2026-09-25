@@ -347,13 +347,21 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         rejected.EnsureSuccessStatusCode();
         Assert.Equal("Rejected", (await rejected.Content.ReadFromJsonAsync<PolicyVerificationDto>())!.Stage);
 
+        // The customer's already-open portal converges to an explicit terminal rejection and gets
+        // no contract/down-payment data after the agency cancels the policy.
+        var publicClient = _factory.CreateClient();
+        var publicInfo = await publicClient.GetFromJsonAsync<PublicPortalInfoDto>($"/api/portal/{dto.Token}");
+        Assert.Equal("Rejected", publicInfo!.Stage);
+        Assert.Null(publicInfo.ContractText);
+        Assert.Null(publicInfo.DownPaymentAmountToman);
+        Assert.Null(publicInfo.Installments);
+
         await using var verify = TestDbContextFactory.Create();
         AgencyContext.Current = h.Fixture.AgencyAId;
         var policy = await verify.Policies.AsNoTracking().SingleAsync(p => p.Id == h.PolicyId);
         Assert.Equal(PolicyStatus.Cancelled, policy.Status);
 
         // The customer cannot approve a rejected chain, and the operator cannot decide twice.
-        var publicClient = _factory.CreateClient();
         var approve = await publicClient.PostAsync($"/api/portal/{dto.Token}/approve-contract", null);
         Assert.Equal(HttpStatusCode.BadRequest, approve.StatusCode);
         Assert.Contains("رد", await approve.Content.ReadAsStringAsync());
@@ -397,6 +405,52 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         Assert.Equal("ReportReady", retried!.Stage);
         Assert.NotNull(retried.CreditReport);
     }
+
+    [Fact]
+    public async Task A_report_with_missing_real_values_cannot_receive_normal_agency_approval()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+        _apiIr.UnpaidCheque = new UnpaidChequeResult(null, null, null);
+        _apiIr.ActiveLoans = new ActiveLoansResult(null, null, null, null, null, null, null);
+        var dto = await StartChainAsync(h);
+        await PayFeeOnPortalAsync(dto.Token!);
+
+        var status = await h.Client.GetFromJsonAsync<PolicyVerificationDto>(
+            $"/api/policies/{h.PolicyId}/verification");
+        Assert.Equal("ReportReady", status!.Stage);
+        Assert.False(status.CreditReport!.RawSuccess);
+
+        var decision = await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/verification/decision", new AgencyVerificationDecisionRequest(true));
+        Assert.Equal(HttpStatusCode.BadRequest, decision.StatusCode);
+        Assert.Contains("گزارش اعتباری واقعی", await decision.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task An_expired_paid_invitation_cannot_start_or_complete_customer_payment()
+    {
+        var h = await CreateScheduledInstallmentPolicyAsync();
+        var dto = await StartChainAsync(h);
+        await PayFeeOnPortalAsync(dto.Token!);
+        await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/verification/decision", new AgencyVerificationDecisionRequest(true));
+        var publicClient = _factory.CreateClient();
+        var accepted = await publicClient.PostAsync($"/api/portal/{dto.Token}/approve-contract", null);
+        accepted.EnsureSuccessStatusCode();
+
+        AgencyContext.Current = h.Fixture.AgencyAId;
+        await using (var expire = TestDbContextFactory.Create())
+        {
+            var invitation = await expire.CustomerPortalInvitations.FirstAsync(i => i.Token == dto.Token);
+            invitation.ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+            await expire.SaveChangesAsync();
+        }
+
+        var pay = await publicClient.PostAsync($"/api/portal/{dto.Token}/pay-down-payment", null);
+        Assert.Equal(HttpStatusCode.BadRequest, pay.StatusCode);
+        Assert.Contains("اعتبار این لینک", await pay.Content.ReadAsStringAsync());
+    }
+
 
     [Fact]
     public async Task The_public_portal_only_knows_a_token_it_can_resolve()

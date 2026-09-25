@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -39,7 +40,7 @@ public class PolicyReceiptStatusEndpointTests : IClassFixture<WebApplicationFact
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-RS-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری وضعیت دریافت", null, null,
             Vehicle: new VehicleInput("۶۶د۶۶۶", null, null, null, null, null), Property: null,
@@ -60,6 +61,13 @@ public class PolicyReceiptStatusEndpointTests : IClassFixture<WebApplicationFact
         Assert.False(afterSchedule.DownPaymentReceived);
         Assert.Equal(2, afterSchedule.OpenInstallments.Count);
 
+        // This test exercises schedule/receipt state only. The product's explicit installment
+        // issuance always arms verification, so a direct fixture opts out to isolate this path.
+        AgencyContext.Current = fixture.AgencyAId;
+        var directPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        directPolicy.RequiresVerification = false;
+        await seedContext.SaveChangesAsync();
+
         var receiveResponse = await client.PostAsJsonAsync(
             $"/api/policies/{policy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(today, null));
         receiveResponse.EnsureSuccessStatusCode();
@@ -70,8 +78,11 @@ public class PolicyReceiptStatusEndpointTests : IClassFixture<WebApplicationFact
         AgencyContext.Current = fixture.AgencyAId;
         var firstInstallmentId = await seedContext.Installments
             .Where(i => i.PolicyId == policy.PolicyId).OrderBy(i => i.SeqNo).Select(i => i.Id).FirstAsync();
+        var cashBoxId = await seedContext.CashBoxes.AsNoTracking()
+            .Where(c => c.AgencyId == fixture.AgencyAId && c.IsActive).Select(c => c.Id).FirstAsync();
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            firstInstallmentId, 1_500_000m, today, "نقدی", null));
+            firstInstallmentId, 1_500_000m, today, "نقدی", null,
+            MethodType: Aqsat.Domain.Enums.PaymentMethod.Cash, CashBoxId: cashBoxId));
         paymentResponse.EnsureSuccessStatusCode();
 
         var afterSettlement = await client.GetFromJsonAsync<PolicyReceiptStatusDto>($"/api/policies/{policy.PolicyId}/receipt-status");

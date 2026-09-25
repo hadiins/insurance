@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -54,7 +55,7 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var marketerResponse = await client.PostAsJsonAsync(
             "/api/marketers", new CreateMarketerRequest("بازاریاب سود و زیان", "09129990000", null, "Independent", null));
@@ -79,6 +80,14 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
             $"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
         scheduleResponse.EnsureSuccessStatusCode();
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<ScheduleResultDto>();
+
+        // Collections-report fixture opts out of the production verification gate to isolate
+        // due-date/payment classification; activate the finalized policy explicitly.
+        AgencyContext.Current = fixture.AgencyAId;
+        var reportPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        reportPolicy.RequiresVerification = false;
+        reportPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
 
         // Stage 4/7 — scheduling alone no longer implies the down payment was collected; the
         // down-payment commission slice only flips Payable once this real receipt event fires.
@@ -153,7 +162,7 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-PNLM-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری روند ماهانه", null, null,
             Vehicle: new VehicleInput("۹۹ب۹۹۸", null, null, null, null, null),
@@ -162,6 +171,11 @@ public class ProfitAndLossEndpointTests : IClassFixture<WebApplicationFactory<Pr
             NetPremium: 5_000_000m, ServiceFee: 0m, MarketerId: null, PreviousInsurer: null, IsRenewal: false,
             AgencyCommissionPercent: 10m));
         policyResponse.EnsureSuccessStatusCode();
+        var monthlyPolicy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+        AgencyContext.Current = fixture.AgencyAId;
+        var monthlyRow = await seedContext.Policies.FirstAsync(p => p.Id == monthlyPolicy!.PolicyId);
+        monthlyRow.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
 
         var result = await client.GetFromJsonAsync<PnlResultDto>(
             $"/api/reports/pnl?from={Iso(today.AddMonths(-3))}&to={Iso(today)}&basis=Accrual");

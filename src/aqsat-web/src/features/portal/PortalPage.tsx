@@ -29,8 +29,11 @@ interface PortalInfoDto {
 }
 
 interface PayResultDto {
-  paidAmountToman: number;
-  paidAtUtc: string;
+  paidAmountToman?: number;
+  paidAtUtc?: string;
+  /// Set when the gateway is a real PSP: the browser must go to the PSP's hosted payment page;
+  /// nothing is settled until its callback returns us here with ?pay=ok|error.
+  redirectUrl?: string | null;
 }
 
 type Phase =
@@ -43,6 +46,19 @@ type Phase =
   | "downPaid"
   | "rejected"
   | "error";
+
+/// A PSP browser callback lands back on this page as ?pay=ok|error&detail=… — read once, shown
+/// as a banner, then stripped from the URL so a refresh / share never replays it.
+const callbackParams = new URLSearchParams(window.location.search);
+const callbackState: "ok" | "error" | null = callbackParams.get("pay") === "ok"
+  ? "ok"
+  : callbackParams.get("pay") === "error"
+    ? "error"
+    : null;
+const callbackDetail = callbackParams.get("detail");
+if (callbackParams.get("pay") !== null) {
+  window.history.replaceState(null, "", window.location.pathname);
+}
 
 const PRIMARY_BTN =
   "w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2.5 text-[13.5px] font-semibold text-(--on-mint) transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
@@ -91,7 +107,14 @@ export function PortalPage() {
     setBusy(true);
     setError(null);
     try {
-      setPayResult(await api.post<PayResultDto>(`/portal/${encodeURIComponent(token)}/pay`));
+      const result = await api.post<PayResultDto>(`/portal/${encodeURIComponent(token)}/pay`);
+      if (result.redirectUrl) {
+        // A real PSP opened a hosted charge — the browser leaves now; the settle arrives via
+        // the gateway's callback (?pay=ok|error) and derivePhase picks the new stage up.
+        window.location.href = result.redirectUrl;
+        return;
+      }
+      setPayResult(result);
       await load();
       setPhase("feePaid");
     } catch (err) {
@@ -119,9 +142,15 @@ export function PortalPage() {
     setBusy(true);
     setError(null);
     try {
-      setPayResult(
-        await api.post<PayResultDto>(`/portal/${encodeURIComponent(token)}/pay-down-payment`),
+      const result = await api.post<PayResultDto>(
+        `/portal/${encodeURIComponent(token)}/pay-down-payment`,
       );
+      if (result.redirectUrl) {
+        // Same hosted-charge flow as the fee — see payFee.
+        window.location.href = result.redirectUrl;
+        return;
+      }
+      setPayResult(result);
       setPhase("downPaid");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "خطای غیرمنتظره");
@@ -152,14 +181,38 @@ export function PortalPage() {
           </div>
         )}
 
+        {callbackState === "ok" && (
+          <div className="mb-3.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-2.5 text-center text-[13px] font-semibold text-(--mint)">
+            پرداخت با موفقیت تأیید شد.
+          </div>
+        )}
+        {callbackState === "error" && (
+          <div className="mb-3.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] leading-relaxed text-(--ember)">
+            پرداخت تأیید نشد{callbackDetail ? ` — ${callbackDetail}` : ""}. در صورت کسر مبلغ از
+            حساب، طی چند دقیقه به‌صورت خودکار برگردانده می‌شود؛ دوباره تلاش کنید.
+          </div>
+        )}
+
         {phase === "error" && !info && (
           <div className="text-[13.5px] text-(--ice-3)">
             لینک نامعتبر است یا دیگر قابل استفاده نیست. لطفاً با نمایندگی خود تماس بگیرید.
           </div>
         )}
 
-        {info && (phase === "info" || phase === "feePaid" || phase === "error" || phase === "rejected") && (
-          <>
+          {info && (phase === "info" || phase === "feePaid" || phase === "error" || phase === "rejected") && (
+            <>
+              {phase === "rejected" ? (
+                <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-4 py-4 text-center">
+                  <div className="mb-1 text-[14px] font-bold text-(--ember)">درخواست شما تأیید نشد</div>
+                  <div className="text-[12.5px] leading-relaxed text-(--ice-2)">
+                    درخواست بیمه‌نامهٔ اقساطی شما توسط نمایندگی رد و پروندهٔ آن لغو شد. امکان تأیید قرارداد یا پرداخت پیش‌پرداخت در این لینک وجود ندارد.
+                  </div>
+                  <div className="mt-2 text-[11.5px] leading-relaxed text-(--ice-3)">
+                    برای اطلاع از وضعیت و بررسی امکان صدور مجدد، با نمایندگی تماس بگیرید.
+                  </div>
+                </div>
+              ) : (
+                <>
             <div className="mb-4.5 rounded-(--r) bg-(--fld) px-3 py-2.5">
               <div className="mb-1 text-[10.5px] tracking-[0.16em] text-(--ice-3)">مشتری</div>
               <div className="text-[14px] font-semibold text-(--ice)">{info.customerDisplayName}</div>
@@ -199,8 +252,10 @@ export function PortalPage() {
                 پرداخت کارمزد
               </button>
             )}
-          </>
-        )}
+                </>
+              )}
+            </>
+          )}
 
         {info && phase === "contract" && (
           <>

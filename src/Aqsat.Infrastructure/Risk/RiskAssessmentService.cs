@@ -153,7 +153,9 @@ public sealed class RiskAssessmentService(
         // Phase 2B-1 cross-agency sharing — the status-only derived row, upserted in this same
         // SaveChanges (rule 29). Written even while the platform switch is OFF: it is derived
         // data with no amounts or identity, so enabling the switch later needs no backfill.
-        // A customer with no usable national ID simply never gets a network row.
+        // A customer with no usable national ID simply never gets a network row — deliberate for
+        // passport-only foreign nationals too (owner decision 2026-09-21): shared passport risk
+        // is a later phase, and their assessments run on internal history alone.
         var nationalIdHash = customer.NationalIdHash;
         if (nationalIdHash is null && !string.IsNullOrWhiteSpace(customer.NationalId))
         {

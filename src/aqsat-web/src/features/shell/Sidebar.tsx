@@ -5,6 +5,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useAuthStore } from "../../app/store/authStore";
 import type { NavItem } from "../../app/types";
 import { SidebarGroup } from "./SidebarGroup";
+import { useNavBadges } from "./useNavBadges";
 
 const DEFAULT_OPEN = new Set(NAV.filter((g) => g.defaultOpen).map((g) => g.id));
 
@@ -18,6 +19,7 @@ export function Sidebar() {
   const openTab = useTabsStore((s) => s.openTab);
   const activeNavType = tabs.find((t) => t.key === activeKey)?.navType ?? null;
   const permissions = useAuthStore((s) => s.user?.permissions) ?? [];
+  const badges = useNavBadges();
 
   const trimmedQuery = query.trim();
   const filteredGroups = useMemo(
@@ -102,6 +104,7 @@ export function Sidebar() {
               collapsed={collapsed}
               query={trimmedQuery}
               activeNavType={activeNavType}
+              badges={badges}
               onToggle={() => toggleGroup(g.id)}
               onSelect={handleSelect}
             />

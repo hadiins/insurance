@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -45,7 +46,7 @@ public class PosDirectPaymentEndpointTests : IClassFixture<WebApplicationFactory
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
         AgencyContext.Current = fixture.AgencyAId;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var customer = new Customer { AgencyId = fixture.AgencyAId, ExternalCode = $"EXT-{Guid.NewGuid():N}"[..12], FullName = "مشتری پوز" };
         var vehicle = new Vehicle { AgencyId = fixture.AgencyAId, Plate = "99و999" };
         seedContext.Customers.Add(customer);

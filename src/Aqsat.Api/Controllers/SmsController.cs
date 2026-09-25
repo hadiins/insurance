@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Application.Sms;
@@ -78,7 +78,7 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
             .Select(k => (k.InstallmentId, k.OffsetDays))
             .ToHashSet();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var sentCount = 0;
         var skippedCount = 0;
         var alreadySentTodayCount = 0;
@@ -392,7 +392,7 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
     /// payment recording already uses, so the comparison never straddles zones.</summary>
     private static bool IsEffective(SentLog log, EffectivenessData data, int attributionDays)
     {
-        var sentDate = DateOnly.FromDateTime(log.SentAt.LocalDateTime);
+        var sentDate = IranClock.DayOf(log.SentAt);
         var windowEnd = sentDate.AddDays(attributionDays);
         return data.Allocations[log.InstallmentId].Any(a => a.PaidOn >= sentDate && a.PaidOn <= windowEnd);
     }
@@ -403,8 +403,8 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
     {
         var windows = data.SentLogs
             .Where(l => l.InstallmentId == installmentId)
-            .Select(l => (Start: DateOnly.FromDateTime(l.SentAt.LocalDateTime),
-                End: DateOnly.FromDateTime(l.SentAt.LocalDateTime).AddDays(attributionDays)))
+            .Select(l => (Start: IranClock.DayOf(l.SentAt),
+                End: IranClock.DayOf(l.SentAt).AddDays(attributionDays)))
             .ToList();
         return data.Allocations[installmentId]
             .Where(a => windows.Any(w => a.PaidOn >= w.Start && a.PaidOn <= w.End))
@@ -420,7 +420,7 @@ public sealed class SmsController(AppDbContext dbContext, ISmsSender smsSender, 
                 var (installmentId, installment) = (kvp.Key, kvp.Value);
                 var logs = data.SentLogs.Where(l => l.InstallmentId == installmentId).OrderBy(l => l.SentAt).ToList();
                 var firstReminder = logs[0];
-                var firstReminderDate = DateOnly.FromDateTime(firstReminder.SentAt.LocalDateTime);
+                var firstReminderDate = IranClock.DayOf(firstReminder.SentAt);
                 var firstPaidOn = data.Allocations[installmentId]
                     .Where(a => a.PaidOn >= firstReminderDate)
                     .Select(a => (DateOnly?)a.PaidOn)

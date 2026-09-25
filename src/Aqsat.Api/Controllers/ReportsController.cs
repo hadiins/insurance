@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Application.Reports;
@@ -129,10 +129,9 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
             var policies = await dbContext.Policies
                 .AsNoTracking()
                 .Where(p => p.IssueDate >= from && p.IssueDate <= to)
-                // A cancelled policy never earned its commission — leaving it in would count
-                // income the insurer claws back. PendingConfirmation stays: the policy is real,
-                // the agent's sign-off flag is an internal worklist detail.
-                .Where(p => p.Status != PolicyStatus.Cancelled)
+                // A pending wizard row has not earned anything yet. Only Active/Settled policies
+                // enter accrual; a later reject/cancel therefore cannot create a phantom P&L item.
+                .Where(p => p.Status == PolicyStatus.Active || p.Status == PolicyStatus.Settled)
                 .Include(p => p.InsuranceLine)
                 .Include(p => p.Marketer)
                 .ToListAsync(ct);
@@ -216,7 +215,7 @@ public sealed class ReportsController(AppDbContext dbContext, TimeProvider timeP
         var orgSettings = await dbContext.OrgSettings.AsNoTracking()
             .FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
         var writeOffThresholdDays = writeOffThresholdDaysOverride ?? orgSettings?.DefaultWriteOffDays ?? 30;
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         var overdueInstallments = await dbContext.Installments
             .AsNoTracking()

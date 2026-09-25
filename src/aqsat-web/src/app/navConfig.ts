@@ -54,7 +54,7 @@ export const NAV: NavGroup[] = [
         navType: "policies-cancelled", title: "باطل‌شده‌ها", kind: "singleton", page: "policy-list",
         payload: { status: "Cancelled" }, requiresPermission: "Policy.Read",
       },
-      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "renewal-watches", requiresPermission: "Policy.Read" },
+      { navType: "policies-renewal", title: "سررسید تمدید", kind: "singleton", page: "renewal-watches", requiresPermission: "Policy.Read", badgeKey: "renewalWatches" },
     ],
   },
   {
@@ -62,7 +62,7 @@ export const NAV: NavGroup[] = [
     label: "اقساط و وصول",
     icon: ICONS.coin,
     items: [
-      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-worklist", requiresPermission: "Policy.Read" },
+      { navType: "installments-list", title: "فهرست اقساط", kind: "singleton", page: "installment-worklist", requiresPermission: "Policy.Read", badgeKey: "installmentWorklist", badgeIsAlert: true },
       { navType: "installments-schedule", title: "در انتظار زمان‌بندی", kind: "singleton", page: "schedule-policy", requiresPermission: "Policy.Write" },
       {
         navType: "customer-statement", title: "صورت‌حساب مشتری", kind: "singleton", page: "customer-lookup",
@@ -70,7 +70,7 @@ export const NAV: NavGroup[] = [
       },
       {
         navType: "checks-all", title: "همهٔ چک‌ها", kind: "singleton", page: "cheques-list",
-        requiresPermission: "Policy.Read",
+        requiresPermission: "Policy.Read", badgeKey: "cheques",
       },
       {
         navType: "checks-upcoming", title: "چک‌های پیشِ رو", kind: "singleton", page: "cheques-list",
@@ -146,7 +146,7 @@ export const NAV: NavGroup[] = [
       { navType: "risk-dashboard", title: "داشبورد ریسک", kind: "singleton", page: "risk-dashboard", requiresPermission: "Policy.Read" },
       { navType: "risk-assessment", title: "ارزیابی اعتبار", kind: "singleton", page: "risk-assessment", requiresPermission: "Policy.Read" },
       { navType: "risk-network", title: "استعلام شبکه‌ای", kind: "singleton", page: "risk-network", requiresPermission: "Risk.NetworkRead" },
-      { navType: "risk-manual-reviews", title: "بررسی‌های دستی", kind: "singleton", page: "risk-manual-reviews", requiresPermission: "Policy.Read" },
+      { navType: "risk-manual-reviews", title: "بررسی‌های دستی", kind: "singleton", page: "risk-manual-reviews", requiresPermission: "Policy.Read", badgeKey: "riskReviews", badgeIsAlert: true },
       { navType: "risk-warnings", title: "هشدارها", kind: "singleton", page: "risk-warnings", requiresPermission: "Policy.Read" },
       { navType: "risk-settings", title: "قوانین اعتبارسنجی", kind: "singleton", page: "risk-settings", requiresPermission: "Settings.Write" },
     ],

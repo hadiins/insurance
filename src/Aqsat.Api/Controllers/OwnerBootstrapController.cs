@@ -110,8 +110,16 @@ public sealed class OwnerBootstrapController(
         if (ownerRole is null)
         {
             ownerRole = new Role { Name = "مالک نرم‌افزار", IsSystemRole = true };
+            // The permission MUST go through the navigation collection, never via
+            // `RoleId = ownerRole.Id`: ownerRole is unsaved and its server-generated Id
+            // (NEWSEQUENTIALID, AqsatEntityConfiguration) doesn't exist yet, so a scalar FK
+            // carries Guid.Empty, EF sees no dependency, orders RolePermissions INSERT before
+            // Roles, and SQL throws FK_RolePermissions_Roles_RoleId (error 547). Hit on the
+            // first real production bootstrap 2026-09-19 — tests never saw it because
+            // DevSeeder pre-creates the owner role. With the navigation, EF fixes the FK up
+            // from the Id the Roles INSERT returns.
+            ownerRole.RolePermissions.Add(new RolePermission { Permission = Permissions.PlatformOwner });
             dbContext.Roles.Add(ownerRole);
-            dbContext.RolePermissions.Add(new RolePermission { RoleId = ownerRole.Id, Permission = Permissions.PlatformOwner });
         }
 
         var user = new AppUser
@@ -122,7 +130,11 @@ public sealed class OwnerBootstrapController(
             IsActive = true,
         };
         dbContext.Users.Add(user);
-        dbContext.UserOrgRoles.Add(new UserOrgRole { UserId = user.Id, OrganizationId = hq.Id, RoleId = ownerRole.Id });
+        // Same navigation-vs-scalar-FK rule as above: user and (when just created) hq and
+        // ownerRole all carry server-generated Ids — scalar Guid.Empty FKs would violate all
+        // three at INSERT time. Setting the navigations lets EF resolve every FK after the
+        // parents' INSERTs return their generated Ids, and orders UserOrgRoles last.
+        dbContext.UserOrgRoles.Add(new UserOrgRole { User = user, Organization = hq, Role = ownerRole });
 
         // ONE SaveChanges inside the transaction — EF orders the inserts by dependency (HQ, role,
         // permission, user, membership), and a failure at any point rolls the whole bootstrap back.

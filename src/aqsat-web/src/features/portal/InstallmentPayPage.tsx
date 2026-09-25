@@ -24,10 +24,26 @@ interface PaymentLinkInfoDto {
 }
 
 interface PayResultDto {
-  paidAmountToman: number;
-  paidAtUtc: string;
+  paidAmountToman?: number;
+  paidAtUtc?: string;
   policyNumber: string;
   seqNo: number;
+  /// Set when the agency's gateway is a real PSP: the browser must go to the PSP's hosted
+  /// payment page; nothing is settled until its callback returns us here with ?pay=ok|error.
+  redirectUrl?: string | null;
+}
+
+/// The PSP's browser callback lands back on this page as ?pay=ok|error&detail=… — rendered as a
+/// banner and then stripped from the URL so a refresh / share never replays it.
+const callbackParams = new URLSearchParams(window.location.search);
+const callbackState: "ok" | "error" | null = callbackParams.get("pay") === "ok"
+  ? "ok"
+  : callbackParams.get("pay") === "error"
+    ? "error"
+    : null;
+const callbackDetail = callbackParams.get("detail");
+if (callbackParams.get("pay") !== null) {
+  window.history.replaceState(null, "", window.location.pathname);
 }
 
 const PRIMARY_BTN =
@@ -67,6 +83,12 @@ export function InstallmentPayPage() {
     void load();
   }, [load]);
 
+  // A PSP callback just landed (?pay=…) — reload so the settled installment disappears from the
+  // open list, and let the banner below say why.
+  useEffect(() => {
+    if (callbackState !== null) void load();
+  }, [callbackState, load]);
+
   async function pay() {
     if (!paying) return;
     setBusy(true);
@@ -75,6 +97,13 @@ export function InstallmentPayPage() {
       const result = await api.post<PayResultDto>(
         `/portal/pay/${encodeURIComponent(token)}/installments/${paying.id}`,
       );
+      if (result.redirectUrl) {
+        // A real PSP opened a hosted charge — the browser leaves this page now and the settle
+        // comes back through the gateway's callback (?pay=ok|error). Keep the row visible in
+        // case the customer comes back via Back.
+        window.location.href = result.redirectUrl;
+        return;
+      }
       setPayResult(result);
       setPaying(null);
       await load();
@@ -112,12 +141,24 @@ export function InstallmentPayPage() {
           </div>
         )}
 
+        {callbackState === "ok" && (
+          <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center text-[13px] font-semibold text-(--mint)">
+            پرداخت با موفقیت تأیید شد. جدول اقساط به‌روزرسانی شده است.
+          </div>
+        )}
+        {callbackState === "error" && (
+          <div className="mb-4.5 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2.5 text-[12.5px] leading-relaxed text-(--ember)">
+            پرداخت تأیید نشد{callbackDetail ? ` — ${callbackDetail}` : ""}. در صورت کسر مبلغ از
+            حساب، طی چند دقیقه به‌صورت خودکار برگردانده می‌شود؛ دوباره تلاش کنید.
+          </div>
+        )}
+
         {payResult && (
           <div className="mb-4.5 rounded-(--r) border border-(--mint)/30 bg-(--mint)/10 px-3 py-3 text-center">
             <div className="mb-1 text-[14px] font-bold text-(--mint)">پرداخت با موفقیت انجام شد</div>
             <div className="text-[12.5px] tabular-nums text-(--ice-2)">
               قسط {fa(payResult.seqNo)} بیمه‌نامهٔ {payResult.policyNumber} — مبلغ{" "}
-              {money(payResult.paidAmountToman)} تومان
+              {money(payResult.paidAmountToman ?? 0)} تومان
             </div>
             <div className="mt-0.5 text-[11.5px] text-(--ice-3)">
               {fa(toJalaliDateTimeDisplay(payResult.paidAtUtc))}

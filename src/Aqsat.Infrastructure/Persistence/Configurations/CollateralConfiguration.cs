@@ -11,6 +11,7 @@ public sealed class CollateralConfiguration : AqsatEntityConfiguration<Collatera
         base.Configure(builder);
 
         builder.Property(c => c.SayadId).HasMaxLength(30);
+        builder.Property(c => c.ChequeSerial).HasMaxLength(20);
         builder.Property(c => c.BankName).HasMaxLength(80);
         builder.Property(c => c.Amount).HasPrecision(18, 0);
         builder.Property(c => c.ColorCode).HasMaxLength(20);

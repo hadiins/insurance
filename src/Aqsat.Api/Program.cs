@@ -572,6 +572,8 @@ try
 catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "Aqsat.Api terminated unexpectedly during startup");
+    // Preserve failure for the process supervisor and test host instead of exiting successfully.
+    throw;
 }
 finally
 {

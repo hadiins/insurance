@@ -41,8 +41,8 @@ public sealed class PolicyVerificationController(
     [HttpGet]
     public async Task<ActionResult<PolicyVerificationDto>> Get(CancellationToken ct)
     {
-        var (invitation, report) = await verificationService.GetStatusAsync(PolicyId, ct);
-        return Ok(ToDto(invitation, smsSent: null, report));
+        var (invitation, report, notApplicableReason) = await verificationService.GetStatusAsync(PolicyId, ct);
+        return Ok(ToDto(invitation, smsSent: null, report, notApplicableReason));
     }
 
     /// <summary>Approve moves the chain to the customer's contract approval; reject is terminal
@@ -81,8 +81,8 @@ public sealed class PolicyVerificationController(
             return Problem(ex.Message);
         }
 
-        var (invitation, report) = await verificationService.GetStatusAsync(PolicyId, ct);
-        var dto = ToDto(invitation, smsSent: null, report);
+        var (invitation, report, notApplicableReason) = await verificationService.GetStatusAsync(PolicyId, ct);
+        var dto = ToDto(invitation, smsSent: null, report, notApplicableReason);
         return result.Succeeded
             ? Ok(dto)
             : Problem(result.Error ?? "استعلام اعتباری ناموفق بود.");
@@ -91,12 +91,15 @@ public sealed class PolicyVerificationController(
     private Guid PolicyId => Guid.Parse(RouteData.Values["policyId"]!.ToString()!);
 
     private static PolicyVerificationDto ToDto(
-        CustomerPortalInvitation? i, bool? smsSent, CreditReport? report = null) =>
+        CustomerPortalInvitation? i, bool? smsSent, CreditReport? report = null,
+        string? notApplicableReason = null) =>
         new(
             i?.Id, i?.Token, i?.Stage.ToString(), i?.Status.ToString(), i?.ExpiresAtUtc,
             i?.InquiryFeeToman, i?.DownPaymentAmountToman,
             i?.AgencyDecisionAtUtc, i?.CustomerApprovedAtUtc, i?.DownPaymentPaidAtUtc,
-            report is null ? null : ToReportDto(report), smsSent);
+            report is null ? null : ToReportDto(report), smsSent,
+            ExternalInquiryNotApplicable: notApplicableReason is not null,
+            ExternalInquiryNotApplicableReason: notApplicableReason);
 
     /// <summary>Shared with PortalInvitationsController's customer-report endpoints.</summary>
     public static CreditReportDto ToReportDto(CreditReport r) =>

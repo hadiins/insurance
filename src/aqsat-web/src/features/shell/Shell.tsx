@@ -3,6 +3,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useAuthStore } from "../../app/store/authStore";
 import { todayJalaliLongDisplay } from "../../lib/jalali";
 import { Sidebar } from "./Sidebar";
+import { StatusBar } from "./StatusBar";
 import { TabBar } from "./TabBar";
 import { Stage } from "./Stage";
 import { ConfirmCloseDialog } from "./ConfirmCloseDialog";
@@ -102,6 +103,8 @@ export function Shell() {
           <Stage />
         </div>
       </div>
+
+      <StatusBar />
 
       <ConfirmCloseDialog />
       <Toast />

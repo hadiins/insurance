@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+</Project>

@@ -21,15 +21,21 @@ namespace Aqsat.UnitTests.Sms;
 public class SmsReminderJobTests
 {
     private static SmsReminderJob CreateJob(
-        AppDbContext context, ISmsSender sender, TimeProvider timeProvider) =>
-        new(context, sender, timeProvider,
-            new InstallmentPaymentLinkService(context, [new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance)]),
-            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Portal:PublicBaseUrl"] = "https://portal.example.com",
-            }).Build(),
+        AppDbContext context, ISmsSender sender, TimeProvider timeProvider)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Portal:PublicBaseUrl"] = "https://portal.example.com",
+        }).Build();
+        return new(context, sender, timeProvider,
+            new InstallmentPaymentLinkService(context,
+                new GatewayPaymentCoordinator(context,
+                    [new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance)],
+                    config),
+                config),
+            config,
             NullLogger<SmsReminderJob>.Instance);
-
+    }
     [Fact]
     public async Task Settling_most_installments_before_the_second_window_sends_only_the_remaining_ones_a_second_reminder()
     {

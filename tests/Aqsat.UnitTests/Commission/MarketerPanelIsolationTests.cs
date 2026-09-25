@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -96,7 +97,7 @@ public class MarketerPanelIsolationTests : IClassFixture<WebApplicationFactory<P
         context.Vehicles.Add(vehicle);
         await context.SaveChangesAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policy = new Policy
         {
             AgencyId = agencyId,

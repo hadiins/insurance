@@ -1,7 +1,24 @@
 services:
+  # Only this short-lived initializer runs as root. It mounts the backup volume only,
+  # never the database volume or Docker socket. Existing backup contents are not changed.
+  backup-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    user: "0:0"
+    restart: "no"
+    network_mode: none
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - "chown 10001:20001 /var/opt/mssql/backup && chmod 2770 /var/opt/mssql/backup"
+    volumes:
+      - sqlserver-backup:/var/opt/mssql/backup
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     restart: unless-stopped
+    group_add: ["20001"]
+    depends_on:
+      backup-init:
+        condition: service_completed_successfully
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${SA_PASSWORD}
@@ -23,6 +40,8 @@ services:
     # over the compose network), so it must be predictable. This container never mounts the Docker
     # socket and never will — see docs/UPDATE-SYSTEM.md §1 and the "updater" service below.
     container_name: aqsat-api
+    # Directory group grants backup retention cleanup without making the API root.
+    group_add: ["20001"]
     build:
       context: .
       dockerfile: src/Aqsat.Api/Dockerfile
@@ -83,6 +102,7 @@ services:
   # "updater" other than the narrow, token-authenticated HTTP API updater.md documents.
   updater:
     container_name: aqsat-updater
+    group_add: ["20001"]
     build:
       context: .
       dockerfile: src/Aqsat.Updater/Dockerfile

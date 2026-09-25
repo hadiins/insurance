@@ -10,6 +10,9 @@ public class Collateral : AgencyOwnedEntity, IAuditableEntity
 
     public CollateralType Type { get; set; }
     public string? SayadId { get; set; }
+
+    /// <summary>شمارهٔ سری چاپ‌شده روی برگهٔ چک — جدا از <see cref="SayadId"/> که شناسهٔ خودِ چک ثبت‌شده است.</summary>
+    public string? ChequeSerial { get; set; }
     public string? BankName { get; set; }
     public decimal Amount { get; set; }
     public DateOnly? DueDate { get; set; }

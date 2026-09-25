@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -35,7 +36,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
         // An empty string is what a forgotten input actually sends — unlike JSON null, it passes
         // model binding and used to reach the database as ChequeNumber = "".
         var (client, installmentId, cashBoxId, _, _) = await SeedChequeTargetAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
             installmentId, 4_000_000m, today, "چک", null,
@@ -51,7 +52,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
     public async Task An_unselected_cash_box_is_rejected_before_reaching_the_database()
     {
         var (client, installmentId, _, _, _) = await SeedChequeTargetAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
             installmentId, 4_000_000m, today, "چک", null,
@@ -67,7 +68,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
     public async Task A_cash_box_outside_the_agency_is_rejected_as_not_found_not_an_fk_500()
     {
         var (client, installmentId, _, _, _) = await SeedChequeTargetAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
             installmentId, 4_000_000m, today, "چک", null,
@@ -76,14 +77,14 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
-        Assert.Contains("صندوق انتخاب‌شده یافت نشد", problem!.Title);
+        Assert.Contains("صندوق فعال انتخاب‌شده یافت نشد", problem!.Title);
     }
 
     [Fact]
     public async Task A_cheque_due_date_years_ahead_is_rejected()
     {
         var (client, installmentId, cashBoxId, _, _) = await SeedChequeTargetAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
             installmentId, 4_000_000m, today, "چک", null,
@@ -99,7 +100,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
     public async Task A_bounced_cheque_is_terminal_no_status_edit_can_revive_it()
     {
         var (client, installmentId, cashBoxId, seedContext, fixture) = await SeedChequeTargetAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var cheque = new ChequeDetailsRequest("CHQ-002", "بانک ملت", today.AddMonths(1), "علی رضایی", cashBoxId);
         var paymentResponse = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
@@ -136,7 +137,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
         var (client, installmentId, _, _, _) = await SeedChequeTargetAsync();
 
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 500_000m, DateOnly.FromDateTime(DateTime.UtcNow), "هر متنی که کلاینت فرستاد", null));
+            installmentId, 500_000m, IranClock.Today(), "هر متنی که کلاینت فرستاد", null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
@@ -149,7 +150,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
         // B13 — one SaveChanges per item; an unbounded array would hold the request thread and its
         // DB connection for as long as thousands of payments take.
         var (client, installmentId, _, _, _) = await SeedChequeTargetAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var items = Enumerable.Range(0, 201)
             .Select(_ => new RecordPaymentRequest(installmentId, 1m, today, "نقدی", null))
@@ -170,7 +171,7 @@ public class ChequeGuardEndpointTests : IClassFixture<WebApplicationFactory<Prog
         await InsuranceLineSeeder.EnsureSeededAsync(seedContext);
 
         AgencyContext.Current = fixture.AgencyAId;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var customer = new Customer { AgencyId = fixture.AgencyAId, ExternalCode = $"EXT-{Guid.NewGuid():N}"[..12], FullName = "مشتری چک" };
         var vehicle = new Vehicle { AgencyId = fixture.AgencyAId, Plate = "77ج777" };
         var cashBox = new CashBox { AgencyId = fixture.AgencyAId, Name = "صندوق مرکزی", IsActive = true };

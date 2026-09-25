@@ -16,6 +16,10 @@ public sealed class OrgSettingsConfiguration : IEntityTypeConfiguration<OrgSetti
         builder.Property(s => s.AgentMerchantId).HasMaxLength(128);
         builder.Property(s => s.SmsApiKey).HasMaxLength(256);
         builder.Property(s => s.DangerZoneManagerMobile).HasMaxLength(20);
+
+        // A collection goal is toman, and toman has no fractions — same precision as
+        // Payment.Amount and Installment.Amount.
+        builder.Property(s => s.MonthlyCollectionGoal).HasPrecision(18, 0);
         builder.Property(s => s.PaymentProvider)
             .HasConversion<string>()
             .HasMaxLength(32);

@@ -7,7 +7,7 @@ import { MoneyInput } from "../../components/MoneyInput";
  * inquiry fee (کارمزد استعلام), docs/CUSTOMER-PORTAL-SPEC.md §3. The merchant ID is write-only:
  * GET only ever returns a mask. */
 interface PaymentSettingsDto {
-  provider: "Mock" | "ZarinPal";
+  provider: "Mock" | "ZarinPal" | "GooyaPay";
   enabled: boolean;
   hasOwnerMerchantId: boolean;
   ownerMerchantIdMasked: string | null;
@@ -19,6 +19,7 @@ interface PaymentSettingsDto {
 const PROVIDERS: Array<{ value: PaymentSettingsDto["provider"]; label: string; note: string }> = [
   { value: "Mock", label: "آزمایشی (Mock)", note: "درگاه شبیهسازیشده برای توسعه و تست — پول واقعی جابهجا نمیشود و به شناسهٔ پذیرنده نیاز ندارد." },
   { value: "ZarinPal", label: "زرینپال", note: "درگاه واقعی — برای فعالسازی، شناسهٔ پذیرنده (Merchant ID) صادرشده از پنل زرینپال الزامی است." },
+  { value: "GooyaPay", label: "گویا پی", note: "درگاه واقعی — برای فعالسازی، شناسهٔ پذیرنده (Merchant ID) صادرشده از پنل گویا پی الزامی است." },
 ];
 
 export function PaymentSettingsPage() {
@@ -167,7 +168,7 @@ export function PaymentSettingsPage() {
             className="w-full rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[13.5px] text-(--ice) outline-none focus:border-(--mint)"
           />
         </div>
-        {enabled && provider === "ZarinPal" && !settings?.hasOwnerMerchantId && merchantId.trim() === "" && (
+        {enabled && provider !== "Mock" && !settings?.hasOwnerMerchantId && merchantId.trim() === "" && (
           <div className="mb-4 rounded-(--r) border border-(--amber)/30 bg-(--amber)/8 px-3 py-2 text-[11.5px] leading-relaxed text-(--amber)">
             برای فعالسازی درگاه زرینپال، شناسهٔ پذیرنده (Merchant ID) الزامی است — سرور ذخیرهٔ تنظیمات بدون آن را نمیپذیرد.
           </div>

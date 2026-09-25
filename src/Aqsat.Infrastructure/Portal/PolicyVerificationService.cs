@@ -1,9 +1,11 @@
 using Aqsat.Application.ApiIr;
+using Aqsat.Application.Common;
 using Aqsat.Application.Payments;
 using Aqsat.Application.Sms;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -36,7 +38,7 @@ public sealed class PolicyVerificationService(
     AppDbContext dbContext,
     IApiIrClient apiIrClient,
     ISmsSender smsSender,
-    IEnumerable<IPaymentGateway> gateways,
+    GatewayPaymentCoordinator coordinator,
     IConfiguration configuration,
     ILogger<PolicyVerificationService> logger)
 {
@@ -64,9 +66,9 @@ public sealed class PolicyVerificationService(
             throw new PortalInvitationException("ابتدا زمان‌بندی اقساط (مرحلهٔ ۳) را تکمیل کنید.");
         }
 
-        if (policy.Status != PolicyStatus.Active)
+        if (policy.Status is not (PolicyStatus.Active or PolicyStatus.PendingConfirmation))
         {
-            throw new PortalInvitationException("این بیمه‌نامه فعال نیست و نمی‌تواند فرایند اعتبارسنجی را آغاز کند.");
+            throw new PortalInvitationException("بیمه‌نامه لغوشده یا نهایی‌نشده است و فرایند اعتبارسنجی را نمی‌پذیرد.");
         }
 
         var customer = await dbContext.Customers.AsNoTracking()
@@ -76,7 +78,11 @@ public sealed class PolicyVerificationService(
             throw new PortalInvitationException("شمارهٔ همراه مشتری ثبت نشده است؛ برای ارسال لینک ابتدا آن را کامل کنید.");
         }
 
-        if (string.IsNullOrWhiteSpace(customer.NationalId))
+        // Passport-only customers (owner decision 2026-09-21) get the FULL verification chain —
+        // the chain just runs without the external inquiry step (RunInquiriesAsync skips it and
+        // advances straight to ReportReady with a null report). Blocking the chain here would
+        // make a passport-only customer unissuable, which the owner decision forbids.
+        if (string.IsNullOrWhiteSpace(customer.NationalId) && customer.Kind != CustomerKind.ForeignPassportOnly)
         {
             throw new PortalInvitationException("کد ملی مشتری ثبت نشده است؛ استعلام اعتباری بدون کد ملی ممکن نیست.");
         }
@@ -218,8 +224,11 @@ public sealed class PolicyVerificationService(
     }
 
     /// <summary>The wizard's step-3.5 view: the policy's open chain and its credit report, if any.
-    /// A null Invitation means no chain was ever started.</summary>
-    public async Task<(CustomerPortalInvitation? Invitation, CreditReport? Report)> GetStatusAsync(
+    /// A null Invitation means no chain was ever started. The third element carries the Persian
+    /// «اعمال نشد» reason when the external inquiry was deliberately skipped for this chain's
+    /// customer (passport-only kind, owner decision 2026-09-21) — the UI shows it explicitly
+    /// instead of an empty report (rules 15/17).</summary>
+    public async Task<(CustomerPortalInvitation? Invitation, CreditReport? Report, string? ExternalInquiryNotApplicableReason)> GetStatusAsync(
         Guid policyId, CancellationToken ct = default)
     {
         var invitation = await dbContext.CustomerPortalInvitations.AsNoTracking()
@@ -234,7 +243,23 @@ public sealed class PolicyVerificationService(
                 .OrderByDescending(r => r.BizId)
                 .FirstOrDefaultAsync(ct);
 
-        return (invitation, report);
+        string? notApplicableReason = null;
+        if (invitation is not null && report is null)
+        {
+            var customer = await dbContext.Customers.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == invitation.CustomerId, ct);
+            if (customer is { Kind: CustomerKind.ForeignPassportOnly })
+            {
+                notApplicableReason =
+                    "اتباع بدون کد ملی — استعلام اعتباری خارجی اعمال نمی‌شود؛ تصمیم بر اساس سوابق داخلی نمایندگی گرفته شود.";
+            }
+            else if (customer is { NationalId: null })
+            {
+                notApplicableReason = "مشتری فاقد کد ملی ثبت‌شده است — استعلام اعتباری خارجی اعمال نمی‌شود.";
+            }
+        }
+
+        return (invitation, report, notApplicableReason);
     }
 
     /// <summary>Runs both credit inquiries for an invitation whose fee was just paid — a policy
@@ -254,6 +279,39 @@ public sealed class PolicyVerificationService(
                 .FirstAsync(p => p.Id == invitation.PolicyId, ct);
         var customer = await dbContext.Customers.AsNoTracking()
             .FirstAsync(c => c.Id == invitation.CustomerId, ct);
+
+        // Foreign nationals with no national ID (owner decision 2026-09-21) are issued fully —
+        // but the external inquiry step CANNOT run: there is nothing api.ir can look up. This is
+        // an explicit not-applicable state, not an error and not an empty result (rules 15/17):
+        // the chain advances straight to ReportReady with a null report so the agency's decision
+        // step relies on internal history alone. The audit row records exactly why.
+        if (customer.Kind == CustomerKind.ForeignPassportOnly || customer.NationalId is null)
+        {
+            invitation.Stage = PolicyVerificationStage.ReportReady;
+
+            var reason = customer.Kind == CustomerKind.ForeignPassportOnly
+                ? "اتباع بدون کد ملی — استعلام اعتباری خارجی اعمال نمی‌شود؛ ارزیابی فقط بر اساس سوابق داخلی نمایندگی انجام می‌شود."
+                : "مشتری فاقد کد ملی ثبت‌شده است — استعلام اعتباری خارجی اعمال نمی‌شود.";
+
+            dbContext.AuditEntries.Add(new AuditEntry
+            {
+                AgencyId = agencyId,
+                UserId = Guid.Empty,
+                UserDisplayName = "سیستم",
+                EntityType = nameof(CreditReport),
+                EntityId = invitation.Id,
+                PolicyId = invitation.PolicyId ?? Guid.Empty,
+                Action = AuditAction.PolicyVerification,
+                Description = $"استعلام اعتباری برای {customer.FullName} انجام نشد — {reason}",
+                OccurredAt = DateTimeOffset.UtcNow,
+            });
+            await dbContext.SaveChangesAsync(ct);
+
+            logger.LogInformation(
+                "Credit inquiries skipped for customer {CustomerId} (kind={Kind}): no national ID to query.",
+                invitation.CustomerId, customer.Kind);
+            return new InquiryRunResult(true, null);
+        }
 
         var cheque = await apiIrClient.UnpaidChequeAsync(customer.NationalId!, agencyId, ct);
         var loans = await apiIrClient.ActiveLoansAsync(customer.NationalId!, agencyId, ct);
@@ -389,6 +447,19 @@ public sealed class PolicyVerificationService(
             throw new PortalInvitationException("برای تصمیم‌گیری، ابتدا گزارش اعتباری باید آماده شود.");
         }
 
+        var report = await dbContext.CreditReports.AsNoTracking()
+            .Where(r => r.PolicyId == policyId)
+            .OrderByDescending(r => r.RetrievedAtUtc)
+            .ThenByDescending(r => r.BizId)
+            .FirstOrDefaultAsync(ct);
+        var isExternalInquiryNotApplicable = await dbContext.Customers.AsNoTracking()
+            .AnyAsync(c => c.Id == invitation.CustomerId
+                && (c.Kind == CustomerKind.ForeignPassportOnly || c.NationalId == null), ct);
+        if (!isExternalInquiryNotApplicable && report?.RawSuccess != true)
+        {
+            throw new PortalInvitationException("گزارش اعتباری واقعی و موفق در دسترس نیست؛ تأیید عادی مجاز نیست.");
+        }
+
         var customer = await dbContext.Customers.AsNoTracking()
             .FirstAsync(c => c.Id == invitation.CustomerId, ct);
 
@@ -444,6 +515,7 @@ public sealed class PolicyVerificationService(
     {
         return await RunWithAgencyScopeAsync(token, ct, async (invitation, _) =>
         {
+            EnsureInvitationNotExpired(invitation);
             if (invitation.PolicyId is null)
             {
                 throw new PortalInvitationException("این لینک برای تأیید قرارداد بیمه‌نامه نیست.");
@@ -484,11 +556,12 @@ public sealed class PolicyVerificationService(
     /// the owner's). Records the Payment idempotently exactly like receive-down-payment (rule 24)
     /// and flips the down-payment commission slices Payable, so an online and a manual receipt land
     /// in the same state.</summary>
-    public async Task<(decimal PaidAmountToman, DateTimeOffset PaidAtUtc)> PayDownPaymentAsync(
+    public async Task<PortalPaymentResult> PayDownPaymentAsync(
         string token, string? customerIp, CancellationToken ct = default)
     {
         return await RunWithAgencyScopeAsync(token, ct, async (invitation, agencyId) =>
         {
+            EnsureInvitationNotExpired(invitation);
             if (invitation.PolicyId is null)
             {
                 throw new PortalInvitationException("این لینک برای پرداخت پیش‌پرداخت بیمه‌نامه نیست.");
@@ -505,6 +578,10 @@ public sealed class PolicyVerificationService(
             }
 
             var policy = await dbContext.Policies.FirstAsync(p => p.Id == invitation.PolicyId, ct);
+            if (policy.Status is not (PolicyStatus.Active or PolicyStatus.PendingConfirmation))
+            {
+                throw new PortalInvitationException("بیمه‌نامه لغوشده یا نهایی‌نشده و پرداخت آن پذیرفته نمی‌شود.");
+            }
             var amount = invitation.DownPaymentAmountToman ?? policy.DownPayment;
             if (amount <= 0)
             {
@@ -516,15 +593,13 @@ public sealed class PolicyVerificationService(
                 .FirstOrDefaultAsync(s => s.OrganizationId == agencyId, ct);
             var provider = settings?.PaymentProvider ?? new OrgSettings().PaymentProvider;
             var merchantId = settings?.AgentMerchantId;
-            var gateway = gateways.FirstOrDefault(g => g.Provider == provider)
-                ?? throw new PortalInvitationException($"درگاه پرداخت «{provider}» پشتیبانی نمی‌شود.");
             if (provider != PaymentProvider.Mock && string.IsNullOrWhiteSpace(merchantId))
             {
                 throw new PortalInvitationException(
                     "درگاه پرداخت نمایندگی تنظیم نشده است؛ با نمایندگی تماس بگیرید.");
             }
 
-            var paidOn = DateOnly.FromDateTime(DateTimeOffset.UtcNow.LocalDateTime);
+            var paidOn = IranClock.Today();
             var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
                 p => p.InstallmentIdHint == policy.Id && p.PaidOn == paidOn && p.Amount == amount, ct);
             if (existing is not null)
@@ -532,60 +607,156 @@ public sealed class PolicyVerificationService(
                 invitation.Stage = PolicyVerificationStage.Completed;
                 invitation.DownPaymentPaidAtUtc ??= DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(ct);
-                return (existing.Amount, invitation.DownPaymentPaidAtUtc!.Value);
+                return new PortalPaymentResult(existing.Amount, invitation.DownPaymentPaidAtUtc!.Value);
             }
 
-            var result = await gateway.ChargeAsync(
-                invitation.Token, merchantId ?? string.Empty, amount,
-                $"پرداخت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}", string.Empty, ct);
-            if (!result.Succeeded)
+            // Mock resolves inline and never redirects (no callback possible) — skip the callback
+            // base resolution so a zero-config fresh install can still settle a down payment.
+            // A real PSP keeps the fail-fast before any request goes out.
+            var callbackUrl = provider == PaymentProvider.Mock
+                ? string.Empty
+                : $"{await coordinator.ResolveCallbackBaseAsync(ct)}/api/portal/{invitation.Token}/callback";
+            var charge = await coordinator.ChargeAsync(
+                new GatewayChargeContext(
+                    provider, GatewayPurpose.DownPayment, agencyId,
+                    InvitationId: invitation.Id, PolicyId: policy.Id, CustomerId: invitation.CustomerId),
+                new GatewayChargeRequest(
+                    // Idempotent per invitation: one charge slot per invitation, so a retry after a
+                    // timed-out charge and a returning customer both resume the same pending charge.
+                    invitation.Token, merchantId ?? string.Empty, amount,
+                    $"پرداخت پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber}",
+                    callbackUrl, Mobile: null, FullName: null),
+                ct);
+
+            if (charge.RequiresRedirect)
             {
-                throw new PortalInvitationException(result.FailureReason ?? "پرداخت ناموفق بود. لطفاً دوباره تلاش کنید.");
+                // A real PSP: nothing is settled — the PSP's browser callback finalises after verify.
+                return new PortalPaymentResult(null, null, charge.RedirectUrl);
             }
 
-            var settledAmount = result.PaidAmountToman ?? amount;
-            var occurredAt = DateTimeOffset.UtcNow;
-            var payment = new Payment
-            {
-                // Client-side key — the audit row below references it by Id in this same
-                // SaveChanges; a database-generated key would leave the audit pointing at EF's
-                // empty placeholder.
-                Id = SequentialGuidGenerator.Next(),
-                AgencyId = agencyId,
-                CustomerId = invitation.CustomerId,
-                InstallmentIdHint = policy.Id,
-                Amount = settledAmount,
-                PaidOn = paidOn,
-                Method = WellKnownPaymentMethods.DownPayment,
-                ReferenceNo = $"PORTAL-{invitation.Token[..12]}",
-                MethodType = PaymentMethod.Online,
-                RecordedByUserId = invitation.CreatedByUserId,
-            };
-            dbContext.Payments.Add(payment);
-
-            dbContext.AuditEntries.Add(new AuditEntry
-            {
-                AgencyId = agencyId,
-                UserId = invitation.CreatedByUserId,
-                UserDisplayName = "پورتال مشتری",
-                EntityType = nameof(Payment),
-                EntityId = payment.Id,
-                PolicyId = policy.Id,
-                Action = AuditAction.PaymentRecorded,
-                Description = $"پرداخت آنلاین پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber} ({settledAmount:N0} تومان) از طریق پورتال مشتری",
-                OccurredAt = occurredAt,
-                IpAddress = customerIp,
-            });
-
-            await FlipDownPaymentCommissionSlicesAsync(policy.Id, occurredAt, ct);
-
-            invitation.Stage = PolicyVerificationStage.Completed;
-            invitation.DownPaymentPaidAtUtc = occurredAt;
-            await dbContext.SaveChangesAsync(ct);
-
-            return (settledAmount, occurredAt);
+            var settled = await SettleDownPaymentAsync(
+                invitation, policy, charge.SettledAmountToman ?? amount, customerIp, paidOn, ct);
+            return new PortalPaymentResult(settled.SettledAmount, settled.OccurredAt);
         });
     }
+
+    /// <summary>The money-moving half of a down payment, shared verbatim by the inline (mock /
+    /// one-phase) path and the PSP-callback path — Payment + audit + stage flip + commission
+    /// flips. The caller's pre-check keeps it idempotent per (policy, day, method).</summary>
+    public async Task<(decimal SettledAmount, DateTimeOffset OccurredAt)> SettleDownPaymentAsync(
+        CustomerPortalInvitation invitation, Policy policy, decimal settledAmount,
+        string? customerIp, DateOnly paidOn, CancellationToken ct)
+    {
+        var agencyId = invitation.AgencyId;
+
+        // A non-positive reported amount is a protocol violation. A different positive amount is
+        // equally unsafe here: this hop completes the exact down payment and must never turn a
+        // partial/over capture into a settled policy balance.
+        var expectedAmount = invitation.DownPaymentAmountToman ?? policy.DownPayment;
+        if (settledAmount <= 0 || settledAmount != expectedAmount)
+        {
+            throw new PortalInvitationException("مبلغ تأییدشده با پیش‌پرداخت مورد انتظار یکسان نیست؛ پرداخت تسویه نشد.");
+        }
+
+        // Protect the one-down-payment-per-policy invariant across both the online callback and
+        // the operator endpoint. The range lock is policy-scoped; a repeated portal charge returns
+        // the existing payment instead of creating a second one.
+        await using var paymentTx = await dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, ct);
+        var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
+            p => p.InstallmentIdHint == policy.Id && p.Method == WellKnownPaymentMethods.DownPayment && !p.IsDeleted, ct);
+        if (existing is not null)
+        {
+            var completedAt = invitation.DownPaymentPaidAtUtc ?? existing.PaidOn.ToDateTime(TimeOnly.MinValue);
+            return (existing.Amount, completedAt);
+        }
+
+        var occurredAt = DateTimeOffset.UtcNow;
+        var payment = new Payment
+        {
+            // Client-side key — the audit row below references it by Id in this same
+            // SaveChanges; a database-generated key would leave the audit pointing at EF's
+            // empty placeholder.
+            Id = SequentialGuidGenerator.Next(),
+            AgencyId = agencyId,
+            CustomerId = invitation.CustomerId,
+            InstallmentIdHint = policy.Id,
+            Amount = settledAmount,
+            PaidOn = paidOn,
+            Method = WellKnownPaymentMethods.DownPayment,
+            ReferenceNo = $"PORTAL-{invitation.Token[..12]}",
+            MethodType = PaymentMethod.Online,
+            RecordedByUserId = invitation.CreatedByUserId,
+        };
+        dbContext.Payments.Add(payment);
+
+        dbContext.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = agencyId,
+            UserId = invitation.CreatedByUserId,
+            UserDisplayName = "پورتال مشتری",
+            EntityType = nameof(Payment),
+            EntityId = payment.Id,
+            PolicyId = policy.Id,
+            Action = AuditAction.PaymentRecorded,
+            Description = $"پرداخت آنلاین پیش‌پرداخت بیمه‌نامهٔ {policy.PolicyNumber} ({settledAmount:N0} تومان) از طریق پورتال مشتری",
+            OccurredAt = occurredAt,
+            IpAddress = customerIp,
+        });
+
+        await FlipDownPaymentCommissionSlicesAsync(policy.Id, occurredAt, ct);
+
+        invitation.Stage = PolicyVerificationStage.Completed;
+        invitation.DownPaymentPaidAtUtc = occurredAt;
+        await dbContext.SaveChangesAsync(ct);
+        await paymentTx.CommitAsync(ct);
+
+        return (settledAmount, occurredAt);
+    }
+
+    /// <summary>The PSP-callback half of the down-payment flow: resolves the pending charge to a
+    /// business action via the coordinator, then settles exactly like the inline path. Called by
+    /// the anonymous callback endpoint after the customer returns from the PSP. Returns the SPA
+    /// URL the browser must be bounced to, carrying a machine-readable result.</summary>
+    public async Task<string> FinalizeDownPaymentCallbackAsync(
+        string token, IReadOnlyDictionary<string, string> callbackParameters,
+        string? customerIp, CancellationToken ct = default)
+    {
+        return await RunWithAgencyScopeAsync(token, ct, async (invitation, agencyId) =>
+        {
+            var policy = await dbContext.Policies.FirstAsync(p => p.Id == invitation.PolicyId, ct);
+            var transaction = await coordinator.ResolveCallbackTransactionAsync(
+                invitation.Id, null, callbackParameters, ct);
+            var data = coordinator.ReadCallback(transaction.Provider, callbackParameters);
+            if (!data.SuccessFlagSet)
+            {
+                await coordinator.MarkCallbackFailedAsync(
+                    transaction, "بازگشت از درگاه پرداخت موفق گزارش نشد.", ct);
+                return PortalCallbackReturnUrl(token, "failed", "cancelled");
+            }
+
+            try
+            {
+                var outcome = await coordinator.VerifyAsync(transaction.Provider, transaction.GatewayReference, ct);
+                await SettleDownPaymentAsync(
+                    invitation, policy, outcome.SettledAmountToman, customerIp, IranClock.Today(), ct);
+                return PortalCallbackReturnUrl(token, "ok", $"{outcome.SettledAmountToman:N0}");
+            }
+            catch (PortalInvitationException ex)
+            {
+                // Verify refused the payment — the row is already Failed/Expired in the database,
+                // and the customer must see the Persian reason on the SPA page, not a bare error.
+                return PortalCallbackReturnUrl(token, "failed", ex.Message);
+            }
+        });
+    }
+
+    /// <summary>Where the PSP's browser is bounced after a down payment: back onto the SPA's own
+    /// /portal/{token} page with a machine-readable result the page renders. Mirrors
+    /// InstallmentPaymentLinkService.PayCallbackReturnUrl.</summary>
+    private string PortalCallbackReturnUrl(string token, string payState, string detail) =>
+        $"{configuration["Portal:PublicBaseUrl"]?.TrimEnd('/')}/portal/{Uri.EscapeDataString(token)}" +
+        $"?pay={payState}&detail={Uri.EscapeDataString(detail)}";
 
     /// <summary>Everything the public portal page renders for one token: base invitation info plus
     /// the contract text and the real installment schedule, which only appear once the agency has
@@ -718,6 +889,18 @@ public sealed class PolicyVerificationService(
         finally
         {
             AgencyContext.Current = previousAgency;
+        }
+    }
+
+    private static void EnsureInvitationNotExpired(CustomerPortalInvitation invitation)
+    {
+        if (invitation.ExpiresAtUtc <= DateTimeOffset.UtcNow)
+        {
+            if (invitation.Status == PortalInvitationStatus.Pending)
+            {
+                invitation.Status = PortalInvitationStatus.Expired;
+            }
+            throw new PortalInvitationException("اعتبار این لینک به پایان رسیده است.");
         }
     }
 

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -43,7 +44,7 @@ public class CollateralEndpointTests : IClassFixture<WebApplicationFactory<Progr
 
         // The "upcoming" filter compares against the REAL wall clock (TimeProvider is not faked
         // through HTTP), so due dates must be anchored to actual "now".
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-CHQ-{Guid.NewGuid():N}"[..16], salisLineId, null, "بیمه‌گذار چک", null, null,
             Vehicle: new VehicleInput("۷۷و۷۷۷", null, null, null, null, null), Property: null,
@@ -52,11 +53,11 @@ public class CollateralEndpointTests : IClassFixture<WebApplicationFactory<Progr
         var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
 
         var missingSayad = await client.PostAsJsonAsync("/api/collateral", new CreateCollateralRequest(
-            policy!.PolicyId, "ChequeSayadi", null, "بانک ملی", 3_000_000m, today.AddDays(20)));
+            policy!.PolicyId, "ChequeSayadi", null, null, "بانک ملی", 3_000_000m, today.AddDays(20)));
         Assert.Equal(HttpStatusCode.BadRequest, missingSayad.StatusCode);
 
         var createResponse = await client.PostAsJsonAsync("/api/collateral", new CreateCollateralRequest(
-            policy.PolicyId, "ChequeSayadi", "IR010203040506070809101112", "بانک ملی", 3_000_000m, today.AddDays(20)));
+            policy.PolicyId, "ChequeSayadi", "IR010203040506070809101112", null, "بانک ملی", 3_000_000m, today.AddDays(20)));
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<CollateralDto>();
         Assert.Equal("Held", created!.Status);

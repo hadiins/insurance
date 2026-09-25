@@ -189,7 +189,7 @@ export function ChequesListPage() {
         <Table>
           <thead>
             <tr>
-              {["نوع", "بیمه‌نامه", "بیمه‌گذار", "شمارهٔ چک", "بانک", "مبلغ", "سررسید", "وضعیت", ""].map((h) => (
+              {["نوع", "بیمه‌نامه", "بیمه‌گذار", "شمارهٔ چک", "شناسهٔ صیادی", "بانک", "مبلغ", "سررسید", "وضعیت", ""].map((h) => (
                 <Th key={h}>{h}</Th>
               ))}
             </tr>
@@ -213,7 +213,10 @@ export function ChequesListPage() {
                 <Td className="py-2.5 font-semibold">{fa(c.policyNumber)}</Td>
                 <Td className="py-2.5 text-(--ice-3)">{c.customerName}</Td>
                 <Td ltr className="py-2.5 tabular-nums text-(--ice-3)">
-                  {fa(c.chequeNumber ?? c.sayadId ?? "—")}
+                  {fa(c.chequeNumber ?? "—")}
+                </Td>
+                <Td ltr className="py-2.5 tabular-nums text-(--ice-3)">
+                  {fa(c.sayadId ?? "—")}
                 </Td>
                 <Td className="py-2.5 text-(--ice-3)">{c.bankName || "—"}</Td>
                 <Td className="py-2.5 font-bold">{money(c.amount)}</Td>

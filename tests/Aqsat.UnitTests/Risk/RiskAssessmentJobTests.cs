@@ -1,4 +1,4 @@
-using Aqsat.Application.Common;
+﻿using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Jobs;
@@ -90,9 +90,9 @@ public class RiskAssessmentJobTests
             VehicleId = vehicle.Id,
             ContractName = "تجارت آفرینان تسنیم",
             IsInstallment = true,
-            IssueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-2)),
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-2)),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(10)),
+            IssueDate = IranClock.Today().AddMonths(-2),
+            StartDate = IranClock.Today().AddMonths(-2),
+            EndDate = IranClock.Today().AddMonths(10),
             NetPremium = 9_000_000,
             DownPayment = 0,
             InstallmentCount = 3,
@@ -106,8 +106,8 @@ public class RiskAssessmentJobTests
             AgencyId = fixture.AgencyAId,
             PolicyId = policy.Id,
             SeqNo = 1,
-            DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1)),
-            SettlementDeadline = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1).AddDays(3)),
+            DueDate = IranClock.Today().AddMonths(1),
+            SettlementDeadline = IranClock.Today().AddMonths(1).AddDays(3),
             Amount = 3_000_000,
             Status = InstallmentStatus.Unpaid,
         });

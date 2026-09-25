@@ -12,7 +12,9 @@ public sealed record AgencySettingsDto(
     /// system default is in effect.</summary>
     string? InstallmentContractText = null,
     /// <summary>The agency manager's mobile that danger-zone confirmation codes are SMS'd to.</summary>
-    string? DangerZoneManagerMobile = null);
+    string? DangerZoneManagerMobile = null,
+    /// <summary>The agency's monthly collection target in TOMAN. Null = no goal configured.</summary>
+    decimal? MonthlyCollectionGoal = null);
 
 /// <summary>docs/TASK-24-POLICY-NUMBER.md §4.3 — a dedicated endpoint, not a field on the general
 /// settings PUT, since it carries its own service-layer lock rule.</summary>
@@ -57,4 +59,8 @@ public sealed record UpdateAgencySettingsRequest(
     string? InstallmentContractText = null,
     /// <summary>Null keeps the stored mobile; empty string clears it (danger-zone OTP then refuses
     /// to start until a new one is set).</summary>
-    string? DangerZoneManagerMobile = null);
+    string? DangerZoneManagerMobile = null,
+    /// <summary>The agency's monthly collection target in TOMAN — the Today dashboard spreads it
+    /// over the Jalali month to draw the daily goal line. Null (or zero) means no goal is
+    /// configured and the chart draws no goal bar at all, rather than a fabricated zero target.</summary>
+    decimal? MonthlyCollectionGoal = null);

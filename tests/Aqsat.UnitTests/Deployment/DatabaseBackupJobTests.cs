@@ -121,7 +121,7 @@ public class DatabaseBackupJobTests
         }
         finally
         {
-            Directory.Delete(backupDirectory, recursive: true);
+            await DeleteBackupDirectoryBestEffortAsync(backupDirectory);
         }
     }
 
@@ -164,7 +164,35 @@ public class DatabaseBackupJobTests
         }
         finally
         {
-            Directory.Delete(backupDirectory, recursive: true);
+            await DeleteBackupDirectoryBestEffortAsync(backupDirectory);
+        }
+    }
+
+    /// <summary>
+    /// Temp cleanup is best-effort by design. SQL Server holds a read handle on a .bak until it is
+    /// finished with it, and that release is not synchronous with the command returning — so a
+    /// recursive delete can hit <c>IOException : The process cannot access the file ... because it is
+    /// being used by another process</c>. Cleanup failing must never turn a passing check red (the
+    /// task's own check is "restore the backup and confirm the data"), so this retries briefly and
+    /// then gives up; SerilogTailReaderTests.Dispose swallows the same race for its log files.
+    /// </summary>
+    private static async Task DeleteBackupDirectoryBestEffortAsync(string backupDirectory)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                Directory.Delete(backupDirectory, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < 4)
+            {
+                await Task.Delay(200);
+            }
+            catch (IOException)
+            {
+                // Still locked after the retries; the OS cleans temp anyway.
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -47,7 +48,7 @@ public class ReceiptsReportEndpointTests : IClassFixture<WebApplicationFactory<P
         seedContext.CashBoxes.Add(cashBox);
         await seedContext.SaveChangesAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-RCPT-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری گزارش دریافتی", null, null,
             Vehicle: new VehicleInput("۸۸د۸۸۸", null, null, null, null, null), Property: null,
@@ -58,6 +59,12 @@ public class ReceiptsReportEndpointTests : IClassFixture<WebApplicationFactory<P
         var scheduleResponse = await client.PostAsJsonAsync(
             $"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 1));
         scheduleResponse.EnsureSuccessStatusCode();
+        AgencyContext.Current = fixture.AgencyAId;
+        var receiptsPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        receiptsPolicy.RequiresVerification = false;
+        receiptsPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
+
 
         var receiveResponse = await client.PostAsJsonAsync(
             $"/api/policies/{policy.PolicyId}/receive-down-payment",

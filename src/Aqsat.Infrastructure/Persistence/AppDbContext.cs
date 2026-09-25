@@ -30,6 +30,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     // RLS-exempt by design, same as PortalInvitationTokenIndex above: the anonymous /pay/{token}
     // entry point resolves its agency here before any scoped read.
     public DbSet<PaymentLinkTokenIndex> PaymentLinkTokenIndex => Set<PaymentLinkTokenIndex>();
+    // docs/PAYMENT-GATEWAYS.md — one row per real-PSP charge attempt (request → redirect →
+    // callback → verify). Agency-scoped and RLS-covered via AgencyAccessPolicy, like every other
+    // money-bearing table.
+    public DbSet<GatewayTransaction> GatewayTransactions => Set<GatewayTransaction>();
     public DbSet<CreditReport> CreditReports => Set<CreditReport>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<PropertySubject> PropertySubjects => Set<PropertySubject>();
@@ -47,6 +51,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<PaymentCheque> PaymentCheques => Set<PaymentCheque>();
+    public DbSet<CollectionContact> CollectionContacts => Set<CollectionContact>();
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<InsurerRemittance> InsurerRemittances => Set<InsurerRemittance>();

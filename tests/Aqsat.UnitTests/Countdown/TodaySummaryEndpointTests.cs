@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -40,7 +41,7 @@ public class TodaySummaryEndpointTests : IClassFixture<WebApplicationFactory<Pro
 
         var before = await client.GetFromJsonAsync<TodaySummaryDto>("/api/countdown/summary");
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = Guid.NewGuid().ToString("N")[..8];
 
         // An installment whose settlement deadline has already passed → overdue.

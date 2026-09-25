@@ -33,8 +33,7 @@ public class PlatformOtpServiceTests
         var sent = await service.SendAsync(userId, "09121234567", Guid.NewGuid());
 
         Assert.True(sent);
-        // The message ends with expiry prose, not the code — pull the 6-digit run out with a regex
-        // (the only ASCII-digit run in the text; "۵ دقیقه" is Persian script, not \d).
+        // The delivered payload is the code itself — pull the 6-digit run out of it.
         var code = System.Text.RegularExpressions.Regex.Match(sender.LastText!, @"\d{6}").Value;
         Assert.True(service.Verify(userId, code));
         Assert.False(service.Verify(userId, code)); // single-use: consumed on first verify.
@@ -49,8 +48,8 @@ public class PlatformOtpServiceTests
 
         await service.SendAsync(userId, "09121234567", Guid.NewGuid());
 
-        // The wrong-code assertion only needs to show Verify rejects a bad input; the code-bearing
-        // text ends with prose, so match the embedded 6-digit run rather than the last 6 chars.
+        // The wrong-code assertion only needs to show Verify rejects a bad input: read the real code
+        // off the delivered payload and hand Verify a different one.
         var wrongCode = System.Text.RegularExpressions.Regex.Match(sender.LastText!, @"\d{6}").Value == "000000" ? "000001" : "000000";
 
         Assert.False(service.Verify(userId, wrongCode));
@@ -63,6 +62,14 @@ public class PlatformOtpServiceTests
         public Task<bool> SendAsync(string mobile, string text, Guid agencyId, CancellationToken ct = default)
         {
             LastText = text;
+            return Task.FromResult(success);
+        }
+
+        /// <summary>The OTP service delivers through SendOtpAsync, whose interface default returns
+        /// false — without this override LastText stayed null and the code could never be sent.</summary>
+        public Task<bool> SendOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default)
+        {
+            LastText = code;
             return Task.FromResult(success);
         }
     }

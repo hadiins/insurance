@@ -26,7 +26,10 @@ public sealed record RecordPaymentRequest(
     PaymentMethod? MethodType = null,
     Guid? CashBoxId = null,
     Guid? BankAccountId = null,
-    ChequeDetailsRequest? Cheque = null);
+    ChequeDetailsRequest? Cheque = null,
+    // Describes the payment or the action taken on it, never the person paying (CLAUDE.md rule 8).
+    // Cap mirrors the column (nvarchar(300)).
+    [MaxLength(300)] string? Note = null);
 
 public sealed record AllocationLineDto(Guid InstallmentId, int SeqNo, string PolicyNumber, decimal Amount);
 

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -54,6 +55,12 @@ public class AgencyCommissionEndpointTests : IClassFixture<WebApplicationFactory
         scheduleResponse.EnsureSuccessStatusCode();
 
         AgencyContext.Current = fixture.AgencyAId;
+        var commissionPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        commissionPolicy.RequiresVerification = false;
+        commissionPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
+
+        AgencyContext.Current = fixture.AgencyAId;
 
         // Down-payment slice (20% of receivable) + 2 installment slices (each 40%), 10% of NetPremium = 1,000,000 total.
         // Stage 4/7 — every slice starts Pending; scheduling no longer implies the down payment was collected.
@@ -103,7 +110,7 @@ public class AgencyCommissionEndpointTests : IClassFixture<WebApplicationFactory
             .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
 
         AgencyContext.Current = fixture.AgencyAId;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var customer = new Customer { AgencyId = fixture.AgencyAId, ExternalCode = $"EXT-{Guid.NewGuid():N}"[..12], FullName = "مشتری غیراقساطی" };
         var vehicle = new Vehicle { AgencyId = fixture.AgencyAId, Plate = "55و555" };
         seedContext.Customers.Add(customer);

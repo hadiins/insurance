@@ -15,11 +15,13 @@ export function JalaliDateField({
   onChange,
   className,
   placeholder,
+  readOnly = false,
 }: {
   value: string;
   onChange: (isoDate: string) => void;
   className?: string;
   placeholder?: string;
+  readOnly?: boolean;
 }) {
   const [text, setText] = useState(() => isoToJalaliText(value));
   const [open, setOpen] = useState(false);
@@ -39,6 +41,7 @@ export function JalaliDateField({
       <div className="flex items-stretch gap-1">
         <input
           value={fa(text)}
+          readOnly={readOnly}
           onChange={(e) => {
             const latin = toLatinDigits(e.target.value).replace(/[^\d/-]/g, "");
             setText(latin);
@@ -56,8 +59,9 @@ export function JalaliDateField({
         />
         <button
           type="button"
+          disabled={readOnly}
           onClick={() => (open ? setOpen(false) : openPopup())}
-          className="shrink-0 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 text-[14px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice)"
+          className="shrink-0 rounded-(--r) border border-(--edge-2) bg-(--fld) px-2.5 text-[14px] text-(--ice-3) transition-colors hover:bg-(--hov) hover:text-(--ice) disabled:cursor-default disabled:opacity-50"
           aria-label="نمایش تقویم"
         >
           <CalendarBlankIcon size={16} />

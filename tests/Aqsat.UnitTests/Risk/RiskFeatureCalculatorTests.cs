@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -28,7 +29,7 @@ public class RiskFeatureCalculatorTests
         var lineId = await context.InsuranceLines
             .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var customer = new Customer { AgencyId = agencyA.AgencyId, ExternalCode = $"EXT-{Guid.NewGuid():N}"[..12], FullName = "مشتری ریسک" };
         context.Customers.Add(customer);
         await context.SaveChangesAsync();

@@ -40,6 +40,16 @@ public sealed class NationalIdPlaintextBackfillJob(
 
         foreach (var table in Tables)
         {
+            // A database whose legacy column never existed (fresh install: InitialCreateV2 already
+            // has the plaintext columns) or was already dropped by a previous successful run has
+            // nothing to convert. Without this guard the raw-SQL reads below fail with
+            // "Invalid column name 'NationalIdEncrypted'", logging a misleading ERROR on every
+            // startup. DropLegacyColumnAsync already carries the same COL_LENGTH guard.
+            if (!await LegacyColumnExistsAsync(table, ct))
+            {
+                continue;
+            }
+
             blockedIds.Clear();
 
             foreach (var agencyId in agencyIds)
@@ -129,6 +139,18 @@ public sealed class NationalIdPlaintextBackfillJob(
                 return;
             }
         }
+    }
+
+    /// <summary>Whether the pre-plaintext (AES-GCM) column is still present. Metadata only, so it
+    /// needs no agency stamp and is unaffected by RLS.</summary>
+    private async Task<bool> LegacyColumnExistsAsync(string table, CancellationToken ct)
+    {
+        await using var connection = new SqlConnection(dbContext.Database.GetConnectionString());
+        await connection.OpenAsync(ct);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT CASE WHEN COL_LENGTH('dbo.{table}', 'NationalIdEncrypted') IS NULL THEN 0 ELSE 1 END";
+        return Convert.ToInt32(await command.ExecuteScalarAsync(ct)) == 1;
     }
 
     /// <summary>Reads through a raw connection (the legacy column is not part of the EF model) —

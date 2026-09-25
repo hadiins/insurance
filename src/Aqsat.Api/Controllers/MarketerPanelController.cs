@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Domain;
@@ -43,7 +43,7 @@ public sealed class MarketerPanelController(AppDbContext dbContext, ICurrentUser
             return Forbid();
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policies = await dbContext.Policies
             .AsNoTracking()
             .Where(p => p.MarketerId == marketer.Id)

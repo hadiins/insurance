@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -9,6 +10,7 @@ using Aqsat.Infrastructure;
 using Aqsat.Infrastructure.Payments;
 using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Portal;
+using Microsoft.Extensions.Configuration;
 using Aqsat.Infrastructure.Seed;
 using Aqsat.UnitTests.DataModel;
 using Microsoft.AspNetCore.Hosting;
@@ -82,9 +84,9 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
             VehicleId = vehicle.Id,
             ContractName = "تجارت آفرینان تسنیم",
             IsInstallment = true,
-            IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1),
+            IssueDate = IranClock.Today(),
+            StartDate = IranClock.Today(),
+            EndDate = IranClock.Today().AddYears(1),
             NetPremium = installmentAmount * installmentCount,
             DownPayment = 0,
             InstallmentCount = installmentCount,
@@ -92,7 +94,7 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
         context.Policies.Add(policy);
         await context.SaveChangesAsync();
 
-        var due = firstDueDate ?? DateOnly.FromDateTime(DateTime.UtcNow).AddDays(10);
+        var due = firstDueDate ?? IranClock.Today().AddDays(10);
         for (var seq = 1; seq <= installmentCount; seq++)
         {
             var installment = new Installment
@@ -172,9 +174,9 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
             CustomerId = customerId,
             ContractName = "بیمهٔ عادی",
             IsInstallment = true,
-            IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1),
+            IssueDate = IranClock.Today(),
+            StartDate = IranClock.Today(),
+            EndDate = IranClock.Today().AddYears(1),
             NetPremium = 500_000m,
             DownPayment = 0,
             InstallmentCount = 1,
@@ -186,8 +188,8 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
             AgencyId = fixture.AgencyAId,
             PolicyId = secondPolicy.Id,
             SeqNo = 1,
-            DueDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-5),
-            SettlementDeadline = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2),
+            DueDate = IranClock.Today().AddDays(-5),
+            SettlementDeadline = IranClock.Today().AddDays(-2),
             Amount = 500_000m,
             Status = InstallmentStatus.Unpaid,
         });
@@ -240,7 +242,7 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
         Assert.Equal(1_000_000m, onlineResult!.PaidAmountToman);
 
         // MANUAL — the agent records the identical receipt for the other customer.
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var record = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
             manualInstallment.Id, 1_000_000m, today, "نقدی", null));
         record.EnsureSuccessStatusCode();
@@ -457,7 +459,7 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
         AgencyContext.Current = fixture.AgencyAId;
         var customerId = await SeedInstallmentPolicyAsync(context, fixture.AgencyAId, "مشتری ایندکس", "09123334464");
 
-        var service = new InstallmentPaymentLinkService(context, [new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance)]);
+        var service = CreateService(context, new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance));
         var link = await service.EnsureLinkAsync(customerId, Guid.NewGuid());
 
         await using var verify = TestDbContextFactory.Create();
@@ -486,7 +488,7 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
         var beforeRow = await before.CustomerPaymentLinks.AsNoTracking().SingleAsync(l => l.Token == token);
 
         await Task.Delay(50);
-        var service = new InstallmentPaymentLinkService(context, [new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance)]);
+        var service = CreateService(context, new MockPaymentGateway(NullLogger<MockPaymentGateway>.Instance));
         var refreshed = await service.EnsureLinkAsync(customerId, Guid.NewGuid());
 
         await using var verify = TestDbContextFactory.Create();
@@ -514,7 +516,7 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
             .Select(i => i.Id).FirstAsync();
         var (_, token) = await CreateLinkDirectAsync(fixture.AgencyAId, customerId, TimeSpan.FromDays(30));
 
-        var service = new InstallmentPaymentLinkService(context, [new ZeroAmountGateway()]);
+        var service = CreateService(context, new ZeroAmountGateway());
         var ex = await Assert.ThrowsAsync<PortalInvitationException>(
             () => service.PayInstallmentAsync(token, installmentId, "1.2.3.4"));
         Assert.Contains("نامعتبر", ex.Message);
@@ -528,13 +530,40 @@ public class InstallmentPaymentLinkEndpointTests : IClassFixture<WebApplicationF
         Assert.Equal(0m, installment.PaidAmount);
     }
 
+    /// <summary>The same wiring the DI container uses: the gateway list feeds one
+    /// GatewayPaymentCoordinator, and the service routes its charging through it.</summary>
+    private static InstallmentPaymentLinkService CreateService(AppDbContext context, IPaymentGateway gateway) =>
+        new(context,
+            new GatewayPaymentCoordinator(
+                context, [gateway],
+                new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Portal:PublicBaseUrl"] = "https://portal.example.com",
+                }).Build()),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Portal:PublicBaseUrl"] = "https://portal.example.com",
+            }).Build());
+
     private sealed class ZeroAmountGateway : IPaymentGateway
     {
         public PaymentProvider Provider => PaymentProvider.Mock;
 
-        public Task<GatewayPaymentResult> ChargeAsync(
-            string paymentToken, string merchantId, decimal amountToman, string description,
-            string callbackUrl, CancellationToken ct = default)
+        public decimal MinAmountToman => 0m;
+
+        public decimal MaxAmountToman => decimal.MaxValue;
+
+        public Task<GatewayChargeRequestResult> RequestAsync(
+            GatewayChargeRequest request, CancellationToken ct = default)
+            => Task.FromResult(new GatewayChargeRequestResult(
+                Succeeded: true, RequiresRedirect: false, RedirectUrl: null, GatewayReference: null,
+                SimulatedPaidAmountToman: 0m, FailureReason: null));
+
+        public Task<GatewayPaymentResult> VerifyAsync(
+            string gatewayReference, string merchantId, decimal amountToman, CancellationToken ct = default)
             => Task.FromResult(new GatewayPaymentResult(Succeeded: true, PaidAmountToman: 0m, FailureReason: null));
+
+        public GatewayCallbackData ReadCallback(IReadOnlyDictionary<string, string> parameters) =>
+            new(SuccessFlagSet: false, Reference: parameters.TryGetValue("Authority", out var a) ? a : "", InvoiceId: null);
     }
 }

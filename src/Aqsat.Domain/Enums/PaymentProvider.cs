@@ -15,6 +15,11 @@ public enum PaymentProvider : byte
     /// immediately. Never select this in production.</summary>
     Mock = 1,
 
-    /// <summary>زرینپال — the first real PSP wired behind IPaymentGateway.</summary>
+    /// <summary>زرینپال — the first real PSP wired behind IPaymentGateway. Amounts are sent as
+    /// IRT (تومان) explicitly, matching this system's own internal unit (rule 19).</summary>
     ZarinPal = 2,
+
+    /// <summary>گویا پی — wired behind the same IPaymentGateway abstraction. Its Amount field is
+    /// toman-only (no currency parameter), so the shared in-toman contract maps directly.</summary>
+    GooyaPay = 3,
 }

@@ -56,6 +56,9 @@ public sealed class NetworkRiskQueryService(AppDbContext dbContext, IFieldEncryp
         if (!string.IsNullOrWhiteSpace(nationalId))
         {
             var normalized = DigitNormalizer.ToLatin(nationalId).Trim();
+            // IsValid now accepts both the Iranian and the 996 series — foreign residents share
+            // the same cross-agency key space (owner decision 2026-09-21). Passport-only lookup
+            // is deliberately NOT offered: shared passport risk is a later phase.
             if (!NationalIdValidator.IsValid(normalized))
             {
                 throw new RiskAssessmentException("کد ملی نامعتبر است.");

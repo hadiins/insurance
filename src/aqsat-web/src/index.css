@@ -397,6 +397,16 @@ select option {
 }
 @keyframes aqsat-sweep { to { transform: translateX(100%); } }
 
+/* Login entrance: a soft staggered rise, brand pane first, form card after.
+ * Reduced-motion users get the global override above, so no extra guard. */
+@keyframes aqsat-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.aqsat-rise   { animation: aqsat-rise 0.6s var(--ease) both; }
+.aqsat-rise-2 { animation: aqsat-rise 0.6s var(--ease) 0.09s both; }
+.aqsat-rise-3 { animation: aqsat-rise 0.6s var(--ease) 0.18s both; }
+
 /* Motion is an enhancement. Honour the OS setting instead of overriding it. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

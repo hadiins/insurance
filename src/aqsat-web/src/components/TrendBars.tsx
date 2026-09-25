@@ -6,8 +6,9 @@ export interface TrendBarPoint {
   value: number;
 }
 
-/** Compact Persian amount for chart labels and axis ticks — the full figure stays in the tooltip. */
-function moneyShort(n: number): string {
+/** Compact Persian amount for chart labels and axis ticks — the full figure stays in the tooltip.
+ * Shared with GroupedTrendBars so the two charts can never disagree about how a number is written. */
+export function moneyShort(n: number): string {
   const abs = Math.abs(n);
   const sign = n < 0 ? "−" : "";
   if (abs >= 1_000_000_000) return `${sign}${fa(trim(abs / 1_000_000_000))} میلیارد`;

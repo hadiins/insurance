@@ -1,8 +1,10 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
+using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,14 +31,45 @@ public sealed class CustomersController(
     /// wizard can offer inline new-customer registration instead of an error.</summary>
     [HttpGet("lookup")]
     public async Task<ActionResult<CustomerLookupResultDto>> Lookup(
-        [FromQuery] string? nationalId, CancellationToken ct)
+        [FromQuery] string? nationalId, [FromQuery] string? passportNumber, CancellationToken ct)
     {
+        // Foreign nationals (owner decision 2026-09-21): passport-only customers are looked up by
+        // their passport instead. Exactly one key is accepted — an empty key is an explicit 400,
+        // never a silent full-list (rule 17).
+        if (!string.IsNullOrWhiteSpace(passportNumber))
+        {
+            var normalizedPassport = Aqsat.Infrastructure.Customers.CustomerCreationService.NormalizePassport(passportNumber);
+            if (!NationalIdValidator.IsPassport(normalizedPassport))
+            {
+                return ValidationProblem("شمارهٔ پاسپورت نامعتبر است.");
+            }
+
+            var passportCustomer = await dbContext.Customers.AsNoTracking()
+                .Where(c => c.PassportNumber == normalizedPassport)
+                .Select(c => new CustomerLookupProfileDto(
+                    c.Id, c.FullName, c.FirstName, c.LastName, c.NationalId,
+                    c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete,
+                    c.Kind, c.PassportNumber, c.PassportExpiry))
+                .FirstOrDefaultAsync(ct);
+
+            if (passportCustomer is null)
+            {
+                return Ok(new CustomerLookupResultDto(false, null, 0));
+            }
+
+            var passportPolicyCount = await dbContext.Policies.AsNoTracking()
+                .CountAsync(p => p.CustomerId == passportCustomer.Id, ct);
+
+            return Ok(new CustomerLookupResultDto(true, passportCustomer, passportPolicyCount));
+        }
+
         var normalized = DigitNormalizer.ToLatin(nationalId ?? string.Empty).Trim();
         if (normalized.Length == 0)
         {
-            return ValidationProblem("کد ملی الزامی است.");
+            return ValidationProblem("کد ملی یا شمارهٔ پاسپورت الزامی است.");
         }
 
+        // Valid = Iranian OR 996-series: both share the NationalId column and lookup path.
         if (!NationalIdValidator.IsValid(normalized))
         {
             return ValidationProblem("کد ملی نامعتبر است.");
@@ -46,7 +79,8 @@ public sealed class CustomersController(
             .Where(c => c.NationalId == normalized)
             .Select(c => new CustomerLookupProfileDto(
                 c.Id, c.FullName, c.FirstName, c.LastName, c.NationalId,
-                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete))
+                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete,
+                c.Kind, c.PassportNumber, c.PassportExpiry))
             .FirstOrDefaultAsync(ct);
 
         if (customer is null)
@@ -73,14 +107,24 @@ public sealed class CustomersController(
             return ValidationProblem("نام و نام خانوادگی الزامی است.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.NationalId))
-        {
-            return ValidationProblem("کد ملی الزامی است.");
-        }
-
         if (string.IsNullOrWhiteSpace(request.Mobile))
         {
             return ValidationProblem("شمارهٔ همراه الزامی است.");
+        }
+
+        // The standalone form is stricter than the issuance path (where a null national ID still
+        // means an incomplete profile): a customer registered here always carries an identity
+        // anchor, and Kind decides which one (owner decision 2026-09-21).
+        if (request.Kind == Aqsat.Domain.Enums.CustomerKind.ForeignPassportOnly)
+        {
+            if (string.IsNullOrWhiteSpace(request.PassportNumber))
+            {
+                return ValidationProblem("برای اتباع بدون کد ملی، شمارهٔ پاسپورت الزامی است.");
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(request.NationalId))
+        {
+            return ValidationProblem("کد ملی الزامی است.");
         }
 
         Domain.Customer customer;
@@ -91,7 +135,8 @@ public sealed class CustomersController(
                 new Aqsat.Infrastructure.Customers.CreateCustomerInput(
                     $"{request.FirstName.Trim()} {request.LastName.Trim()}",
                     request.FirstName, request.LastName, request.NationalId, request.Mobile,
-                    request.EmergencyMobile, request.PostalCode, request.Address),
+                    request.EmergencyMobile, request.PostalCode, request.Address,
+                    request.Kind, request.PassportNumber, request.PassportExpiry),
                 ct);
         }
         catch (Aqsat.Infrastructure.Customers.CustomerCreationException ex)
@@ -103,7 +148,8 @@ public sealed class CustomersController(
             .Where(c => c.Id == customer.Id)
             .Select(c => new CustomerLookupProfileDto(
                 c.Id, c.FullName, c.FirstName, c.LastName, c.NationalId,
-                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete))
+                c.Mobile, c.EmergencyMobile, c.Address, c.PostalCode, c.IsProfileComplete,
+                c.Kind, c.PassportNumber, c.PassportExpiry))
             .FirstAsync(ct);
 
         return Ok(new CustomerLookupResultDto(true, profile, 0));
@@ -122,7 +168,9 @@ public sealed class CustomersController(
             {
                 Total = g.Count(),
                 WithoutMobile = g.Count(c => c.Mobile == null),
-                WithoutNationalId = g.Count(c => c.NationalId == null),
+                // "Without an identifier" — either kind counts as identified (owner decision
+                // 2026-09-21): a passport-only customer missing their passport still needs this count.
+                WithoutNationalId = g.Count(c => c.NationalId == null && c.PassportNumber == null),
                 WithoutAddress = g.Count(c => c.Address == null),
                 WithoutPostalCode = g.Count(c => c.PostalCode == null),
                 WithoutName = g.Count(c => c.FirstName == null || c.LastName == null),
@@ -146,7 +194,7 @@ public sealed class CustomersController(
         query = filter switch
         {
             "no-mobile" => query.Where(c => c.Mobile == null),
-            "no-national-id" => query.Where(c => c.NationalId == null),
+            "no-national-id" => query.Where(c => c.NationalId == null && c.PassportNumber == null),
             "no-address" => query.Where(c => c.Address == null),
             "no-postal-code" => query.Where(c => c.PostalCode == null),
             "no-name" => query.Where(c => c.FirstName == null || c.LastName == null),
@@ -211,14 +259,40 @@ public sealed class CustomersController(
 
         if (request.NationalId is not null)
         {
-            if (!NationalIdValidator.IsValid(request.NationalId))
+            // The kind is already settled on the stored row; a 996-series ID belongs to a
+            // ForeignResident row, an Iranian ID to an Iranian row. A checksum-valid Iranian ID on
+            // a ForeignPassportOnly row is accepted too (the resident later obtained a regular ID).
+            var normalizedNationalId = DigitNormalizer.ToLatin(request.NationalId).Trim();
+            var accepted = customer.Kind == CustomerKind.ForeignResident
+                ? NationalIdValidator.IsForeignResident(normalizedNationalId)
+                : NationalIdValidator.IsIranian(normalizedNationalId)
+                    || (customer.Kind == CustomerKind.ForeignPassportOnly && NationalIdValidator.IsIranian(normalizedNationalId));
+            if (!accepted)
             {
-                return ValidationProblem("کد ملی نامعتبر است.");
+                return ValidationProblem(customer.Kind == CustomerKind.ForeignResident
+                    ? "کد ملی اتباع باید ۱۰ رقم شروع‌شده با ۹۹۶ باشد."
+                    : "کد ملی نامعتبر است.");
             }
 
-            var normalizedNationalId = DigitNormalizer.ToLatin(request.NationalId).Trim();
             customer.NationalId = normalizedNationalId;
             customer.NationalIdHash = fieldEncryptor.Hash(normalizedNationalId);
+        }
+
+        if (request.PassportNumber is not null)
+        {
+            var normalizedPassport = Aqsat.Infrastructure.Customers.CustomerCreationService.NormalizePassport(request.PassportNumber);
+            if (!NationalIdValidator.IsPassport(normalizedPassport))
+            {
+                return ValidationProblem("شمارهٔ پاسپورت نامعتبر است.");
+            }
+
+            customer.PassportNumber = normalizedPassport;
+            customer.PassportNumberHash = fieldEncryptor.Hash(normalizedPassport);
+        }
+
+        if (request.PassportExpiry is not null)
+        {
+            customer.PassportExpiry = request.PassportExpiry;
         }
 
         if (request.PostalCode is not null)
@@ -274,7 +348,7 @@ public sealed class CustomersController(
     [HttpGet("high-risk")]
     public async Task<ActionResult<IReadOnlyList<HighRiskCustomerDto>>> HighRisk(CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         var overdueByCustomer = await dbContext.Installments.AsNoTracking()
             .Where(i => i.Status != InstallmentStatus.Settled && i.SettlementDeadline < today)
@@ -338,14 +412,109 @@ public sealed class CustomersController(
                     && p.Vehicle.PlateNormalized.Contains(normalized)));
         }
 
-        var customers = await query
+        var rows = await query
             .OrderBy(c => c.FullName)
             .Take(100)
-            .Select(c => new CustomerListItemDto(
-                c.Id, c.FullName, c.Mobile, dbContext.Policies.Count(p => p.CustomerId == c.Id)))
+            .Select(c => new
+            {
+                c.Id, c.FullName, c.Mobile,
+                PolicyCount = dbContext.Policies.Count(p => p.CustomerId == c.Id)
+            })
             .ToListAsync(ct);
 
+        var deletableIds = await FindCustomerIdsWithoutHistoryAsync(rows.Select(r => r.Id).ToArray(), ct);
+        var customers = rows
+            .Select(r => new CustomerListItemDto(
+                r.Id, r.FullName, r.Mobile, r.PolicyCount, deletableIds.Contains(r.Id)))
+            .ToList();
+
         return Ok(customers);
+    }
+
+    /// <summary>Physically deletes a customer only when no direct business relationship exists.
+    /// Query filters are intentionally ignored for soft-deletable history so a hidden/deleted row
+    /// cannot become an FK failure or an accidental deletion bypass.</summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.PolicyWrite)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await using var tx = await dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, ct);
+
+        var customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (customer is null) return NotFound();
+
+        var deletable = await FindCustomerIdsWithoutHistoryAsync([id], ct);
+        if (!deletable.Contains(id))
+        {
+            return Conflict(new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "این مشتری سابقه دارد و حذف فیزیکی آن مجاز نیست.",
+            });
+        }
+
+        var name = customer.FullName;
+        var agencyId = customer.AgencyId;
+        var deletedAt = DateTimeOffset.UtcNow;
+        var actorId = currentUser.UserId;
+        var actorName = currentUser.DisplayName;
+
+        // The operation itself is auditable, but AuditEntry has no Customer FK and therefore does
+        // not itself make a later deletion attempt fail.
+        dbContext.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = agencyId, UserId = actorId, UserDisplayName = actorName,
+            EntityType = nameof(Customer), EntityId = id, PolicyId = Guid.Empty,
+            Action = AuditAction.Deleted, Description = $"حذف فیزیکی مشتری بدون سابقه: {name}",
+            OccurredAt = deletedAt, IpAddress = CurrentRequestContext.IpAddress,
+        });
+        dbContext.Customers.Remove(customer);
+        await dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return NoContent();
+    }
+
+    private async Task<HashSet<Guid>> FindCustomerIdsWithoutHistoryAsync(
+        IReadOnlyCollection<Guid> customerIds, CancellationToken ct)
+    {
+        if (customerIds.Count == 0) return [];
+
+        var ids = customerIds.ToHashSet();
+        var blocked = new HashSet<Guid>();
+        async Task AddAsync<T>(
+            DbSet<T> set,
+            System.Linq.Expressions.Expression<Func<T, bool>> predicate,
+            System.Linq.Expressions.Expression<Func<T, Guid?>> customerIdSelector) where T : class
+        {
+            var found = (await set.IgnoreQueryFilters().Where(predicate)
+                .Select(customerIdSelector).Where(x => x != null).Select(x => x!.Value)
+                .ToListAsync(ct)).ToHashSet();
+            blocked.UnionWith(found);
+        }
+
+        await AddAsync(dbContext.Policies, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.Payments, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.GatewayTransactions, x => x.CustomerId != null && ids.Contains(x.CustomerId.Value), x => x.CustomerId);
+        await AddAsync(dbContext.CreditReports, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.CustomerPortalInvitations, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.CustomerPaymentLinks, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.CollectionContacts, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.RiskAssessments, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.RiskWarnings, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.ManualReviews, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.CustomerCreditLimits, x => ids.Contains(x.CustomerId), x => x.CustomerId);
+        await AddAsync(dbContext.RenewalWatches, x => x.CustomerId != null && ids.Contains(x.CustomerId.Value), x => x.CustomerId);
+        // NetworkRiskProfile is deliberately RLS-exempt, so tenant scope is explicit here.
+        await AddAsync(dbContext.NetworkRiskProfiles,
+            x => x.AgencyId == currentUser.ActiveOrganizationId && ids.Contains(x.CustomerId), x => x.CustomerId);
+        // Keep a direct customer-level audit as history if one is ever introduced. Current profile
+        // edits are not audited, so a newly registered customer remains deletable.
+        blocked.UnionWith((await dbContext.AuditEntries
+            .Where(a => a.EntityType == nameof(Customer) && ids.Contains(a.EntityId))
+            .Select(a => a.EntityId).ToListAsync(ct)).ToHashSet());
+
+        return ids.Except(blocked).ToHashSet();
     }
 
     [HttpGet("{id:guid}/file")]
@@ -404,7 +573,8 @@ public sealed class CustomersController(
         return Ok(new CustomerFileDto(
             customer.Id, customer.FullName, customer.Mobile, customer.NationalId,
             policySummaries.Sum(p => p.Balance),
-            policySummaries, paymentDtos, collateral, timeline));
+            policySummaries, paymentDtos, collateral, timeline,
+            customer.Kind, customer.PassportNumber));
     }
 
     [HttpGet("{id:guid}/open-installments")]

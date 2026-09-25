@@ -107,7 +107,7 @@ public class FanavaranImportServiceTests
 
         var fileBytes = BuildFanavaranWorkbook(rows);
 
-        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor(), TimeProvider.System);
         await service.SaveMappingAsync(FanavaranImportFields.ImportType, agencyA.AgencyId, BuildMapping(), CancellationToken.None);
 
         var report = await service.CommitFanavaranPolicyReportAsync(
@@ -143,7 +143,7 @@ public class FanavaranImportServiceTests
         var suffix = Guid.NewGuid().ToString("N")[..6];
         var fileBytes = BuildFanavaranWorkbook([($"POL-{suffix}", $"{suffix}-X", "تجارت آفرینان تسنیم")]);
 
-        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor(), TimeProvider.System);
         await service.SaveMappingAsync(FanavaranImportFields.ImportType, agencyA.AgencyId, BuildMapping(), CancellationToken.None);
 
         var report = await service.CommitFanavaranPolicyReportAsync(
@@ -189,7 +189,7 @@ public class FanavaranImportServiceTests
             [($"POL-{suffix}-1", $"{suffix}-1", "نقدی"), ($"POL-{suffix}-2", $"{suffix}-2", "نقدی")],
             plates: ["12ب345-67", "پلاک نامشخص"]);
 
-        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor(), TimeProvider.System);
         await service.SaveMappingAsync(FanavaranImportFields.ImportType, agencyA.AgencyId, BuildMapping(), CancellationToken.None);
 
         var report = await service.CommitFanavaranPolicyReportAsync(

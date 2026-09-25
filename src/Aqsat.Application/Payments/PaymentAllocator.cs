@@ -19,6 +19,8 @@ public static class PaymentAllocator
     /// ordered oldest-due-date-first by the caller.</param>
     public static AllocationResult Allocate(decimal paymentAmount, IReadOnlyList<InstallmentBalance> installmentsOrderedByDueDate)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(paymentAmount);
+
         var remaining = paymentAmount;
         var allocations = new List<(Guid, decimal)>();
 

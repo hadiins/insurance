@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -86,9 +87,9 @@ public class RiskEndpointTests : IClassFixture<WebApplicationFactory<Program>>
             CustomerId = customer.Id,
             ContractName = "تجارت آفرینان تسنیم",
             IsInstallment = true,
-            IssueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-6)),
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-6)),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(6)),
+            IssueDate = IranClock.Today().AddMonths(-6),
+            StartDate = IranClock.Today().AddMonths(-6),
+            EndDate = IranClock.Today().AddMonths(6),
             NetPremium = 8_000_000,
             DownPayment = 0,
             InstallmentCount = 4,
@@ -102,8 +103,8 @@ public class RiskEndpointTests : IClassFixture<WebApplicationFactory<Program>>
             AgencyId = agencyId,
             PolicyId = policy.Id,
             SeqNo = 1,
-            DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1)),
-            SettlementDeadline = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1).AddDays(3)),
+            DueDate = IranClock.Today().AddMonths(1),
+            SettlementDeadline = IranClock.Today().AddMonths(1).AddDays(3),
             Amount = 2_000_000,
             Status = InstallmentStatus.Unpaid,
         });

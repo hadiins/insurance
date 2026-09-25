@@ -3,6 +3,7 @@ import { EyeIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, getActiveOrgId, getToken } from "../../lib/api";
 import { fa } from "../../lib/persian";
+import { useEditLockStore } from "./editLockStore";
 
 interface PresenceEntry {
   userId: string;
@@ -33,6 +34,26 @@ export function PresenceLockBar({ entityType, entityId }: { entityType: string; 
   const [error, setError] = useState<string | null>(null);
   const [revoked, setRevoked] = useState<{ reason: string; by: string } | null>(null);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
+
+  const publishLock = useEditLockStore((s) => s.publish);
+  const clearLock = useEditLockStore((s) => s.clear);
+
+  // Mirror the lock into the shell's status bar while this record page is open, and drop it when
+  // the page goes away — otherwise the bar would keep claiming an edit that nothing is holding.
+  useEffect(() => {
+    if (lock === null) {
+      clearLock(entityType, entityId);
+      return;
+    }
+    publishLock({
+      entityType,
+      entityId,
+      mine: lock.acquiredByMe,
+      holderDisplayName: lock.lockedByDisplayName,
+    });
+  }, [lock, entityType, entityId, publishLock, clearLock]);
+
+  useEffect(() => () => clearLock(entityType, entityId), [entityType, entityId, clearLock]);
 
   useEffect(() => {
     const agencyId = getActiveOrgId();

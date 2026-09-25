@@ -1,8 +1,19 @@
 /** Shared table primitives — the exact classes every list page currently hand-writes, extracted
  * once so a spacing or border tweak lands everywhere at the same time. */
-export function Table({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+/** `plain` drops the card chrome (border, radius, background) for a table that sits *inside* a
+ * panel which already draws it — otherwise the two frames nest and read as a box in a box. */
+export function Table({
+  children,
+  className = "",
+  plain = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  plain?: boolean;
+}) {
+  const chrome = plain ? "" : "overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane)";
   return (
-    <div className={`overflow-hidden rounded-(--r-lg) border border-(--edge) bg-(--pane) ${className}`}>
+    <div className={`${chrome} ${className}`}>
       <table className="w-full border-collapse">{children}</table>
     </div>
   );

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -124,5 +125,5 @@ public sealed class AgencyStatsRollupJob(
     }
 
     private DateOnly Today() =>
-        DateOnly.FromDateTime(timeProvider.GetUtcNow().ToOffset(TimeSpan.FromHours(3.5)).DateTime);
+        IranClock.Today(timeProvider);
 }

@@ -1,3 +1,5 @@
+using Aqsat.Application.Common;
+
 namespace Aqsat.Api.Contracts;
 
 /// <summary>
@@ -30,10 +32,10 @@ public static class ChequeDetailsValidator
             return "صندوق محل دریافت چک انتخاب نشده است.";
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         if (cheque.DueDate < today.AddYears(-1) || cheque.DueDate > today.AddYears(3))
         {
-            return "تاریخ سررسید چک باید در بازهٔ یک سال گذشته تا سه سال آینده باشد — در صورت تبدیل دستی تاریخ شمسی، سال را بازبینی کنید.";
+            return "تاریخ سررسید چک باید در بازهٔ یک سال گذشته تا سه سال آینده باشد — در صورت تبدیل دستی تاریخشمسی، سال را بازبینی کنید.";
         }
 
         return null;

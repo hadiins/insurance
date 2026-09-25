@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using Aqsat.Application.Concurrency;
+using Aqsat.Infrastructure.Concurrency;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -15,8 +16,23 @@ namespace Aqsat.Api.Hubs;
 /// touching any RLS-scoped table.
 /// </summary>
 [Authorize]
-public sealed class PresenceHub(AppDbContext dbContext, IPresenceService presenceService) : Hub
+public sealed class PresenceHub(
+    AppDbContext dbContext,
+    IPresenceService presenceService,
+    PresenceConnectionRegistry connectionRegistry) : Hub
 {
+    /// <summary>Marks this connection as "the app is open" for the caller's agency — no record in
+    /// view, just an active session. This is what the status bar's active-user count is built from;
+    /// the record-presence methods below cannot serve it, since a user on the dashboard never opens
+    /// a record.</summary>
+    public async Task EnterApp(Guid agencyId)
+    {
+        var (userId, _) = await ResolveCallerAsync(agencyId);
+        connectionRegistry.TrackApp(Context.ConnectionId, agencyId, userId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, AppGroupName(agencyId));
+        await BroadcastActiveUsersAsync(agencyId);
+    }
+
     public async Task Enter(Guid agencyId, string entityType, Guid entityId)
     {
         var (userId, displayName) = await ResolveCallerAsync(agencyId);
@@ -53,8 +69,20 @@ public sealed class PresenceHub(AppDbContext dbContext, IPresenceService presenc
             await Clients.Group(group).SendAsync("PresenceChanged", list);
         }
 
+        // Only the open-app registration needs its own broadcast: it is the one the status bar
+        // shows, and it survives record-level presence being dropped.
+        if (connectionRegistry.TryGetAppSession(Context.ConnectionId, out var session))
+        {
+            connectionRegistry.ForgetApp(Context.ConnectionId);
+            await BroadcastActiveUsersAsync(session.AgencyId);
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
+
+    private Task BroadcastActiveUsersAsync(Guid agencyId) =>
+        Clients.Group(AppGroupName(agencyId))
+            .SendAsync("ActiveUsersChanged", connectionRegistry.DistinctAppUserCount(agencyId));
 
     private async Task<(Guid UserId, string DisplayName)> ResolveCallerAsync(Guid agencyId)
     {
@@ -81,4 +109,6 @@ public sealed class PresenceHub(AppDbContext dbContext, IPresenceService presenc
     }
 
     private static string GroupName(string entityType, Guid entityId) => $"{entityType}:{entityId}";
+
+    private static string AppGroupName(Guid agencyId) => $"app:{agencyId}";
 }

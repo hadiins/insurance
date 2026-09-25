@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -44,7 +45,7 @@ public class EditInstallmentShiftFollowingTests : IClassFixture<WebApplicationFa
     private async Task<(Guid PolicyId, AppDbContext SeedContext)> IssueScheduledPolicyAsync(HttpClient client, int installmentCount)
     {
         var lineId = GetLineId();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"SHF-{Guid.NewGuid():N}"[..20], lineId, null, $"مشتری {Guid.NewGuid():N}"[..12], null, null,
             new VehicleInput(null, null, null, null, null, null,
@@ -90,12 +91,12 @@ public class EditInstallmentShiftFollowingTests : IClassFixture<WebApplicationFa
             // installment (§3.4), which would settle seq 1 instead of seq 3.
             var settledDue = original[2].DueDate;
             var payment = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-                original[2].Id, original[2].Amount, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null,
+                original[2].Id, original[2].Amount, IranClock.Today(), "نقدی", null,
                 Allocations: [new AllocationLineRequest(original[2].Id, original[2].Amount)]));
             payment.EnsureSuccessStatusCode();
 
             // Edit installment 2 onto a new date, asking the rest to follow.
-            var newDue = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(45);
+            var newDue = IranClock.Today().AddDays(45);
             var edit = await client.PutAsJsonAsync($"/api/installments/{original[1].Id}",
                 new UpdateInstallmentRequest(null, newDue, true));
             edit.EnsureSuccessStatusCode();
@@ -124,7 +125,7 @@ public class EditInstallmentShiftFollowingTests : IClassFixture<WebApplicationFa
         {
             AgencyContext.Current = _fixture.AgencyAId;
             var original = await LoadAsync(seedContext, policyId);
-            var newDue = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(60);
+            var newDue = IranClock.Today().AddDays(60);
 
             var edit = await client.PutAsJsonAsync($"/api/installments/{original[0].Id}",
                 new UpdateInstallmentRequest(null, newDue, false));

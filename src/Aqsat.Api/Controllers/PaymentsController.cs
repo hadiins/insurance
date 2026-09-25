@@ -87,6 +87,35 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             return (null, "روش پرداخت نامعتبر است.");
         }
 
+        var methodType = request.MethodType ?? PaymentMethod.Cash;
+        var cashBoxId = methodType == PaymentMethod.Cheque && request.Cheque is not null
+            ? request.Cheque.CashBoxId
+            : request.CashBoxId;
+        if (methodType == PaymentMethod.Cash && cashBoxId is null)
+        {
+            var boxes = await dbContext.CashBoxes.AsNoTracking().Where(c => c.IsActive)
+                .OrderBy(c => c.Id).Select(c => (Guid?)c.Id).Take(2).ToListAsync(ct);
+            if (boxes.Count != 1)
+                return (null, boxes.Count == 0
+                    ? "برای پرداخت نقدی صندوق فعال انتخاب کنید."
+                    : "چند صندوق فعال وجود دارد؛ صندوق پرداخت را انتخاب کنید.");
+            cashBoxId = boxes[0];
+        }
+        var paymentShapeError = OperatorPaymentValidator.Validate(
+            request.Method, methodType, cashBoxId, request.BankAccountId, request.Cheque);
+        if (paymentShapeError is not null)
+        {
+            return (null, paymentShapeError);
+        }
+        if (methodType == PaymentMethod.Cash && await CashBoxExistsAsync(cashBoxId!.Value, ct) is { } cashBoxError)
+        {
+            return (null, cashBoxError);
+        }
+        if (methodType == PaymentMethod.BankTransfer && await BankAccountExistsAsync(request.BankAccountId!.Value, ct) is { } bankError)
+        {
+            return (null, bankError);
+        }
+
         // Idempotency pre-check (CLAUDE.md rule 24) — the common sequential-duplicate case.
         var existing = await FindExistingPaymentResultAsync(request, ct);
         if (existing is not null)
@@ -146,10 +175,11 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
             PaidOn = request.PaidOn,
             Method = request.Method,
             ReferenceNo = request.ReferenceNo,
-            MethodType = request.MethodType ?? PaymentMethod.Cash,
-            CashBoxId = request.CashBoxId,
+            MethodType = methodType,
+            CashBoxId = cashBoxId,
             BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
         };
         if (payment.MethodType == PaymentMethod.Cheque)
         {
@@ -321,9 +351,14 @@ public sealed class PaymentsController(AppDbContext dbContext, ICurrentUserConte
     /// caller's agency. RLS scopes the lookup; an invisible box reads as "not found", never as an
     /// FK violation the user can't act on.</summary>
     private async Task<string?> CashBoxExistsAsync(Guid cashBoxId, CancellationToken ct) =>
-        await dbContext.CashBoxes.AsNoTracking().AnyAsync(c => c.Id == cashBoxId, ct)
+        await dbContext.CashBoxes.AsNoTracking().AnyAsync(c => c.Id == cashBoxId && c.IsActive, ct)
             ? null
-            : "صندوق انتخاب‌شده یافت نشد.";
+            : "صندوق فعال انتخاب‌شده یافت نشد.";
+
+    private async Task<string?> BankAccountExistsAsync(Guid bankAccountId, CancellationToken ct) =>
+        await dbContext.BankAccounts.AsNoTracking().AnyAsync(a => a.Id == bankAccountId && a.IsActive, ct)
+            ? null
+            : "حساب بانکی فعال انتخاب‌شده یافت نشد.";
 
     private static InstallmentStatus RecomputeStatus(decimal paidAmount, decimal amount) =>
         paidAmount <= 0 ? InstallmentStatus.Unpaid : paidAmount >= amount ? InstallmentStatus.Settled : InstallmentStatus.Partial;

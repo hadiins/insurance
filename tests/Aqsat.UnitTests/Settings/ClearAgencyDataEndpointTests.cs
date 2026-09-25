@@ -158,6 +158,15 @@ public class ClearAgencyDataEndpointTests : IClassFixture<WebApplicationFactory<
             return Task.FromResult(true);
         }
 
+        /// <summary>OTP codes arrive through SendOtpAsync, whose interface default returns false —
+        /// without this override the fake records nothing and LastCode() throws on an empty list.</summary>
+        public Task<bool> SendOtpAsync(string mobile, string code, Guid agencyId, CancellationToken ct = default)
+        {
+            SentTo.Add(mobile);
+            _texts.Add(code);
+            return Task.FromResult(true);
+        }
+
         public string LastCode()
         {
             var text = _texts[^1];

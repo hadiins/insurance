@@ -20,6 +20,7 @@ interface AgencyPaymentGatewayDto {
 const PROVIDERS: Array<{ value: string; label: string; note: string }> = [
   { value: "Mock", label: "آزمایشی (Mock)", note: "درگاه شبیه‌سازیشده برای توسعه و تست — پول واقعی جابه‌جا نمی‌شود." },
   { value: "ZarinPal", label: "زرین‌پال", note: "درگاه واقعی — شناسهٔ پذیرندهٔ نمایندگی برای دریافت پیش‌پرداخت و اقساط الزامی است." },
+  { value: "GooyaPay", label: "گویا پی", note: "درگاه واقعی — شناسهٔ پذیرندهٔ نمایندگی برای دریافت پیش‌پرداخت و اقساط الزامی است." },
 ];
 
 export function AgencyPaymentSettingsPage() {

@@ -1,4 +1,4 @@
-namespace Aqsat.Application.Common;
+﻿namespace Aqsat.Application.Common;
 
 /// <summary>
 /// Shared window for every money-receipt endpoint's PaidOn: a future date or one more than two
@@ -8,7 +8,7 @@ namespace Aqsat.Application.Common;
 /// </summary>
 public static class PaymentDateValidator
 {
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
+    private static DateOnly Today => IranClock.Today();
 
     public static bool IsValid(DateOnly paidOn) => paidOn <= Today && paidOn >= Today.AddYears(-2);
 

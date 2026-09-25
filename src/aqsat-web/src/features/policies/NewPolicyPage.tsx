@@ -3,8 +3,19 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { useDraftState } from "../shell/useDraftState";
 import { api, ApiError } from "../../lib/api";
-import { fa, isValidNationalId, money, toLatinDigits } from "../../lib/persian";
+import {
+  classifyIdentityDoc,
+  fa,
+  isForeignResidentId,
+  isValidNationalId,
+  isValidPassport,
+  money,
+  normalizeVehicleManufactureYear,
+  toLatinDigits,
+  type CustomerKind,
+} from "../../lib/persian";
 import { PolicyNumberField, type PolicyNumberSuggestionDto } from "./PolicyNumberField";
+import { IdentityKindPicker } from "../../components/IdentityKindPicker";
 import { PlateField, EMPTY_PLATE, isPlateFilled, type PlateParts } from "./PlateField";
 import { JalaliDateField } from "../../components/JalaliDateField";
 import { addOneJalaliYear, toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
@@ -57,6 +68,9 @@ interface CustomerLookupProfileDto {
   address: string | null;
   postalCode: string | null;
   isProfileComplete: boolean;
+  kind: CustomerKind;
+  passportNumber: string | null;
+  passportExpiry: string | null;
 }
 
 interface CustomerLookupResultDto {
@@ -133,11 +147,14 @@ const METHOD_LABELS: Record<MethodType, string> = {
 };
 
 interface FormState {
+  customerKind: CustomerKind;
   customerFirstName: string;
   customerLastName: string;
   customerMobile: string;
   customerEmergencyMobile: string;
   customerNationalId: string;
+  customerPassportNumber: string;
+  customerPassportExpiry: string;
   customerAddress: string;
   customerPostalCode: string;
   insuranceLineId: string;
@@ -158,11 +175,14 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
+  customerKind: "Iranian" as CustomerKind,
   customerFirstName: "",
   customerLastName: "",
   customerMobile: "",
   customerEmergencyMobile: "",
   customerNationalId: "",
+  customerPassportNumber: "",
+  customerPassportExpiry: "",
   customerAddress: "",
   customerPostalCode: "",
   insuranceLineId: "",
@@ -487,25 +507,27 @@ export function NewPolicyPage() {
 
   function update<K extends keyof FormState>(field: K, value: string) {
     const next = { ...form, [field]: value };
-    // تاریخ پایان همیشه یک سال شمسی بعد از تاریخ صدور پیشفرض میشود — کاربر هنوز میتواند بعداً
-    // آن را دستی تغییر دهد.
-    if (field === "issueDate") {
+    // The end date is derived from StartDate, not IssueDate. A user editing either the start date or
+    // restoring an older local draft therefore gets a consistent one-Jalali-year policy duration.
+    if (field === "startDate") {
       next.endDate = addOneJalaliYear(value) ?? next.endDate;
     }
     setForm(next);
     setDirty(tabKey, true);
   }
 
-  // Step 1 — the «بررسی» button: normalize the entered ID, validate the checksum locally, then ask
-  // the backend (which normalizes + validates again and searches the plaintext column).
+  // Step 1 — the «بررسی» button: normalize the entered key, validate it locally (Iranian OR 996
+  // series OR passport — owner decision 2026-09-21), then ask the backend (which normalizes +
+  // validates again and searches the plaintext column by the matching key).
   async function runLookup() {
-    const normalized = toLatinDigits(nationalIdInput).trim();
+    const normalized = toLatinDigits(nationalIdInput).trim().toUpperCase();
     if (!normalized) {
-      setError("کد ملی را وارد کنید.");
+      setError("کد ملی یا شمارهٔ پاسپورت را وارد کنید.");
       return;
     }
-    if (!isValidNationalId(normalized)) {
-      setError("کد ملی نامعتبر است.");
+    const docKind = classifyIdentityDoc(normalized);
+    if (docKind === "Unknown") {
+      setError("کد ملی یا شمارهٔ پاسپورت واردشده معتبر نیست.");
       return;
     }
 
@@ -513,7 +535,9 @@ export function NewPolicyPage() {
     setError(null);
     try {
       const res = await api.get<CustomerLookupResultDto>(
-        `/customers/lookup?nationalId=${encodeURIComponent(normalized)}`,
+        docKind === "Passport"
+          ? `/customers/lookup?passportNumber=${encodeURIComponent(normalized)}`
+          : `/customers/lookup?nationalId=${encodeURIComponent(normalized)}`,
       );
       if (res.found && res.customer) {
         setLookupCustomer(res.customer);
@@ -523,8 +547,18 @@ export function NewPolicyPage() {
         setLookupCustomer(null);
         setLookupPolicyCount(0);
         setCustomerMode("new");
-        setNetworkNationalId(normalized);
-        setForm((prev) => ({ ...prev, customerNationalId: normalized }));
+        // The network-risk pre-check is keyed by national ID only (passport sharing is a later
+        // phase) — passport-only customers skip it (rules 15/17: not applicable ≠ empty).
+        setNetworkNationalId(docKind === "Passport" ? null : normalized);
+        if (docKind === "Passport") {
+          setForm((prev) => ({ ...prev, customerKind: "ForeignPassportOnly", customerPassportNumber: normalized }));
+        } else {
+          setForm((prev) => ({
+            ...prev,
+            customerKind: docKind === "ForeignResidentNationalId" ? "ForeignResident" : "Iranian",
+            customerNationalId: normalized,
+          }));
+        }
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "بررسی کد ملی ناموفق بود.");
@@ -550,7 +584,20 @@ export function NewPolicyPage() {
     if (/^\d+$/.test(toLatinDigits(firstName)) || /^\d+$/.test(toLatinDigits(lastName))) {
       return "نام و نام خانوادگی نمی‌تواند عدد باشد — کد ملی را در فیلد جداگانهٔ آن وارد کنید.";
     }
-    if (!form.customerNationalId.trim() || !isValidNationalId(form.customerNationalId)) {
+    // Kind-aware identity validation (owner decision 2026-09-21): each kind demands its own
+    // identifier with its own format check — mirrors CustomerCreationService's gates.
+    if (form.customerKind === "ForeignPassportOnly") {
+      if (!form.customerPassportNumber.trim() || !isValidPassport(form.customerPassportNumber)) {
+        return "شمارهٔ پاسپورت بیمه‌گذار الزامی است — حروف لاتین و رقم، حداقل ۵ کاراکتر.";
+      }
+    } else if (form.customerKind === "ForeignResident") {
+      if (!form.customerNationalId.trim()) {
+        return "برای اتباع دارای کد ملی، کد ۱۰ رقمی شروع‌شده با ۹۹۶ الزامی است.";
+      }
+      if (!isForeignResidentId(form.customerNationalId)) {
+        return "کد ملی اتباع باید ۱۰ رقم شروع‌شده با ۹۹۶ باشد.";
+      }
+    } else if (!form.customerNationalId.trim() || !isValidNationalId(form.customerNationalId)) {
       return "کد ملی بیمه‌گذار الزامی است و باید معتبر باشد.";
     }
     if (
@@ -570,6 +617,10 @@ export function NewPolicyPage() {
 
   function goFromCustomerToPolicy() {
     if (customerMode === "existing" && lookupCustomer) {
+      if (paymentType === "installment" && !lookupCustomer.isProfileComplete) {
+        setError("برای بیمه‌نامهٔ اقساطی، پروفایل مشتری باید کامل باشد. ابتدا اطلاعات ناقص را تکمیل کنید.");
+        return;
+      }
       setError(null);
       setStep(2);
       return;
@@ -604,7 +655,12 @@ export function NewPolicyPage() {
       const created = await api.post<CustomerLookupResultDto>("/customers", {
         firstName: form.customerFirstName.trim(),
         lastName: form.customerLastName.trim(),
-        nationalId: form.customerNationalId.trim(),
+        kind: form.customerKind,
+        nationalId:
+          form.customerKind !== "ForeignPassportOnly" ? form.customerNationalId.trim() || null : null,
+        passportNumber:
+          form.customerPassportNumber.trim() ? form.customerPassportNumber.trim().toUpperCase() : null,
+        passportExpiry: form.customerPassportExpiry || null,
         mobile: form.customerMobile.trim(),
         emergencyMobile: form.customerEmergencyMobile.trim() || null,
         postalCode: form.customerPostalCode.trim() || null,
@@ -659,6 +715,19 @@ export function NewPolicyPage() {
       setError("شماره پلاک کامل نیست.");
       return;
     }
+    if (form.manufactureYear.trim()
+      && Number.isNaN(normalizeVehicleManufactureYear(form.manufactureYear.trim()) ?? Number.NaN)) {
+      setError("سال ساخت خودرو معتبر نیست؛ سال شمسی یا میلادی وارد کنید.");
+      return;
+    }
+
+    // Defense in depth for restored drafts: submit always sends the canonical end date derived from
+    // the current start date, even if an older draft/manual state contains a stale value.
+    const endDate = addOneJalaliYear(form.startDate);
+    if (!endDate) {
+      setError("تاریخ شروع معتبر نیست؛ تاریخ پایان قابل محاسبه نیست.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -676,7 +745,14 @@ export function NewPolicyPage() {
         customerMobile: isNew && form.customerMobile.trim() ? form.customerMobile.trim() : null,
         customerEmergencyMobile:
           isNew && form.customerEmergencyMobile.trim() ? form.customerEmergencyMobile.trim() : null,
-        customerNationalId: isNew && form.customerNationalId.trim() ? form.customerNationalId.trim() : null,
+        customerKind: isNew ? form.customerKind : undefined,
+        customerNationalId:
+          isNew && form.customerKind !== "ForeignPassportOnly" && form.customerNationalId.trim()
+            ? form.customerNationalId.trim()
+            : null,
+        customerPassportNumber:
+          isNew && form.customerPassportNumber.trim() ? form.customerPassportNumber.trim().toUpperCase() : null,
+        customerPassportExpiry: isNew && form.customerPassportExpiry ? form.customerPassportExpiry : null,
         customerAddress: isNew && form.customerAddress.trim() ? form.customerAddress.trim() : null,
         customerPostalCode: isNew && form.customerPostalCode.trim() ? form.customerPostalCode.trim() : null,
         vehicle:
@@ -696,7 +772,7 @@ export function NewPolicyPage() {
                 engineNumber: form.engineNumber.trim() || null,
                 vehicleType: form.vehicleType.trim() || null,
                 manufactureYear: form.manufactureYear.trim()
-                  ? Number(toLatinDigits(form.manufactureYear.trim())) || null
+                  ? normalizeVehicleManufactureYear(form.manufactureYear.trim())
                   : null,
               }
             : null,
@@ -705,7 +781,7 @@ export function NewPolicyPage() {
           : null,
         issueDate: form.issueDate,
         startDate: form.startDate,
-        endDate: form.endDate,
+        endDate,
         netPremium: Number(form.netPremium) || 0,
         serviceFee: Number(form.serviceFee) || 0,
         marketerId: form.marketerId || null,
@@ -866,11 +942,17 @@ export function NewPolicyPage() {
     });
   }
 
-  function finalize() {
-    if (!canFinalize) return;
-    setFinalized(true);
-    setDirty(tabKey, false);
-    openPolicyFile();
+  async function finalize() {
+    if (!canFinalize || !created) return;
+    const policyId = created.policyId;
+    try {
+      await api.post(`/policies/${policyId}/finalize`);
+      setFinalized(true);
+      setDirty(tabKey, false);
+      openPolicyFile();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "ثبت نهایی بیمه‌نامه ناموفق بود.");
+    }
   }
 
   function reset() {
@@ -955,14 +1037,17 @@ export function NewPolicyPage() {
 
       {step === 1 && (
         <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
-          <div className="mb-3 text-[13.5px] font-bold text-(--ice)">مشتری را با کد ملی پیدا کنید</div>
+          <div className="mb-3 text-[13.5px] font-bold text-(--ice)">مشتری را با کد ملی یا پاسپورت پیدا کنید</div>
+          <div className="mb-3 text-[11.5px] leading-relaxed text-(--ice-3)">
+            کد ملی ایرانی/اتباع (سری ۹۹۶) یا شمارهٔ پاسپورت اتباع بدون کد ملی — سیستم نوع سند را خودش تشخیص میدهد.
+          </div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
             <div>
-              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">کد ملی بیمه‌گذار</label>
+              <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">کد ملی / پاسپورت بیمه‌گذار</label>
               <input
                 value={nationalIdInput}
-                onChange={(e) => setNationalIdInput(toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 10))}
-                placeholder="۰۰۷۲۳۴۵۴۵۳"
+                onChange={(e) => setNationalIdInput(toLatinDigits(e.target.value).toUpperCase().replace(/[^\dA-Z]/g, "").slice(0, 15))}
+                placeholder="۰۰۷۲۳۴۵۴۵۳ یا A12345678"
                 dir="ltr"
                 className={`${INPUT_CLASS} text-[14px] tabular-nums`}
               />
@@ -987,12 +1072,25 @@ export function NewPolicyPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12.5px] text-(--ice-2)">
-                <div>
-                  کد ملی: <b className="tabular-nums text-(--ice)" dir="ltr">{fa(lookupCustomer.nationalId ?? "")}</b>
-                </div>
+                {lookupCustomer.kind === "ForeignPassportOnly" ? (
+                  <div>
+                    پاسپورت: <b className="tabular-nums text-(--ice)" dir="ltr">{lookupCustomer.passportNumber}</b>
+                  </div>
+                ) : (
+                  <div>
+                    کد ملی: <b className="tabular-nums text-(--ice)" dir="ltr">{fa(lookupCustomer.nationalId ?? "")}</b>
+                  </div>
+                )}
                 <div>
                   موبایل: <span className="tabular-nums text-(--ice)">{lookupCustomer.mobile ? fa(lookupCustomer.mobile) : "—"}</span>
                 </div>
+                {lookupCustomer.kind !== "Iranian" && (
+                  <div className="col-span-2 text-[11.5px] text-(--amber)">
+                    {lookupCustomer.kind === "ForeignPassportOnly"
+                      ? "اتباع بدون کد ملی — استعلام اعتباری خارجی برای او اعمال نمیشود؛ ارزیابی بر اساس سوابق داخلی انجام میشود."
+                      : "اتباع دارای کد ملی (سری ۹۹۶) — استعلام اعتباری با همین کد انجام میشود."}
+                  </div>
+                )}
                 <div className="col-span-2">آدرس: {lookupCustomer.address ?? "—"}</div>
                 <div className="col-span-2 text-(--ice-3)">این مشتری {fa(lookupPolicyCount)} بیمه‌نامه در سیستم دارد.</div>
               </div>
@@ -1027,11 +1125,25 @@ export function NewPolicyPage() {
           {customerMode === "new" && (
             <div className="mt-4 rounded-(--r) border border-(--edge-2) bg-(--fld) p-4">
               <div className="mb-3 text-[12.5px] font-semibold text-(--ice)">
-                مشتری با این کد ملی پیدا نشد — اطلاعات بیمه‌گذار جدید را وارد کنید:
+                مشتری با این شناسه پیدا نشد — اطلاعات بیمه‌گذار جدید را وارد کنید:
               </div>
               <div className="mb-3 text-[11.5px] leading-relaxed text-(--ice-3)">
                 برای اعتبارسنجی قبل از صدور، «ثبت مشتری و ارسال لینک اعتبارسنجی» را بزنید (مشتری همان‌جا ثبت و لینک
                 پیامک میشود)؛ در غیر این صورت مشتری هنگام ثبت بیمه‌نامه ساخته میشود.
+              </div>
+              {/* Foreign nationals (owner decision 2026-09-21): the selector presets itself from
+                  the lookup classification, but stays switchable — e.g. a 996-typed input can be
+                  re-registered as passport-only if the resident has no 996 ID after all. */}
+              <div className="mb-3.5">
+                <span className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">نوع هویت</span>
+                <IdentityKindPicker
+                  compact
+                  value={form.customerKind}
+                  onChange={(kind) => {
+                    setForm((prev) => ({ ...prev, customerKind: kind }));
+                    setDirty(tabKey, true);
+                  }}
+                />
               </div>
               {networkNationalId !== null && (
                 <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--card) p-3">
@@ -1056,11 +1168,22 @@ export function NewPolicyPage() {
               <div className="grid grid-cols-2 gap-3.5">
                 <Field label="نام" value={form.customerFirstName} onChange={(v) => update("customerFirstName", v)} />
                 <Field label="نام خانوادگی" value={form.customerLastName} onChange={(v) => update("customerLastName", v)} />
-                <Field
-                  label="کد ملی"
-                  value={form.customerNationalId}
-                  onChange={(v) => update("customerNationalId", toLatinDigits(v).replace(/\D/g, "").slice(0, 10))}
-                />
+                {form.customerKind === "ForeignPassportOnly" ? (
+                  <>
+                    <Field
+                      label="شمارهٔ پاسپورت"
+                      value={form.customerPassportNumber}
+                      onChange={(v) => update("customerPassportNumber", toLatinDigits(v).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
+                    />
+                    <Field label="انقضای پاسپورت (اختیاری)" value={form.customerPassportExpiry} onChange={(v) => update("customerPassportExpiry", v)} placeholder="—" />
+                  </>
+                ) : (
+                  <Field
+                    label={form.customerKind === "ForeignResident" ? "کد ملی اتباع (سری ۹۹۶)" : "کد ملی"}
+                    value={form.customerNationalId}
+                    onChange={(v) => update("customerNationalId", toLatinDigits(v).replace(/\D/g, "").slice(0, 10))}
+                  />
+                )}
                 <Field label="شمارهٔ همراه" value={form.customerMobile} onChange={(v) => update("customerMobile", v)} placeholder="۰۹۱۲۳۴۵۶۷۸۹" />
                 <Field label="شمارهٔ همراه اضطراری" value={form.customerEmergencyMobile} onChange={(v) => update("customerEmergencyMobile", v)} placeholder="اختیاری" />
                 <Field label="کد پستی" value={form.customerPostalCode} onChange={(v) => update("customerPostalCode", v)} placeholder="۱۲۳۴۵۶۷۸۹۰" />
@@ -1211,7 +1334,7 @@ export function NewPolicyPage() {
 
             <DateField label="تاریخ صدور" value={form.issueDate} onChange={(v) => update("issueDate", v)} />
             <DateField label="تاریخ شروع" value={form.startDate} onChange={(v) => update("startDate", v)} />
-            <DateField label="تاریخ پایان" value={form.endDate} onChange={(v) => update("endDate", v)} />
+            <DateField label="تاریخ پایان (محاسبه‌شده)" value={form.endDate} onChange={() => {}} readOnly />
 
             {selectedLine?.requiresVehicle && (
               <>
@@ -1223,7 +1346,12 @@ export function NewPolicyPage() {
                   }}
                 />
                 <Field label="نوع خودرو" value={form.vehicleType} onChange={(v) => update("vehicleType", v)} placeholder="مثلاً پژو ۲۰۶" />
-                <Field label="سال ساخت" value={form.manufactureYear} onChange={(v) => update("manufactureYear", toLatinDigits(v).replace(/\D/g, "").slice(0, 4))} />
+                <Field
+                  label="سال ساخت (شمسی یا میلادی)"
+                  value={form.manufactureYear}
+                  onChange={(v) => update("manufactureYear", toLatinDigits(v).replace(/\D/g, "").slice(0, 4))}
+                  placeholder="مثلاً ۱۴۰۴ یا ۲۰۲۵"
+                />
                 <Field label="شماره شاسی" value={form.chassis} onChange={(v) => update("chassis", v)} />
                 <Field label="شماره موتور" value={form.engineNumber} onChange={(v) => update("engineNumber", v)} />
                 <Field label="شماره VIN" value={form.vin} onChange={(v) => update("vin", v)} />
@@ -1238,10 +1366,10 @@ export function NewPolicyPage() {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <button type="button" onClick={savePolicy} disabled={saving || lines === null} className={BTN_PRIMARY}>
-              {saving ? "در حال ثبت..." : "ثبت بیمه‌نامه و ادامه"}
+            <button type="button" onClick={savePolicy} disabled={saving || created !== null || lines === null} className={BTN_PRIMARY}>
+              {created !== null ? "بیمه‌نامه ثبت شده" : saving ? "در حال ثبت..." : "ثبت بیمه‌نامه و ادامه"}
             </button>
-            <button type="button" onClick={() => setStep(1)} className={BTN_SECONDARY}>
+            <button type="button" onClick={() => setStep(1)} disabled={created !== null} className={BTN_SECONDARY}>
               مرحلهٔ قبل
             </button>
           </div>
@@ -1495,7 +1623,8 @@ export function NewPolicyPage() {
             </button>
             <button
               type="button"
-              onClick={() => setStep(paymentType === "cash" ? 2 : 4)}
+              onClick={() => setStep(paymentType === "cash" ? 4 : 3)}
+              disabled={created !== null}
               className={BTN_SECONDARY}
             >
               مرحلهٔ قبل
@@ -1615,11 +1744,21 @@ function Field({
   );
 }
 
-function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function DateField({
+  label,
+  value,
+  onChange,
+  readOnly = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  readOnly?: boolean;
+}) {
   return (
     <div>
       <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">{label}</label>
-      <JalaliDateField value={value} onChange={onChange} />
+      <JalaliDateField value={value} onChange={onChange} readOnly={readOnly} />
     </div>
   );
 }

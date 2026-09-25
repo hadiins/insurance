@@ -1,7 +1,10 @@
+using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
 using Aqsat.Infrastructure.Seed;
+using Aqsat.Infrastructure.Persistence;
+
 using Aqsat.UnitTests.DataModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,28 +41,40 @@ public class PolicyConfirmationEndpointTests : IClassFixture<WebApplicationFacto
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = Guid.NewGuid().ToString("N")[..8];
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-PEND-{uniqueTag}", lineId, null, $"مشتری تأیید {uniqueTag}", null, null,
             Vehicle: new VehicleInput("۹۹و۰۰۰", null, null, null, null, null), Property: null,
-            today, today, today.AddYears(1), 7_000_000m, 0m, null, null, false));
+            today, today, today.AddYears(1), 7_000_000m, 0m, null, null, false,
+            PaymentType: "cash"));
         policyResponse.EnsureSuccessStatusCode();
         var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
 
-        var markResponse = await client.PutAsJsonAsync($"/api/policies/{policy!.PolicyId}/mark-pending-confirmation", new { });
-        markResponse.EnsureSuccessStatusCode();
+        Assert.NotNull(policy);
+        var policyId = policy!.PolicyId;
 
+        // New manual policies already start pending; the worklist sees them immediately.
         var pendingList = await client.GetFromJsonAsync<List<PolicyListItemDto>>("/api/policies?status=PendingConfirmation");
-        Assert.Contains(pendingList!, p => p.Id == policy.PolicyId);
+        Assert.Contains(pendingList!, p => p.Id == policyId);
 
-        var confirmResponse = await client.PutAsJsonAsync($"/api/policies/{policy.PolicyId}/confirm", new { });
+        // Confirmation cannot bypass workflow evidence.
+        var prematureConfirm = await client.PutAsJsonAsync($"/api/policies/{policyId}/confirm", new { });
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, prematureConfirm.StatusCode);
+
+        AgencyContext.Current = fixture.AgencyAId;
+        var cashBoxId = await seedContext.CashBoxes.AsNoTracking()
+            .Where(c => c.AgencyId == fixture.AgencyAId && c.IsActive).Select(c => c.Id).FirstAsync();
+        var payResponse = await client.PostAsJsonAsync($"/api/policies/{policyId}/record-full-payment",
+            new RecordFullPaymentRequest(7_000_000m, today, "نقدی", null,
+                MethodType: Aqsat.Domain.Enums.PaymentMethod.Cash, CashBoxId: cashBoxId));
+        payResponse.EnsureSuccessStatusCode();
+        var confirmResponse = await client.PostAsync($"/api/policies/{policyId}/finalize", null);
         confirmResponse.EnsureSuccessStatusCode();
-
         var activeList = await client.GetFromJsonAsync<List<PolicyListItemDto>>("/api/policies?status=Active");
-        Assert.Contains(activeList!, p => p.Id == policy.PolicyId);
+        Assert.Contains(activeList!, p => p.Id == policyId);
 
         var pendingListAfter = await client.GetFromJsonAsync<List<PolicyListItemDto>>("/api/policies?status=PendingConfirmation");
-        Assert.DoesNotContain(pendingListAfter!, p => p.Id == policy.PolicyId);
+        Assert.DoesNotContain(pendingListAfter!, p => p.Id == policyId);
     }
 }

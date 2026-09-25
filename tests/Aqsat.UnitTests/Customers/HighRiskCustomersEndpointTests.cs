@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -38,7 +39,7 @@ public class HighRiskCustomersEndpointTests : IClassFixture<WebApplicationFactor
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = Guid.NewGuid().ToString("N")[..8];
 
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
@@ -53,7 +54,7 @@ public class HighRiskCustomersEndpointTests : IClassFixture<WebApplicationFactor
         scheduleResponse.EnsureSuccessStatusCode();
 
         var collateralResponse = await client.PostAsJsonAsync("/api/collateral", new CreateCollateralRequest(
-            policy.PolicyId, "ChequeSayadi", "1234567890123456789012345", "بانک آزمایشی", 1_000_000m, today));
+            policy.PolicyId, "ChequeSayadi", "1234567890123456789012345", null, "بانک آزمایشی", 1_000_000m, today));
         collateralResponse.EnsureSuccessStatusCode();
         var collateral = await collateralResponse.Content.ReadFromJsonAsync<CollateralDto>();
 

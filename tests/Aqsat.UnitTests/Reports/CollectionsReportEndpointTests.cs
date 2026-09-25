@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -47,13 +48,14 @@ public class CollectionsReportEndpointTests : IClassFixture<WebApplicationFactor
         // needs a PaidOn beyond an already-passed deadline, and the payment-date guard (review B5)
         // refuses future PaidOn values. The last installment is still well inside the write-off
         // horizon, so it counts as open.
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var start = today.AddMonths(-3);
 
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-COLL-{Guid.NewGuid():N}"[..16], salisLineId, null, "بیمه‌گذار وصولی", null, null,
             Vehicle: new VehicleInput("۸۸ز۸۸۸", null, null, null, null, null), Property: null,
-            today, start, start.AddYears(1), 12_000_000m, 0m, null, null, false));
+            start, start, start.AddYears(1), 12_000_000m, 0m, null, null, false,
+            PaymentType: "installment"));
         policyResponse.EnsureSuccessStatusCode();
         var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
 

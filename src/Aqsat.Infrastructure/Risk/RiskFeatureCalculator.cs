@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -15,7 +16,7 @@ public sealed class RiskFeatureCalculator(AppDbContext dbContext)
 {
     public async Task<RiskFeatures> CalculateAsync(Guid customerId, int writeOffDays, CancellationToken ct = default)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var policies = await dbContext.Policies.AsNoTracking()
             .Where(p => p.CustomerId == customerId)

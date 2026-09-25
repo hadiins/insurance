@@ -13,6 +13,7 @@ public sealed class PaymentConfiguration : AqsatEntityConfiguration<Payment>
         builder.Property(p => p.Amount).HasPrecision(18, 0);
         builder.Property(p => p.Method).HasMaxLength(30).IsRequired();
         builder.Property(p => p.ReferenceNo).HasMaxLength(60);
+        builder.Property(p => p.Note).HasMaxLength(300);
 
         builder.HasOne(p => p.Customer).WithMany().HasForeignKey(p => p.CustomerId);
 

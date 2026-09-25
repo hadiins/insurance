@@ -11,15 +11,25 @@ public sealed record InstallmentDetailDto(
 
 /// <summary>Backs اقساط معوق / تسویه‌های جزئی — the countdown dashboard's window is deliberately
 /// narrow (30 days back, 7 ahead); this worklist has no window at all, since "every overdue
-/// installment" and "every partially-settled installment" are open-ended by nature.</summary>
+/// installment" and "every partially-settled installment" are open-ended by nature.
+///
+/// SeqTotal is how many installments the policy has altogether, so a row can read «قسط ۳ از ۶».
+/// It is resolved for the whole page in one grouped query, not per row.</summary>
 public sealed record InstallmentWorklistRowDto(
     Guid InstallmentId, Guid PolicyId, string PolicyNumber, string CustomerFullName, string? CustomerMobile,
     int SeqNo, DateOnly DueDate, DateOnly SettlementDeadline, decimal Amount, decimal PaidAmount, decimal Balance,
-    string Status, string Urgency);
+    string Status, string Urgency, int SeqTotal);
 
 /// <summary>One call behind the worklist's filter chips and overdue banner — counts and open
 /// balance per urgency bucket over every unsettled installment, so the chips can show live
 /// counters (FinSync's reminders pattern) without the page fetching the unfiltered row set.</summary>
 public sealed record InstallmentUrgencyCountDto(string Urgency, int Count, decimal Balance);
 
-public sealed record InstallmentCountsDto(int Total, decimal TotalBalance, IReadOnlyList<InstallmentUrgencyCountDto> Buckets);
+/// <summary>How many installments each collection chip of the Today worklist would show. Counted
+/// server-side over the same predicate the list itself applies, so the chip label and the filtered
+/// list can never disagree.</summary>
+public sealed record InstallmentFilterCountDto(string Filter, int Count);
+
+public sealed record InstallmentCountsDto(
+    int Total, decimal TotalBalance, IReadOnlyList<InstallmentUrgencyCountDto> Buckets,
+    IReadOnlyList<InstallmentFilterCountDto> Filters);

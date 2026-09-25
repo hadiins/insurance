@@ -1,5 +1,6 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Application.Common;
 using Aqsat.Application.Countdown;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -24,7 +25,7 @@ public sealed class CountdownController(AppDbContext dbContext, TimeProvider tim
     [HttpGet]
     public async Task<ActionResult<CountdownDashboardDto>> Get(CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
         var windowStart = today.AddDays(-30);
         var windowEnd = today.AddDays(7);
 
@@ -77,7 +78,7 @@ public sealed class CountdownController(AppDbContext dbContext, TimeProvider tim
     [HttpGet("summary")]
     public async Task<ActionResult<TodaySummaryDto>> Summary(CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         var overdue = await dbContext.Installments.AsNoTracking()
             .CountAsync(i => i.Status != InstallmentStatus.Settled && i.SettlementDeadline < today, ct);
@@ -93,7 +94,7 @@ public sealed class CountdownController(AppDbContext dbContext, TimeProvider tim
             {
                 Total = g.Count(),
                 WithoutMobile = g.Count(c => c.Mobile == null),
-                WithoutNationalId = g.Count(c => c.NationalId == null),
+                WithoutNationalId = g.Count(c => c.NationalId == null && c.PassportNumber == null),
                 WithoutAddress = g.Count(c => c.Address == null),
                 WithoutPostalCode = g.Count(c => c.PostalCode == null),
                 WithoutName = g.Count(c => c.FirstName == null || c.LastName == null),

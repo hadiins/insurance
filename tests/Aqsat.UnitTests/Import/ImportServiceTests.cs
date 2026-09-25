@@ -91,7 +91,7 @@ public class ImportServiceTests
             ($"POL-{suffix}-2", $"EXT-{suffix}-2", "مشتری دو", "1404-05-01", 5_000_000m, "تجارت آفرینان تسنیم"),
         ]);
 
-        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor(), TimeProvider.System);
         var mapping = BuildMapping();
 
         var firstRun = await service.CommitAsync(
@@ -124,7 +124,7 @@ public class ImportServiceTests
             ($"POL-{Guid.NewGuid():N}"[..12], $"EXT-{Guid.NewGuid():N}"[..12], "مشتری یک", "1404-05-01", 9_000_000m, "تجارت آفرینان تسنیم"),
         ]);
 
-        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor(), TimeProvider.System);
         var incomplete = BuildMapping();
         incomplete.Remove(ImportTargetFields.PolicyNumber);
 
@@ -152,7 +152,7 @@ public class ImportServiceTests
             ($"POL-{suffix}-3", $"EXT-{suffix}-3", "مشتری سه", "1404-05-01", 4_000_000m, "تجارت آفرینان تسنیم"),
         ]);
 
-        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor());
+        var service = new ImportService(context, new ClosedXmlWorkbookReader(), BuildFieldEncryptor(), TimeProvider.System);
 
         var report = await service.CommitAsync(
             fileBytes, "policies.xlsx", agencyA.AgencyId, BuildMapping(), DetectedDateFormat.Jalali, amountsAreInRials: false, CancellationToken.None);

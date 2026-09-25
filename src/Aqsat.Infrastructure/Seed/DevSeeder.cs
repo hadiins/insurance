@@ -1,4 +1,5 @@
-using Aqsat.Application.Auth;
+﻿using Aqsat.Application.Auth;
+using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -78,9 +79,9 @@ public static class DevSeeder
             VehicleId = vehicle.Id,
             ContractName = "تجارت آفرینان تسنیم",
             IsInstallment = true,
-            IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(1)),
+            IssueDate = IranClock.Today(),
+            StartDate = IranClock.Today(),
+            EndDate = IranClock.Today().AddYears(1),
             NetPremium = 9_000_000,
             DownPayment = 1_000_000,
             InstallmentCount = 4,
@@ -94,8 +95,8 @@ public static class DevSeeder
             AgencyId = org.Id,
             PolicyId = policy.Id,
             SeqNo = 1,
-            DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1)),
-            SettlementDeadline = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1).AddDays(3)),
+            DueDate = IranClock.Today().AddMonths(1),
+            SettlementDeadline = IranClock.Today().AddMonths(1).AddDays(3),
             Amount = 2_000_000,
             Status = InstallmentStatus.Unpaid,
         };
@@ -176,6 +177,15 @@ public static class DevSeeder
         var dualAgencyManager = new AppUser { FullName = "مدیر دونمایندگی", Mobile = dualAgencyManagerMobile, PasswordHash = passwordHash, IsActive = true };
         var agencyOnlyStaff = new AppUser { FullName = "کارمند بدون دسترسی پرداخت", Mobile = agencyOnlyStaffMobile, PasswordHash = passwordHash, IsActive = true };
         context.Users.AddRange(dualAgencyManager, agencyOnlyStaff);
+        await context.SaveChangesAsync(ct);
+
+        AgencyContext.Current = agencyA.Id;
+        context.CashBoxes.Add(new CashBox { AgencyId = agencyA.Id, Name = "صندوق پیش‌فرض آزمایشی", IsActive = true });
+        context.BankAccounts.Add(new BankAccount { AgencyId = agencyA.Id, BankName = "بانک آزمایشی", AccountNumber = "TEST-001", IsActive = true });
+        await context.SaveChangesAsync(ct);
+        AgencyContext.Current = agencyB.Id;
+        context.CashBoxes.Add(new CashBox { AgencyId = agencyB.Id, Name = "صندوق پیش‌فرض آزمایشی", IsActive = true });
+        context.BankAccounts.Add(new BankAccount { AgencyId = agencyB.Id, BankName = "بانک آزمایشی", AccountNumber = "TEST-002", IsActive = true });
         await context.SaveChangesAsync(ct);
 
         // Deliberately a DIFFERENT role per agency for the dual-agency user — Task 4's check is

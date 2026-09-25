@@ -1,6 +1,7 @@
 namespace Aqsat.Api.Contracts;
 
-public sealed record CustomerListItemDto(Guid Id, string FullName, string? Mobile, int PolicyCount);
+public sealed record CustomerListItemDto(
+    Guid Id, string FullName, string? Mobile, int PolicyCount, bool CanDelete = false);
 
 public sealed record CustomerFileDto(
     Guid CustomerId,
@@ -11,7 +12,11 @@ public sealed record CustomerFileDto(
     IReadOnlyList<CustomerPolicySummaryDto> Policies,
     IReadOnlyList<CustomerPaymentDto> Payments,
     IReadOnlyList<CustomerCollateralDto> Collateral,
-    IReadOnlyList<TimelineEntryDto> Timeline);
+    IReadOnlyList<TimelineEntryDto> Timeline,
+    /// <summary>Identity kind (owner decision 2026-09-21) — the file header shows the «اتباع»
+    /// badge and the passport instead of a national ID for ForeignPassportOnly customers.</summary>
+    Aqsat.Domain.Enums.CustomerKind Kind = Aqsat.Domain.Enums.CustomerKind.Iranian,
+    string? PassportNumber = null);
 
 public sealed record CustomerPolicySummaryDto(
     Guid PolicyId, string PolicyNumber, string InsuranceLineNameFa, string Status, decimal TotalReceivable, decimal Balance);

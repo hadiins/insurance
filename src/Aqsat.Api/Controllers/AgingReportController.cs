@@ -1,5 +1,6 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
+using Aqsat.Application.Common;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
 using ClosedXML.Excel;
@@ -23,7 +24,7 @@ public sealed class AgingReportController(AppDbContext dbContext, TimeProvider t
     [HttpGet]
     public async Task<ActionResult<AgingReportDto>> Get(CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         var openInstallments = await dbContext.Installments
             .AsNoTracking()

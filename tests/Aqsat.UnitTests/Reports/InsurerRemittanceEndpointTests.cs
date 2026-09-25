@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -47,7 +48,7 @@ public class InsurerRemittanceEndpointTests : IClassFixture<WebApplicationFactor
         seedContext.BankAccounts.Add(bankAccount);
         await seedContext.SaveChangesAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-REM-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری واریز بیمه‌گر", null, null,
             Vehicle: new VehicleInput("۵۵ه۵۵۵", null, null, null, null, null), Property: null,

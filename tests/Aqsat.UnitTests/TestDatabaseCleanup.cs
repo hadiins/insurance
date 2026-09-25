@@ -39,6 +39,7 @@ internal static class TestDatabaseCleanup
             "ALTER SECURITY POLICY AgencyAccessPolicy WITH (STATE = OFF); " +
             "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'; " +
             "DELETE FROM CommissionEntries; DELETE FROM MarketerRates; DELETE FROM ReminderLogs; " +
+            "DELETE FROM CollectionContacts; " +
             "DELETE FROM Installments; DELETE FROM RenewalWatches; DELETE FROM Policies; " +
             "DELETE FROM Marketers; DELETE FROM OrgSettings; " +
             "DELETE FROM UserOrgRoles; DELETE FROM RolePermissions; DELETE FROM Roles; " +

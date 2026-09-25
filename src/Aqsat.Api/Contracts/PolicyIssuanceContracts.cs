@@ -1,6 +1,19 @@
 using System.ComponentModel.DataAnnotations;
+using Aqsat.Domain.Enums;
 
 namespace Aqsat.Api.Contracts;
+
+/// <summary>Normalizes the wizard's dual-calendar vehicle model year. A year has no month/day, so
+/// Jalali model years follow the standard +621 convention; Gregorian input is unchanged.</summary>
+public static class VehicleManufactureYear
+{
+    public static int? Normalize(int? input)
+    {
+        if (input is not { } year) return null;
+        var gregorian = year is >= 1300 and <= 1479 ? year + 621 : year;
+        return gregorian is >= 1900 and <= 2100 ? gregorian : null;
+    }
+}
 
 public sealed record InsuranceLineDto(
     Guid Id, Guid? ParentId, string Code, string NameFa, bool RequiresVehicle, bool RequiresProperty, int SortOrder);
@@ -66,13 +79,20 @@ public sealed record CreatePolicyRequest(
     string? CustomerPostalCode = null,
     /// <summary>The wizard's step-3 choice: "cash" or "installment". Cash settles via
     /// record-full-payment; an EXPLICIT "installment" arms the portal verification chain that
-    /// hard-blocks the down payment until it completes. Omitted → installment without the block
-    /// (legacy/import-era behavior; the import pipeline doesn't use this endpoint).</summary>
+    /// Omitted keeps legacy installment semantics, but unlike the old code it can no longer arm
+    /// IsInstallment=true while leaving RequiresVerification=false. Unknown values are rejected.
     string? PaymentType = null,
     /// <summary>Which insurer this policy was issued through — multi-insurer agencies need it to
     /// split the pending-remittance liability per insurer. Omitted → the agency's own insurer
     /// (Organization.InsurerName).</summary>
-    [MaxLength(120)] string? InsurerName = null);
+    [MaxLength(120)] string? InsurerName = null,
+    /// <summary>Identity document of a NEWLY-registered customer (owner decision 2026-09-21) —
+    /// Iranian needs a checksum-valid national ID, ForeignResident a 996-series ID,
+    /// ForeignPassportOnly a passport. ForeignPassportOnly customers never run external credit
+    /// inquiries. Ignored when CustomerId points at an existing customer.</summary>
+    CustomerKind CustomerKind = CustomerKind.Iranian,
+    [MaxLength(20)] string? CustomerPassportNumber = null,
+    DateOnly? CustomerPassportExpiry = null);
 
 public sealed record CreatePolicyResultDto(Guid PolicyId, string PolicyNumber, Guid CustomerId);
 

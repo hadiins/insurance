@@ -38,7 +38,11 @@ public sealed record RiskAssessmentDto(
 public sealed record CustomerRiskDto(
     bool HasAssessment,
     bool InsufficientData,
-    RiskAssessmentDto? Latest);
+    RiskAssessmentDto? Latest,
+    /// <summary>The customer's identity kind (owner decision 2026-09-21) — a passport-only
+    /// customer's assessments run on internal history alone, so the panel shows an explicit
+    /// «استعلام خارجی: اعمال نشد» note instead of implying missing network data.</summary>
+    Aqsat.Domain.Enums.CustomerKind Kind = Aqsat.Domain.Enums.CustomerKind.Iranian);
 
 public sealed record RiskHistoryItemDto(
     Guid Id,

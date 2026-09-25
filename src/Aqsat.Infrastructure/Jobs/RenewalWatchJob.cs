@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Application.Sms;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
@@ -23,7 +24,7 @@ public sealed class RenewalWatchJob(AppDbContext dbContext, ISmsSender smsSender
             .Select(o => o.Id)
             .ToListAsync(ct);
 
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         foreach (var agencyId in agencyIds)
         {

@@ -27,6 +27,7 @@ interface CollateralDto {
   customerFullName: string;
   type: "ChequeSayadi" | "PromissoryNote" | "None";
   sayadId: string | null;
+  chequeSerial: string | null;
   bankName: string | null;
   amount: number;
   dueDate: string | null;
@@ -77,6 +78,7 @@ export function CollateralPage() {
     policyId: "",
     type: "ChequeSayadi",
     sayadId: "",
+    chequeSerial: "",
     bankName: "",
     amount: "",
     dueDate: "",
@@ -84,6 +86,7 @@ export function CollateralPage() {
   const policyId = form.policyId;
   const type = form.type;
   const sayadId = form.sayadId;
+  const chequeSerial = form.chequeSerial;
   const bankName = form.bankName;
   const amount = form.amount;
   const dueDate = form.dueDate;
@@ -125,11 +128,12 @@ export function CollateralPage() {
         policyId: policyId.trim(),
         type,
         sayadId: sayadId.trim() || null,
+        chequeSerial: chequeSerial.trim() || null,
         bankName: bankName.trim() || null,
         amount: Number(amount),
         dueDate: dueDate || null,
       });
-      setForm({ ...form, policyId: "", sayadId: "", amount: "", dueDate: "" });
+      setForm({ ...form, policyId: "", sayadId: "", chequeSerial: "", amount: "", dueDate: "" });
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت ناموفق بود.");
@@ -171,7 +175,7 @@ export function CollateralPage() {
 
       <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
         <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">ثبت وثیقهٔ جدید</div>
-        <div className="mb-3 grid grid-cols-6 gap-3">
+        <div className="mb-3 grid grid-cols-7 gap-3">
           <input
             value={policyId}
             onChange={(e) => setForm({ ...form, policyId: e.target.value })}
@@ -187,12 +191,21 @@ export function CollateralPage() {
             <option value="PromissoryNote">سفته</option>
           </select>
           {type === "ChequeSayadi" && (
-            <input
-              value={sayadId}
-              onChange={(e) => setForm({ ...form, sayadId: e.target.value })}
-              placeholder="شناسهٔ صیادی"
-              className={INPUT_INLINE_SM}
-            />
+            <>
+              <input
+                value={sayadId}
+                onChange={(e) => setForm({ ...form, sayadId: e.target.value })}
+                placeholder="شناسهٔ صیادی"
+                className={INPUT_INLINE_SM}
+              />
+              <input
+                value={chequeSerial}
+                onChange={(e) => setForm({ ...form, chequeSerial: e.target.value })}
+                placeholder="شمارهٔ چک"
+                dir="ltr"
+                className={INPUT_INLINE_SM}
+              />
+            </>
           )}
           <select
             value={bankName}
@@ -303,7 +316,7 @@ export function CollateralPage() {
         <Table>
           <thead>
             <tr>
-              {["بیمه‌نامه", "بیمه‌گذار", "نوع", "بانک", "مبلغ", "سررسید", "رنگ چک", "وضعیت", ""].map((h) => (
+              {["بیمه‌نامه", "بیمه‌گذار", "نوع", "شمارهٔ چک", "بانک", "مبلغ", "سررسید", "رنگ چک", "وضعیت", ""].map((h) => (
                 <Th key={h}>{h}</Th>
               ))}
             </tr>
@@ -314,6 +327,7 @@ export function CollateralPage() {
                 <Td className="py-2.5 font-semibold">{fa(c.policyNumber)}</Td>
                 <Td className="py-2.5 text-(--ice-3)">{c.customerFullName}</Td>
                 <Td className="py-2.5 text-(--ice-3)">{TYPE_LABEL[c.type]}</Td>
+                <Td ltr className="py-2.5 tabular-nums text-(--ice-3)">{fa(c.chequeSerial ?? "—")}</Td>
                 <Td className="py-2.5 text-(--ice-3)">{c.bankName ?? "—"}</Td>
                 <Td className="py-2.5 font-bold">{money(c.amount)}</Td>
                 <Td className="py-2.5">{toJalaliDisplay(c.dueDate)}</Td>

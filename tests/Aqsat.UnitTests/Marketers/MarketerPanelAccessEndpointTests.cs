@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -54,7 +55,7 @@ public class MarketerPanelAccessEndpointTests : IClassFixture<WebApplicationFact
 
         // The rate must exist BEFORE issuance — PoliciesController locks it into the policy row.
         await client.PostAsJsonAsync($"/api/marketers/{marketer!.Id}/rates",
-            new SetMarketerRateRequest(lineId, 10m, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new SetMarketerRateRequest(lineId, 10m, IranClock.Today()));
 
         // One policy introduced by this marketer, one by nobody — the panel must see only the first.
         var policy = await IssuePolicyAsync(client, "مشتری بازاریاب", marketer.Id);
@@ -216,7 +217,7 @@ public class MarketerPanelAccessEndpointTests : IClassFixture<WebApplicationFact
     private async Task<CreatePolicyResultDto> IssuePolicyAsync(HttpClient client, string customerName, Guid? marketerId)
     {
         var lineId = await LineIdAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var response = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"MKT-{Guid.NewGuid():N}"[..20], lineId, null, customerName, null, null,
             new VehicleInput(null, null, null, null, null, null,

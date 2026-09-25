@@ -1,8 +1,11 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Application.Payments;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Aqsat.Infrastructure.Portal;
 
@@ -13,7 +16,9 @@ public sealed record PaymentLinkInstallmentDto(
     Guid Id, int SeqNo, string PolicyNumber, DateOnly DueDate, decimal BalanceToman, bool IsOverdue);
 
 public sealed record PortalInstallmentPaymentResult(
-    decimal PaidAmountToman, DateTimeOffset PaidAtUtc, string PolicyNumber, int SeqNo);
+    /// <summary>Null only when the gateway wants a browser redirect — nothing settled yet.</summary>
+    decimal? PaidAmountToman, DateTimeOffset? PaidAtUtc, string PolicyNumber, int SeqNo,
+    string? RedirectUrl = null);
 
 /// <summary>
 /// The installment-payment half of the customer portal: a long-lived per-customer link
@@ -27,7 +32,8 @@ public sealed record PortalInstallmentPaymentResult(
 /// </summary>
 public sealed class InstallmentPaymentLinkService(
     AppDbContext dbContext,
-    IEnumerable<IPaymentGateway> gateways)
+    GatewayPaymentCoordinator coordinator,
+    IConfiguration configuration)
 {
     /// <summary>Returns the customer's active link, creating it if none exists — the reminder job
     /// calls this at send time so a link always exists before the SMS goes out. Every call
@@ -123,7 +129,7 @@ public sealed class InstallmentPaymentLinkService(
                 .Select(o => o.Name)
                 .FirstAsync(ct);
 
-            var today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.LocalDateTime);
+            var today = IranClock.Today();
             var installments = await dbContext.Installments.AsNoTracking()
                 .Where(i => i.Policy.CustomerId == link.CustomerId && i.Status != InstallmentStatus.Settled)
                 .OrderBy(i => i.DueDate)
@@ -159,7 +165,7 @@ public sealed class InstallmentPaymentLinkService(
                 throw new PortalInvitationException("قسط یافت نشد.");
             }
             var amount = installment.Balance;
-            var paidOn = DateOnly.FromDateTime(DateTimeOffset.UtcNow.LocalDateTime);
+            var paidOn = IranClock.Today();
 
             // Idempotency pre-check (rule 24) — BEFORE the settled check: a retry after a
             // successful payment finds the installment already settled, and that retry must
@@ -185,35 +191,59 @@ public sealed class InstallmentPaymentLinkService(
                 .FirstOrDefaultAsync(s => s.OrganizationId == agencyId, ct);
             var provider = settings?.PaymentProvider ?? new OrgSettings().PaymentProvider;
             var merchantId = settings?.AgentMerchantId;
-            var gateway = gateways.FirstOrDefault(g => g.Provider == provider)
-                ?? throw new PortalInvitationException($"درگاه پرداخت «{provider}» پشتیبانی نمی‌شود.");
             if (provider != PaymentProvider.Mock && string.IsNullOrWhiteSpace(merchantId))
             {
                 throw new PortalInvitationException(
                     "درگاه پرداخت نمایندگی تنظیم نشده است؛ با نمایندگی تماس بگیرید.");
             }
 
-            // Idempotent per (link, installment): one charge slot per installment per link, so
-            // paying several installments through one link and retrying a timed-out charge both
-            // behave — the gateway deduplicates on this token.
-            var result = await gateway.ChargeAsync(
-                $"{link.Token}:{installment.Id:N}", merchantId ?? string.Empty, amount,
-                $"پرداخت قسط شمارهٔ {installment.SeqNo} بیمه‌نامهٔ {installment.Policy.PolicyNumber}",
-                string.Empty, ct);
-            if (!result.Succeeded)
+            // Mock resolves inline and never redirects (no callback possible) — skip the callback
+            // base resolution so a zero-config fresh install can still settle an installment.
+            // A real PSP keeps the fail-fast before any request goes out.
+            var callbackUrl = provider == PaymentProvider.Mock
+                ? string.Empty
+                : $"{await coordinator.ResolveCallbackBaseAsync(ct)}/api/portal/pay/{link.Token}/installments/{installment.Id}/callback";
+            var charge = await coordinator.ChargeAsync(
+                new GatewayChargeContext(
+                    provider, GatewayPurpose.Installment, agencyId,
+                    InstallmentId: installment.Id, PolicyId: installment.PolicyId, CustomerId: link.CustomerId),
+                new GatewayChargeRequest(
+                    // Idempotent per (link, installment): one charge slot per installment per link,
+                    // so paying several installments through one link and retrying a timed-out
+                    // charge both behave — the gateway deduplicates on this token.
+                    $"{link.Token}:{installment.Id:N}", merchantId ?? string.Empty, amount,
+                    $"پرداخت قسط شمارهٔ {installment.SeqNo} بیمه‌نامهٔ {installment.Policy.PolicyNumber}",
+                    callbackUrl, Mobile: null, FullName: null),
+                ct);
+
+            if (charge.RequiresRedirect)
             {
-                throw new PortalInvitationException(result.FailureReason ?? "پرداخت ناموفق بود. لطفاً دوباره تلاش کنید.");
+                // A real PSP: nothing is settled — the PSP's browser callback finalises after verify.
+                return new PortalInstallmentPaymentResult(
+                    null, null, installment.Policy.PolicyNumber, installment.SeqNo, charge.RedirectUrl);
             }
 
-            // A gateway that reports no amount falls back to the asked amount, but a NON-POSITIVE
-            // reported amount is a protocol violation, not an under-capture — letting it through
-            // would record a zero/negative Payment and corrupt the balance math.
-            var settledAmount = result.PaidAmountToman ?? amount;
-            if (settledAmount <= 0)
-            {
-                throw new PortalInvitationException("مبلغ پرداخت دریافتی از درگاه نامعتبر است. لطفاً با نمایندگی تماس بگیرید.");
-            }
-            var occurredAt = DateTimeOffset.UtcNow;
+            return await SettleInstallmentAsync(
+                link, agencyId, installment, charge.SettledAmountToman ?? amount, customerIp, paidOn, ct);
+        });
+    }
+
+    /// <summary>The money-moving half of an installment payment, shared verbatim by the inline
+    /// (mock / one-phase) path and the PSP-callback path so a settlement recorded either way is
+    /// the same shape: Payment + allocation, installment status, commission flips, same-transaction
+    /// audit, and idempotency per (installment, day, method) enforced by the database.</summary>
+    private async Task<PortalInstallmentPaymentResult> SettleInstallmentAsync(
+        CustomerPaymentLink link, Guid agencyId, Installment installment,
+        decimal settledAmount, string? customerIp, DateOnly paidOn, CancellationToken ct)
+    {
+        // A gateway that reports no amount falls back to the asked amount, but a NON-POSITIVE
+        // reported amount is a protocol violation, not an under-capture — letting it through
+        // would record a zero/negative Payment and corrupt the balance math.
+        if (settledAmount <= 0)
+        {
+            throw new PortalInvitationException("مبلغ پرداخت دریافتی از درگاه نامعتبر است. لطفاً با نمایندگی تماس بگیرید.");
+        }
+        var occurredAt = DateTimeOffset.UtcNow;
             var payment = new Payment
             {
                 // Client-side key — the audit row below references it by Id in this same
@@ -305,8 +335,54 @@ public sealed class InstallmentPaymentLinkService(
 
             return new PortalInstallmentPaymentResult(
                 settledAmount, occurredAt, installment.Policy.PolicyNumber, installment.SeqNo);
+    }
+
+    /// <summary>The PSP's browser callback for one installment payment: resolves the Pending
+    /// transaction by the gateway's own reference inside the link's agency scope, verifies
+    /// server-to-server (never trusting the callback's success flag), then settles with exactly
+    /// the same money-moving path an inline payment uses. Returns the SPA redirect the controller
+    /// bounces the customer's browser to.</summary>
+    public async Task<string> FinalizeInstallmentCallbackAsync(
+        string token, Guid installmentId, IReadOnlyDictionary<string, string> callbackParameters,
+        string? customerIp, CancellationToken ct = default)
+    {
+        return await RunWithLinkScopeAsync(token, ct, async (link, agencyId) =>
+        {
+            var installment = await dbContext.Installments
+                .Include(i => i.Policy)
+                .FirstOrDefaultAsync(i => i.Id == installmentId, ct)
+                ?? throw new PortalInvitationException("قسط یافت نشد.");
+
+            var transaction = await coordinator.ResolveCallbackTransactionAsync(null, installmentId, callbackParameters, ct);
+            var data = coordinator.ReadCallback(transaction.Provider, callbackParameters);
+            if (!data.SuccessFlagSet)
+            {
+                await coordinator.MarkCallbackFailedAsync(
+                    transaction, "بازگشت از درگاه پرداخت موفق گزارش نشد.", ct);
+                return PayCallbackReturnUrl(token, "failed", "cancelled");
+            }
+
+            try
+            {
+                var outcome = await coordinator.VerifyAsync(transaction.Provider, transaction.GatewayReference, ct);
+                await SettleInstallmentAsync(
+                    link, agencyId, installment, outcome.SettledAmountToman, customerIp, IranClock.Today(), ct);
+                return PayCallbackReturnUrl(token, "ok", $"{outcome.SettledAmountToman:N0}");
+            }
+            catch (PortalInvitationException ex)
+            {
+                // Verify refused the payment — the row is already Failed/Expired in the database,
+                // and the customer must see the Persian reason on the SPA page, not a bare error.
+                return PayCallbackReturnUrl(token, "failed", ex.Message);
+            }
         });
     }
+
+    /// <summary>Where the PSP's browser is bounced after an installment payment: back onto the
+    /// SPA's own /pay/{token} page with a machine-readable result the page renders.</summary>
+    private string PayCallbackReturnUrl(string token, string payState, string detail) =>
+        $"{configuration["Portal:PublicBaseUrl"]?.TrimEnd('/')}/pay/{Uri.EscapeDataString(token)}" +
+        $"?pay={payState}&detail={Uri.EscapeDataString(detail)}";
 
     /// <summary>The customer's active link, for the agency-side status display — null when the
     /// customer has none. Runs in the caller's RLS scope.</summary>

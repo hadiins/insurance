@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.ApiIr;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
@@ -39,7 +39,7 @@ public sealed class CollateralController(AppDbContext dbContext, IApiIrClient ap
 
         if (upcomingDays is { } days)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = IranClock.Today();
             var horizon = today.AddDays(days);
             query = query.Where(c => c.DueDate != null && c.DueDate >= today && c.DueDate <= horizon
                 && c.Status != CollateralStatus.Cleared && c.Status != CollateralStatus.Bounced);
@@ -84,6 +84,7 @@ public sealed class CollateralController(AppDbContext dbContext, IApiIrClient ap
             PolicyId = request.PolicyId,
             Type = type,
             SayadId = request.SayadId?.Trim(),
+            ChequeSerial = request.ChequeSerial?.Trim(),
             BankName = request.BankName?.Trim(),
             Amount = request.Amount,
             DueDate = request.DueDate,
@@ -179,7 +180,7 @@ public sealed class CollateralController(AppDbContext dbContext, IApiIrClient ap
 
     private static CollateralDto ToDto(Collateral c) => new(
         c.Id, c.PolicyId, c.Policy.PolicyNumber, c.Policy.Customer.FullName, c.Type.ToString(),
-        c.SayadId, c.BankName, c.Amount, c.DueDate, c.Status.ToString(), c.ColorCode, c.CheckedAt);
+        c.SayadId, c.ChequeSerial, c.BankName, c.Amount, c.DueDate, c.Status.ToString(), c.ColorCode, c.CheckedAt);
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {

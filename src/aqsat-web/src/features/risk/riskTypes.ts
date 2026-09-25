@@ -49,6 +49,9 @@ export interface CustomerRiskDto {
   hasAssessment: boolean;
   insufficientData: boolean;
   latest: RiskAssessmentDto | null;
+  /** Identity kind (owner decision 2026-09-21) — ForeignPassportOnly shows the «استعلام خارجی:
+   * اعمال نشد» note in the panel. Wire string via [JsonStringEnumConverter]. */
+  kind: "Iranian" | "ForeignResident" | "ForeignPassportOnly";
 }
 
 export interface RiskHistoryItemDto {

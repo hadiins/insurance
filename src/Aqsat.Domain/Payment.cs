@@ -22,6 +22,10 @@ public class Payment : AgencyOwnedEntity
     public string Method { get; set; } = default!;
     public string? ReferenceNo { get; set; }
 
+    /// <summary>Free text about this receipt/transfer — describes the payment action, never the
+    /// person (CLAUDE.md rule 8). Optional.</summary>
+    public string? Note { get; set; }
+
     /// <summary>Structured counterpart of <see cref="Method"/> — the free-text column stays for
     /// display/compat, this drives which of CashBoxId/BankAccountId applies and the receipts
     /// report's breakdown.</summary>

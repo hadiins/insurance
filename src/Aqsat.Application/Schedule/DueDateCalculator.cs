@@ -23,6 +23,11 @@ public static class DueDateCalculator
         return AddPersianMonths(startDate, installmentSeqNo);
     }
 
+    /// <summary>Manual third-party policies run one full Jalali year from the coverage start date,
+    /// never from the issuance date. Keeping this beside installment-due math makes the clamp and
+    /// calendar source explicit for both policy duration and schedule generation.</summary>
+    public static DateOnly CalculatePolicyEndDate(DateOnly startDate) => AddPersianMonths(startDate, 12);
+
     /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §6.2 — day-of-month overflow (e.g. the 31st into a
     /// 30- or 29-day Jalali month) clamps to that month's last day, same spirit as the Gregorian
     /// clamp this replaced.</summary>

@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Commission;
 using Aqsat.Application.Common;
@@ -95,10 +95,11 @@ public sealed class PoliciesController(
             return ValidationProblem($"این شماره قبلاً برای بیمه‌نامهٔ دیگری ثبت شده است: {duplicate.Id}");
         }
 
-        var line = await dbContext.InsuranceLines.AsNoTracking().FirstOrDefaultAsync(l => l.Id == request.InsuranceLineId, ct);
+        var line = await dbContext.InsuranceLines.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == request.InsuranceLineId && l.IsActive, ct);
         if (line is null)
         {
-            return ValidationProblem("رشتهٔ بیمه یافت نشد.");
+            return ValidationProblem("رشتهٔ بیمهٔ فعال یافت نشد.");
         }
 
         if (line.RequiresVehicle && IsEmptyVehicle(request.Vehicle))
@@ -135,13 +136,45 @@ public sealed class PoliciesController(
             return ValidationProblem("درصد کمیسیون نمایندگی باید بین ۰ تا ۱۰۰ باشد.");
         }
 
+        if (request.MarketerId is { } requestedMarketerId
+            && !await dbContext.Marketers.AsNoTracking().AnyAsync(m => m.Id == requestedMarketerId && m.IsActive, ct))
+        {
+            return ValidationProblem("بازاریاب فعال انتخاب‌شده یافت نشد.");
+        }
+
+        if (request.Property is { Value: < 0 })
+        {
+            return ValidationProblem("ارزش ملک نمی‌تواند منفی باشد.");
+        }
+
+        var manufactureYear = request.Vehicle is null
+            ? null
+            : VehicleManufactureYear.Normalize(request.Vehicle.ManufactureYear);
+        if (request.Vehicle?.ManufactureYear is { } requestedManufactureYear
+            && manufactureYear is null)
+        {
+            return ValidationProblem("سال ساخت خودرو معتبر نیست؛ سال شمسی یا میلادی وارد کنید.");
+        }
+
         // A Jalali/Gregorian year mixup (1404 vs 2026) or a reversed month/day silently poisons
         // every due date the schedule generates from StartDate — this system's whole job is the
         // countdown those dates drive, so sanity-check the window instead of trusting the picker.
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        if (request.EndDate <= request.StartDate)
+        var today = IranClock.Today();
+        if (request.IssueDate < today.AddYears(-1) || request.IssueDate > today.AddYears(2))
         {
-            return ValidationProblem("تاریخ پایان باید بعد از تاریخ شروع باشد.");
+            return ValidationProblem("تاریخ صدور باید در بازهٔ یک سال گذشته تا دو سال آینده باشد.");
+        }
+        if (request.StartDate < request.IssueDate.AddMonths(-1) || request.StartDate > request.IssueDate.AddMonths(1))
+        {
+            return ValidationProblem("تاریخ شروع باید حداکثر یک ماه قبل یا بعد از تاریخ صدور باشد.");
+        }
+        // Manual policy coverage is always one full Jalali year from StartDate. The request still
+        // carries EndDate for wire compatibility with older clients/import-era contracts, but manual
+        // issuance never trusts that value or derives duration from IssueDate.
+        var policyEndDate = DueDateCalculator.CalculatePolicyEndDate(request.StartDate);
+        if (policyEndDate <= request.StartDate)
+        {
+            return ValidationProblem("تاریخ پایان معتبر محاسبه نشد.");
         }
 
         if (request.StartDate < today.AddYears(-1) || request.StartDate > today.AddYears(2))
@@ -185,7 +218,8 @@ public sealed class PoliciesController(
                     new Aqsat.Infrastructure.Customers.CreateCustomerInput(
                         request.CustomerFullName!, request.CustomerFirstName, request.CustomerLastName,
                         request.CustomerNationalId, request.CustomerMobile, request.CustomerEmergencyMobile,
-                        request.CustomerPostalCode, request.CustomerAddress),
+                        request.CustomerPostalCode, request.CustomerAddress,
+                        request.CustomerKind, request.CustomerPassportNumber, request.CustomerPassportExpiry),
                     ct);
                 customerId = customer.Id;
             }
@@ -222,7 +256,7 @@ public sealed class PoliciesController(
                 PlateIranCode = hasStructuredPlate ? DigitNormalizer.ToLatin(v.PlateIranCode!) : null,
                 EngineNumber = string.IsNullOrWhiteSpace(v.EngineNumber) ? null : v.EngineNumber.Trim(),
                 VehicleType = string.IsNullOrWhiteSpace(v.VehicleType) ? null : v.VehicleType.Trim(),
-                ManufactureYear = v.ManufactureYear,
+                ManufactureYear = manufactureYear,
             };
             vehicle.PlateNormalized = hasStructuredPlate ? vehicle.Plate : null;
             dbContext.Vehicles.Add(vehicle);
@@ -285,14 +319,18 @@ public sealed class PoliciesController(
             ? PolicyNumberParser.Parse(policyNumber, format)
             : new PolicyNumberParts(policyNumber, null, null, null, null, false, "الگوی شماره‌ای برای این نمایندگی تنظیم نشده است.");
 
-        // The wizard's step-3 نقدی/اقساطی choice (owner decision 2026-09-01). IsInstallment defaults
-        // to on for legacy callers, but the hard verification block is armed only by an EXPLICIT
-        // "installment" — the one caller that made the choice is the wizard, and the import pipeline
-        // never goes through this endpoint (ImportService builds its own Policy rows), so nothing
-        // historical gets blocked from having a down payment recorded.
+        // Missing keeps the historical installment interpretation for older API clients, but every
+        // installment mode — explicit or implicit — arms the hard verification gate. Unknown values
+        // are rejected rather than becoming a fourth, bypass-capable mode.
         var paymentType = request.PaymentType?.Trim();
+        if (!string.IsNullOrWhiteSpace(paymentType)
+            && !string.Equals(paymentType, "cash", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(paymentType, "installment", StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidationProblem("نوع پرداخت نامعتبر است؛ فقط cash یا installment مجاز است.");
+        }
         var isInstallment = !string.Equals(paymentType, "cash", StringComparison.OrdinalIgnoreCase);
-        var requiresVerification = string.Equals(paymentType, "installment", StringComparison.OrdinalIgnoreCase);
+        var requiresVerification = isInstallment;
 
         // Multi-insurer agencies issue through more than one insurer; the per-insurer remittance
         // liability view groups on this. Unspecified → the agency's own insurer (Organization.
@@ -315,9 +353,13 @@ public sealed class PoliciesController(
             ContractName = "صدور دستی",
             IsInstallment = isInstallment,
             RequiresVerification = requiresVerification,
+            // Manual rows begin in the existing pending-confirmation state. They do not count as
+            // active/earned policies until the wizard's server-side finalize endpoint accepts the
+            // required schedule/verification/payment evidence.
+            Status = PolicyStatus.PendingConfirmation,
             IssueDate = request.IssueDate,
             StartDate = request.StartDate,
-            EndDate = request.EndDate,
+            EndDate = policyEndDate,
             NetPremium = request.NetPremium,
             ServiceFee = request.ServiceFee,
             DownPayment = 0,
@@ -364,6 +406,51 @@ public sealed class PoliciesController(
         return Ok(new CreatePolicyResultDto(policy.Id, policy.PolicyNumber, customerId));
     }
 
+    /// <summary>Server-side completion of the wizard. A policy becomes Active only when its schedule,
+    /// verification and required receipt evidence all exist; the frontend button is never the guard.</summary>
+    [HttpPost("{id:guid}/finalize")]
+    public async Task<ActionResult> Finalize(Guid id, CancellationToken ct)
+    {
+        var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (policy is null) return NotFound();
+        if (policy.Status == PolicyStatus.Active) return NoContent();
+        if (policy.Status != PolicyStatus.PendingConfirmation)
+            return ValidationProblem("فقط بیمه‌نامهٔ در انتظار تأیید قابل نهایی‌سازی است.");
+
+        var readinessError = await FinalizationReadinessErrorAsync(policy, ct);
+        if (readinessError is not null) return ValidationProblem(readinessError);
+
+        policy.Status = PolicyStatus.Active;
+        await dbContext.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    private async Task<string?> FinalizationReadinessErrorAsync(Policy policy, CancellationToken ct)
+    {
+        if (!policy.IsInstallment)
+        {
+            var paid = await dbContext.Payments.AsNoTracking().AnyAsync(p =>
+                p.InstallmentIdHint == policy.Id && p.Method != DownPaymentMethod
+                && p.Amount == policy.TotalReceivable && !p.IsDeleted, ct);
+            return paid ? null : "ابتدا پرداخت کامل مبلغ بیمه‌نامه ثبت شود.";
+        }
+
+        if (policy.InstallmentCount <= 0) return "ابتدا اقساط بیمه‌نامه زمان‌بندی شود.";
+        if (policy.RequiresVerification)
+        {
+            var approved = await dbContext.CustomerPortalInvitations.AsNoTracking().AnyAsync(i =>
+                i.PolicyId == policy.Id && !i.IsDeleted
+                && (i.Stage == PolicyVerificationStage.CustomerApproved || i.Stage == PolicyVerificationStage.Completed), ct);
+            if (!approved) return "ابتدا اعتبارسنجی و تأیید قرارداد مشتری تکمیل شود.";
+        }
+        if (policy.DownPayment <= 0) return null;
+
+        var received = await dbContext.Payments.AsNoTracking().AnyAsync(p =>
+            p.InstallmentIdHint == policy.Id && p.Method == DownPaymentMethod
+            && p.Amount == policy.DownPayment && !p.IsDeleted, ct);
+        return received ? null : "ابتدا پیش‌پرداخت تعریف‌شده دریافت شود.";
+    }
+
     /// <summary>در انتظار تأیید مشتری — the agent flags a freshly-issued policy as awaiting the
     /// customer's sign-off. Purely an internal worklist marker; nothing customer-facing changes.</summary>
     [HttpPut("{id:guid}/mark-pending-confirmation")]
@@ -398,6 +485,12 @@ public sealed class PoliciesController(
         if (policy.Status != PolicyStatus.PendingConfirmation)
         {
             return ValidationProblem("این بیمه‌نامه در وضعیت «در انتظار تأیید» نیست.");
+        }
+
+        var readinessError = await FinalizationReadinessErrorAsync(policy, ct);
+        if (readinessError is not null)
+        {
+            return ValidationProblem(readinessError);
         }
 
         policy.Status = PolicyStatus.Active;
@@ -454,10 +547,44 @@ public sealed class PoliciesController(
             return ValidationProblem("روش پرداخت نامعتبر است.");
         }
 
+        var methodType = request.MethodType ?? PaymentMethod.Cash;
+        var cashBoxId = methodType == PaymentMethod.Cheque && request.Cheque is not null
+            ? request.Cheque.CashBoxId
+            : request.CashBoxId;
+        if (methodType == PaymentMethod.Cash && cashBoxId is null)
+        {
+            var boxes = await dbContext.CashBoxes.AsNoTracking().Where(c => c.IsActive)
+                .OrderBy(c => c.Id).Select(c => (Guid?)c.Id).Take(2).ToListAsync(ct);
+            if (boxes.Count != 1)
+                return ValidationProblem(boxes.Count == 0
+                    ? "برای پرداخت نقدی صندوق فعال انتخاب کنید."
+                    : "چند صندوق فعال وجود دارد؛ صندوق پرداخت را انتخاب کنید.");
+            cashBoxId = boxes[0];
+        }
+        var paymentShapeError = OperatorPaymentValidator.Validate(
+            request.Method, methodType, cashBoxId, request.BankAccountId, request.Cheque);
+        if (paymentShapeError is not null)
+        {
+            return ValidationProblem(paymentShapeError);
+        }
+        if (methodType == PaymentMethod.Cash && await CashBoxExistsAsync(cashBoxId!.Value, ct) is { } cashBoxError)
+        {
+            return ValidationProblem(cashBoxError);
+        }
+        if (methodType == PaymentMethod.BankTransfer && await BankAccountExistsAsync(request.BankAccountId!.Value, ct) is { } bankError)
+        {
+            return ValidationProblem(bankError);
+        }
+
         var policy = await dbContext.Policies.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (policy is null)
         {
             return NotFound();
+        }
+
+        if (policy.Status is not (PolicyStatus.Active or PolicyStatus.PendingConfirmation))
+        {
+            return ValidationProblem("برای بیمه‌نامهٔ لغوشده یا نهایی‌نشده نمی‌توان پرداخت ثبت کرد.");
         }
 
         if (policy.IsInstallment)
@@ -465,11 +592,28 @@ public sealed class PoliciesController(
             return ValidationProblem("این بیمه‌نامه اقساطی است؛ از فرم ثبت پرداخت قسط استفاده کنید.");
         }
 
+        if (request.Amount != policy.TotalReceivable)
+        {
+            return ValidationProblem("مبلغ پرداخت کامل باید دقیقاً برابر مبلغ کل بیمه‌نامه باشد.");
+        }
+
+        // Serialize the policy-scoped uniqueness check with the insert. The pre-check alone could
+        // allow two requests with different dates to both create a full-policy receipt.
+        await using var paymentTx = await dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, ct);
+
         var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
-            p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == request.Amount, ct);
+            p => p.InstallmentIdHint == policy.Id && p.Method != DownPaymentMethod && !p.IsDeleted, ct);
         if (existing is not null)
         {
             return Ok(new RecordFullPaymentResultDto(existing.Id, existing.Amount));
+        }
+
+        var existingSameSubmission = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
+            p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == request.Amount, ct);
+        if (existingSameSubmission is not null)
+        {
+            return Ok(new RecordFullPaymentResultDto(existingSameSubmission.Id, existingSameSubmission.Amount));
         }
 
         var occurredAt = DateTimeOffset.UtcNow;
@@ -482,8 +626,8 @@ public sealed class PoliciesController(
             PaidOn = request.PaidOn,
             Method = request.Method,
             ReferenceNo = request.ReferenceNo,
-            MethodType = request.MethodType ?? PaymentMethod.Cash,
-            CashBoxId = request.CashBoxId,
+            MethodType = methodType,
+            CashBoxId = cashBoxId,
             BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
         };
@@ -584,6 +728,7 @@ public sealed class PoliciesController(
             return ValidationProblem("خطای پایگاه‌داده هنگام ثبت پرداخت.");
         }
 
+        await paymentTx.CommitAsync(ct);
         return Ok(new RecordFullPaymentResultDto(payment.Id, payment.Amount));
     }
 
@@ -743,6 +888,11 @@ public sealed class PoliciesController(
             return NotFound();
         }
 
+        if (policy.Status is not (PolicyStatus.Active or PolicyStatus.PendingConfirmation))
+        {
+            return ValidationProblem("برای بیمه‌نامهٔ لغوشده یا نهایی‌نشده نمی‌توان پرداخت ثبت کرد.");
+        }
+
         if (policy.InstallmentCount == 0)
         {
             return ValidationProblem("این بیمه‌نامه هنوز زمان‌بندی نشده است.");
@@ -776,8 +926,52 @@ public sealed class PoliciesController(
             return ValidationProblem(PaymentDateValidator.ErrorMessage);
         }
 
+        var downMethodType = request.MethodType ?? PaymentMethod.Cash;
+        var downMethodLabel = downMethodType switch
+        {
+            PaymentMethod.Cash => "نقدی",
+            PaymentMethod.BankTransfer => "واریز بانکی",
+            PaymentMethod.Cheque => "چک",
+            PaymentMethod.PosDirect => "پوز مستقیم بیمه‌گر",
+            _ => null,
+        };
+        var downCashBoxId = downMethodType == PaymentMethod.Cheque && request.Cheque is not null
+            ? request.Cheque.CashBoxId
+            : request.CashBoxId;
+        if (downMethodType == PaymentMethod.Cash && downCashBoxId is null)
+        {
+            var boxes = await dbContext.CashBoxes.AsNoTracking().Where(c => c.IsActive)
+                .OrderBy(c => c.Id).Select(c => (Guid?)c.Id).Take(2).ToListAsync(ct);
+            if (boxes.Count != 1)
+                return ValidationProblem(boxes.Count == 0
+                    ? "برای پرداخت نقدی صندوق فعال انتخاب کنید."
+                    : "چند صندوق فعال وجود دارد؛ صندوق پرداخت را انتخاب کنید.");
+            downCashBoxId = boxes[0];
+        }
+        var shapeError = OperatorPaymentValidator.Validate(
+            downMethodLabel ?? string.Empty, downMethodType,
+            downCashBoxId, request.BankAccountId, request.Cheque);
+        if (shapeError is not null)
+        {
+            return ValidationProblem(shapeError);
+        }
+        if (downMethodType == PaymentMethod.Cash && await CashBoxExistsAsync(downCashBoxId!.Value, ct) is { } cashBoxError)
+        {
+            return ValidationProblem(cashBoxError);
+        }
+        if (downMethodType == PaymentMethod.BankTransfer && await BankAccountExistsAsync(request.BankAccountId!.Value, ct) is { } bankError)
+        {
+            return ValidationProblem(bankError);
+        }
+
+        // A policy has one down-payment event, not one per date. The old date+amount dedupe key
+        // allowed a second receipt on another date and corrupted cash/commission reports.
+        // Serialize the one-down-payment-per-policy check with the insert; the existing composite
+        // unique index (hint,date,amount) cannot catch a concurrent request using another date.
+        await using var paymentTx = await dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, ct);
         var existing = await dbContext.Payments.AsNoTracking().FirstOrDefaultAsync(
-            p => p.InstallmentIdHint == policy.Id && p.PaidOn == request.PaidOn && p.Amount == policy.DownPayment, ct);
+            p => p.InstallmentIdHint == policy.Id && p.Method == DownPaymentMethod && !p.IsDeleted, ct);
         if (existing is not null)
         {
             return Ok(new ReceiveDownPaymentResultDto(existing.Id, existing.Amount));
@@ -793,8 +987,8 @@ public sealed class PoliciesController(
             PaidOn = request.PaidOn,
             Method = DownPaymentMethod,
             ReferenceNo = request.ReferenceNo,
-            MethodType = request.MethodType ?? PaymentMethod.Cash,
-            CashBoxId = request.CashBoxId,
+            MethodType = downMethodType,
+            CashBoxId = downCashBoxId,
             BankAccountId = request.BankAccountId,
             RecordedByUserId = currentUser.UserId,
         };
@@ -880,6 +1074,7 @@ public sealed class PoliciesController(
             return ValidationProblem("خطای پایگاه‌داده هنگام ثبت پیش‌پرداخت.");
         }
 
+        await paymentTx.CommitAsync(ct);
         return Ok(new ReceiveDownPaymentResultDto(payment.Id, payment.Amount));
     }
 
@@ -892,19 +1087,39 @@ public sealed class PoliciesController(
             return (null, "بیمه‌نامه یافت نشد.");
         }
 
+        // Schedule rows and both commission ledgers form one financial unit of work. A partial
+        // save used to leave a scheduled policy with no commission (and no way to retry, because
+        // InstallmentCount was already set), so the database transaction is now the boundary.
+        await using var tx = await dbContext.Database.BeginTransactionAsync(ct);
+
         if (policy.InstallmentCount > 0)
         {
             return (null, "این بیمه‌نامه قبلاً زمان‌بندی شده است.");
         }
 
-        if (installmentCount <= 0)
+        if (!policy.IsInstallment)
         {
-            return (null, "تعداد اقساط باید مثبت باشد.");
+            return (null, "بیمه‌نامه نقدی اقساط ندارد و قابل زمان‌بندی نیست.");
+        }
+
+        if (policy.Status is not (PolicyStatus.Active or PolicyStatus.PendingConfirmation))
+        {
+            return (null, "بیمه‌نامه لغوشده یا نهایی‌نشده قابل زمان‌بندی نیست.");
+        }
+
+        if (installmentCount <= 0 || installmentCount > 120)
+        {
+            return (null, "تعداد اقساط باید بین ۱ و ۱۲۰ باشد.");
         }
 
         if (downPayment < 0 || downPayment >= policy.TotalReceivable)
         {
             return (null, "پیش‌پرداخت نامعتبر است.");
+        }
+
+        if (policy.EndDate < DueDateCalculator.CalculateDueDate(policy.StartDate, installmentCount))
+        {
+            return (null, "تاریخ سررسید آخرین قسط نمی‌تواند بعد از تاریخ پایان بیمه‌نامه باشد.");
         }
 
         var orgSettings = await dbContext.OrgSettings.AsNoTracking()
@@ -941,17 +1156,6 @@ public sealed class PoliciesController(
 
         await dbContext.SaveChangesAsync(ct);
 
-        // docs/TASKS.md Task 13 — generation happens here, not at issuance, because it needs the
-        // actual per-installment amounts the schedule just produced. Only runs when a marketer and
-        // a locked-in rate were captured at issuance (Task 6); otherwise this policy simply has no
-        // commission entries, same as before Task 13 existed.
-        //
-        // Stage 4/7 — every slice, including the down-payment one, starts Pending: scheduling no
-        // longer implies the down payment was actually collected (that used to be conflated: the
-        // down-payment Payment receipt was auto-created right here). Now a real
-        // POST /{id}/receive-down-payment call is what flips the down-payment slice Payable, with a
-        // real date/method/cashbox — CommissionGenerator's own PayableImmediately flag is ignored
-        // here on purpose.
         if (policy.MarketerId is { } marketerId && policy.MarketerRatePercent is { } ratePercent)
         {
             var slices = CommissionGenerator.Generate(
@@ -1008,6 +1212,7 @@ public sealed class PoliciesController(
             installmentCount > maxInstallments,
             installments.Select(i => new InstallmentDto(i.SeqNo, i.DueDate, i.Amount)).ToList());
 
+        await tx.CommitAsync(ct);
         return (dto, null);
     }
 
@@ -1101,9 +1306,14 @@ public sealed class PoliciesController(
     /// caller's agency. RLS scopes the lookup; an invisible box reads as "not found", never as an
     /// FK violation the user can't act on.</summary>
     private async Task<string?> CashBoxExistsAsync(Guid cashBoxId, CancellationToken ct) =>
-        await dbContext.CashBoxes.AsNoTracking().AnyAsync(c => c.Id == cashBoxId, ct)
+        await dbContext.CashBoxes.AsNoTracking().AnyAsync(c => c.Id == cashBoxId && c.IsActive, ct)
             ? null
-            : "صندوق انتخاب‌شده یافت نشد.";
+            : "صندوق فعال انتخاب‌شده یافت نشد.";
+
+    private async Task<string?> BankAccountExistsAsync(Guid bankAccountId, CancellationToken ct) =>
+        await dbContext.BankAccounts.AsNoTracking().AnyAsync(a => a.Id == bankAccountId && a.IsActive, ct)
+            ? null
+            : "حساب بانکی فعال انتخاب‌شده یافت نشد.";
 
     private ActionResult ValidationProblem(string message) => BadRequest(new ProblemDetails
     {

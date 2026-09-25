@@ -58,7 +58,8 @@ public sealed class AgencySettingsController(
             settings?.RenewalAutoWatchLeadDays ?? defaults.RenewalAutoWatchLeadDays,
             organization.AgencyCode, organization.AgencyCode is not null && hasAnyPolicy,
             settings?.InstallmentContractText,
-            settings?.DangerZoneManagerMobile));
+            settings?.DangerZoneManagerMobile,
+            settings?.MonthlyCollectionGoal));
     }
 
     /// <summary>docs/TASK-24-POLICY-NUMBER.md §4.3 — "پس از اولین بیمه‌نامه قابل تغییر نیست...
@@ -115,6 +116,11 @@ public sealed class AgencySettingsController(
             return ValidationProblem("روزهای یادآوری باید فهرستی از اعداد جدا‌شده با ویرگول باشد، مثلاً «7,3,0».");
         }
 
+        if (request.MonthlyCollectionGoal is < 0)
+        {
+            return ValidationProblem("هدف وصول ماهانه نمی‌تواند منفی باشد.");
+        }
+
         var organization = await dbContext.Organizations.FirstOrDefaultAsync(o => o.Id == currentUser.ActiveOrganizationId, ct);
         if (organization is null)
         {
@@ -142,6 +148,13 @@ public sealed class AgencySettingsController(
         settings.ServiceFeeMode = serviceFeeMode;
         settings.DefaultWriteOffDays = request.DefaultWriteOffDays;
         settings.RenewalAutoWatchLeadDays = request.RenewalAutoWatchLeadDays;
+
+        // Zero and null both mean "no goal". Normalised to null so the stored value is
+        // unambiguous and the dashboard has one thing to test (TodayMath treats "not > 0" as
+        // unset), rather than two spellings of the same absence.
+        var goal = request.MonthlyCollectionGoal is > 0 ? request.MonthlyCollectionGoal : null;
+        var goalChanged = settings.MonthlyCollectionGoal != goal;
+        settings.MonthlyCollectionGoal = goal;
         // Null = keep the stored contract text; empty string = clear back to the system default.
         if (request.InstallmentContractText is not null)
         {
@@ -158,6 +171,28 @@ public sealed class AgencySettingsController(
             }
 
             settings.DangerZoneManagerMobile = mobile.Length == 0 ? null : mobile;
+        }
+
+        // OrgSettings is not IAuditableEntity, so the automatic audit override (rule 29) does not
+        // reach it. Changing the agency's target is a decision worth being able to trace later, so
+        // it gets a manual row — composed here, at write time (rule 31).
+        if (goalChanged)
+        {
+            dbContext.AuditEntries.Add(new AuditEntry
+            {
+                AgencyId = currentUser.ActiveOrganizationId,
+                UserId = currentUser.UserId,
+                UserDisplayName = currentUser.DisplayName,
+                EntityType = nameof(OrgSettings),
+                EntityId = currentUser.ActiveOrganizationId,
+                PolicyId = Guid.Empty,
+                Action = AuditAction.Updated,
+                Description = goal is null
+                    ? "هدف وصول ماهانه برداشته شد"
+                    : $"هدف وصول ماهانه به {goal.Value:N0} تومان تغییر کرد",
+                OccurredAt = DateTimeOffset.UtcNow,
+                IpAddress = CurrentRequestContext.IpAddress,
+            });
         }
 
         await dbContext.SaveChangesAsync(ct);
@@ -344,6 +379,8 @@ public sealed class AgencySettingsController(
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsDeleted, true).SetProperty(c => c.DeletedAt, now), ct);
         await dbContext.Collaterals.Where(c => c.AgencyId == agencyId && !c.IsDeleted)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsDeleted, true).SetProperty(c => c.DeletedAt, now), ct);
+        await dbContext.CollectionContacts.Where(c => c.AgencyId == agencyId && !c.IsDeleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsDeleted, true).SetProperty(c => c.DeletedAt, now), ct);
         await dbContext.Installments.Where(i => i.AgencyId == agencyId && !i.IsDeleted)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.IsDeleted, true).SetProperty(i => i.DeletedAt, now), ct);
         await dbContext.Policies.Where(p => p.AgencyId == agencyId && !p.IsDeleted)
@@ -362,7 +399,7 @@ public sealed class AgencySettingsController(
             EntityId = agencyId,
             PolicyId = Guid.Empty,
             Action = AuditAction.Updated,
-            Description = $"پاکسازی کامل دادهٔ نمایندگی «{organization.Name}» (بیمه‌نامه‌ها، اقساط، پرداخت‌ها، وثیقه‌ها)",
+            Description = $"پاکسازی کامل دادهٔ نمایندگی «{organization.Name}» (بیمه‌نامه‌ها، اقساط، پرداخت‌ها، وثیقه‌ها، تماس‌های وصول)",
             OccurredAt = now,
             IpAddress = CurrentRequestContext.IpAddress,
         });

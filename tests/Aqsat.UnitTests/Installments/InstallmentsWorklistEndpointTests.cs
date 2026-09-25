@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -38,7 +39,7 @@ public class InstallmentsWorklistEndpointTests : IClassFixture<WebApplicationFac
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = Guid.NewGuid().ToString("N")[..8];
 
         // Issue date far in the past so the first monthly installment's deadline is already gone.
@@ -78,7 +79,7 @@ public class InstallmentsWorklistEndpointTests : IClassFixture<WebApplicationFac
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = string.Concat(Guid.NewGuid().ToString("N").Where(char.IsDigit))[..8];
         var mobile = $"0913{uniqueTag}1"[..11];
         var nationalId = MakeValidNationalId($"007{uniqueTag}45"[..9]);

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -39,7 +40,7 @@ public class AuditLogEndpointTests : IClassFixture<WebApplicationFactory<Program
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = Guid.NewGuid().ToString("N")[..8];
         var policyNumber = $"POL-AUDIT-{uniqueTag}";
 

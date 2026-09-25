@@ -25,6 +25,7 @@ interface AgencySettingsDto {
   agencyCodeLocked: boolean;
   installmentContractText: string | null;
   dangerZoneManagerMobile: string | null;
+  monthlyCollectionGoal: number | null;
 }
 
 export function AgencySettingsPage() {
@@ -87,6 +88,7 @@ export function AgencySettingsPage() {
         renewalAutoWatchLeadDays: Number(form.renewalAutoWatchLeadDays),
         ...(contractTouched ? { installmentContractText: form.installmentContractText ?? "" } : {}),
         dangerZoneManagerMobile: form.dangerZoneManagerMobile ?? "",
+        monthlyCollectionGoal: form.monthlyCollectionGoal,
       });
       setForm(updated);
       setContractTouched(false);
@@ -251,6 +253,23 @@ export function AgencySettingsPage() {
           <Field label="پیش‌آگهی تمدید (روز)">
             <input value={form.renewalAutoWatchLeadDays} onChange={(e) => update("renewalAutoWatchLeadDays", Number(e.target.value) as never)} className={inputClass} />
           </Field>
+        </div>
+      </div>
+
+      <div className="mb-4.5 rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
+        <div className="mb-3 text-[12.5px] font-semibold text-(--ice-2)">هدف وصول ماهانه</div>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="هدف ماهانه (تومان)">
+            <MoneyInput
+              value={form.monthlyCollectionGoal === null ? "" : String(form.monthlyCollectionGoal)}
+              onChange={(v) => update("monthlyCollectionGoal", v === "" ? null : Number(v))}
+              placeholder="بدون هدف"
+              className={inputClass}
+            />
+          </Field>
+          <div className="col-span-2 self-end pb-2 text-[11.5px] leading-relaxed text-(--ice-3)">
+            مبنای نوار هدف و نمودار وصول در صفحهٔ «امروز» است؛ هدف روزانه از همین عدد و روزهای ماه شمسی محاسبه می‌شود. خالی گذاشتن = بدون هدف.
+          </div>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { useLiveReload } from "../shell/useLiveReload";
 import { api, ApiError } from "../../lib/api";
-import { fa, money } from "../../lib/persian";
+import { fa, money, type CustomerKind } from "../../lib/persian";
 import { toJalaliDateTimeDisplay, toJalaliDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
@@ -81,6 +81,8 @@ interface CustomerFileDto {
   payments: CustomerPaymentDto[];
   collateral: CustomerCollateralDto[];
   timeline: TimelineEntryDto[];
+  kind: CustomerKind;
+  passportNumber: string | null;
 }
 
 const timeLabel = toJalaliDateTimeDisplay;
@@ -234,9 +236,29 @@ export function CustomerFilePage() {
           <h2 className="mb-1 text-xl font-extrabold tracking-tight text-(--ice)">
             پروندهٔ <em className="font-extralight not-italic text-(--ice-2)">{file.fullName}</em>
           </h2>
-          <div className="mb-4.5 text-[12.5px] text-(--ice-3)">
-            {file.mobile ? fa(file.mobile) : "بدون شمارهٔ همراه"}
-            {file.nationalIdMasked && <> — کد ملی: {fa(file.nationalIdMasked)}</>}
+          <div className="mb-4.5 flex flex-wrap items-center gap-2 text-[12.5px] text-(--ice-3)">
+            <span>
+              {file.mobile ? fa(file.mobile) : "بدون شمارهٔ همراه"}
+              {file.kind === "ForeignPassportOnly"
+                ? file.passportNumber && <> — پاسپورت: <b className="tabular-nums text-(--ice-2)" dir="ltr">{file.passportNumber}</b></>
+                : file.nationalIdMasked && <> — کد ملی: {fa(file.nationalIdMasked)}</>}
+            </span>
+            {file.kind !== "Iranian" && (
+              <span
+                className={
+                  file.kind === "ForeignPassportOnly"
+                    ? "rounded-full border border-(--amber)/40 bg-(--amber)/10 px-2.5 py-0.5 text-[11px] font-semibold text-(--amber)"
+                    : "rounded-full border border-(--mint)/40 bg-(--mint)/10 px-2.5 py-0.5 text-[11px] font-semibold text-(--mint)"
+                }
+                title={
+                  file.kind === "ForeignPassportOnly"
+                    ? "اتباع بدون کد ملی — استعلام اعتباری خارجی اعمال نمیشود"
+                    : "اتباع دارای کد ملی (سری ۹۹۶)"
+                }
+              >
+                اتباع
+              </span>
+            )}
           </div>
 
           <div className="mb-4.5 grid grid-cols-4 gap-3">

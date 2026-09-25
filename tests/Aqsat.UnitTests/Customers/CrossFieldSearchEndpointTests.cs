@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -39,7 +40,7 @@ public class CrossFieldSearchEndpointTests : IClassFixture<WebApplicationFactory
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var uniqueTag = string.Concat(Guid.NewGuid().ToString("N").Where(char.IsDigit))[..8];
         var mobile = $"0914{uniqueTag}2"[..11];
         var nationalId = MakeValidNationalId($"106{uniqueTag}77"[..9]);

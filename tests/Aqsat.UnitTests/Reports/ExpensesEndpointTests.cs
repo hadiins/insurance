@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -49,7 +50,7 @@ public class ExpensesEndpointTests : IClassFixture<WebApplicationFactory<Program
         seedContext.CashBoxes.Add(cashBox);
         await seedContext.SaveChangesAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         // Before the P&L is asserted, snapshot accrual income so this test does not depend on
         // whatever other policies exist for the agency.

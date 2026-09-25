@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Seed;
@@ -79,7 +80,7 @@ public class RowLevelSecurityTests
         var (agencyA, _) = await DevSeeder.SeedTwoAgenciesAsync(context);
         AgencyContext.Current = agencyA.AgencyId;
 
-        var paidOn = DateOnly.FromDateTime(DateTime.UtcNow);
+        var paidOn = IranClock.Today();
         var payment = new Payment
         {
             AgencyId = agencyA.AgencyId,

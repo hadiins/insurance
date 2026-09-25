@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Domain;
@@ -67,7 +67,7 @@ public sealed class CollectionsReportController(AppDbContext dbContext, TimeProv
         var orgSettings = await dbContext.OrgSettings.AsNoTracking()
             .FirstOrDefaultAsync(s => s.OrganizationId == currentUser.ActiveOrganizationId, ct);
         var writeOffThresholdDays = orgSettings?.DefaultWriteOffDays ?? 30;
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         var settledIds = installments.Where(i => i.Status == InstallmentStatus.Settled).Select(i => i.Id).ToList();
         var lastPaymentByInstallment = await dbContext.PaymentAllocations.AsNoTracking()

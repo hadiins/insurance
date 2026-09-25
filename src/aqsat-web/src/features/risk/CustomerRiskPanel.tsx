@@ -5,6 +5,7 @@ import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { EmptyState } from "../../components/EmptyState";
 import { Table, Td, Th, Tr } from "../../components/Table";
 import { BTN_PRIMARY, BTN_SECONDARY, INPUT_CLASS } from "../../components/form";
+import { WaiverNotice } from "../../components/WaiverNotice";
 import { useAssessCustomer, useCreditLimit, useCustomerRisk, useRiskHistory, useSetCreditLimit } from "./riskApi";
 import { RISK_DECISION_STYLES, RISK_LEVEL_STYLES, type RiskAssessmentDto } from "./riskTypes";
 import { ChartBarIcon, ClockIcon } from "@phosphor-icons/react";
@@ -56,6 +57,16 @@ export function CustomerRiskPanel({ customerId }: { customerId: string }) {
         />
       ) : (
         <AssessmentCard assessment={data.latest!} />
+      )}
+
+      {/* Passport-only customers (owner decision 2026-09-21): assessments run on internal history
+          alone — the missing network data is a deliberate skip, shown as an explicit note (rule 17:
+          not applicable ≠ missing). */}
+      {data.kind === "ForeignPassportOnly" && (
+        <WaiverNotice className="mt-3" title="استعلام خارجی: اعمال نشد.">
+          این مشتری اتباع بدون کد ملی است — ارزیابی اعتبار فقط بر اساس سوابق داخلی (پرداخت‌ها، اقساط و
+          چک‌های همین نمایندگی) انجام میشود و دادهٔ شبکه‌ای برای او وجود ندارد.
+        </WaiverNotice>
       )}
 
       <div className="mt-4">

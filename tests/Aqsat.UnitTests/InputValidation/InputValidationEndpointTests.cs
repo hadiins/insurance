@@ -1,3 +1,6 @@
+﻿using Aqsat.Application.Common;
+using Aqsat.Application.Schedule;
+
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -64,15 +67,23 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     }
 
     [Fact]
-    public async Task End_date_on_or_before_start_date_is_rejected()
+    public async Task End_date_is_derived_from_start_date_even_when_an_old_client_sends_a_stale_value()
     {
         var (client, lineId) = await CreateClientWithLineAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var response = await PostCreatePolicyAsync(client, lineId, startDate: today, endDate: today);
+        var today = IranClock.Today();
+        var start = today.AddDays(20);
+        var staleEnd = today.AddYears(3);
+        var response = await PostCreatePolicyAsync(client, lineId, startDate: start, endDate: staleEnd);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
-        Assert.Contains("تاریخ پایان", problem!.Title);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = (await client.GetFromJsonAsync<MeResponse>("/api/auth/me"))!.ActiveOrganizationId;
+        var policy = await verify.Policies.AsNoTracking().SingleAsync(p => p.Id == result!.PolicyId);
+        Assert.Equal(today, policy.IssueDate);
+        Assert.Equal(start, policy.StartDate);
+        Assert.Equal(DueDateCalculator.CalculatePolicyEndDate(start), policy.EndDate);
+        Assert.NotEqual(staleEnd, policy.EndDate);
     }
 
     [Fact]
@@ -81,7 +92,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
         // The classic Jalali/Gregorian mixup: 1404 typed where 2026 belongs, or a stale year in
         // a picker — the schedule would silently generate due dates nobody's countdown shows.
         var (client, lineId) = await CreateClientWithLineAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var response = await PostCreatePolicyAsync(client, lineId,
             startDate: today.AddYears(-2), endDate: today.AddYears(-1));
 
@@ -94,7 +105,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     public async Task A_wellformed_policy_still_passes_the_new_guards()
     {
         var (client, lineId) = await CreateClientWithLineAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var response = await PostCreatePolicyAsync(client, lineId,
             startDate: today, endDate: today.AddYears(1), serviceFee: 200_000m);
 
@@ -106,7 +117,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     {
         var (client, installmentId) = await SeedScheduledPolicyAsync();
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1), "نقدی", null));
+            installmentId, 100_000m, IranClock.Today().AddDays(1), "نقدی", null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
@@ -118,7 +129,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     {
         var (client, installmentId) = await SeedScheduledPolicyAsync();
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-3), "نقدی", null));
+            installmentId, 100_000m, IranClock.Today().AddYears(-3), "نقدی", null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsDto>();
@@ -130,7 +141,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
     {
         var (client, installmentId) = await SeedScheduledPolicyAsync();
         var response = await client.PostAsJsonAsync("/api/payments", new RecordPaymentRequest(
-            installmentId, 100_000m, DateOnly.FromDateTime(DateTime.UtcNow), "نقدی", null));
+            installmentId, 100_000m, IranClock.Today(), "نقدی", null));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -180,7 +191,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
         DateOnly? startDate = null, DateOnly? endDate = null,
         decimal serviceFee = 0m, decimal? agencyCommissionPercent = null)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         return client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-{Guid.NewGuid():N}"[..16],
             lineId,
@@ -210,7 +221,7 @@ public class InputValidationEndpointTests : IClassFixture<WebApplicationFactory<
         // set before the first SaveChanges.
         AgencyContext.Current = fixture.AgencyAId;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var customer = new Customer { AgencyId = fixture.AgencyAId, ExternalCode = $"EXT-{Guid.NewGuid():N}"[..12], FullName = "مشتری پرداخت" };
         var vehicle = new Vehicle { AgencyId = fixture.AgencyAId, Plate = "44د444" };
         seedContext.Customers.Add(customer);

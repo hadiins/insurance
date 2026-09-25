@@ -56,6 +56,12 @@ public class CustomerAndPolicyFileEndpointTests : IClassFixture<WebApplicationFa
         var scheduleResponse = await client.PostAsJsonAsync(
             $"/api/policies/{firstPolicy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
         scheduleResponse.EnsureSuccessStatusCode();
+        AgencyContext.Current = fixture.AgencyAId;
+        var filePolicy = await seedContext.Policies.FirstAsync(p => p.Id == firstPolicy.PolicyId);
+        filePolicy.RequiresVerification = false;
+        filePolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
+
 
         var receiveDownPaymentResponse = await client.PostAsJsonAsync(
             $"/api/policies/{firstPolicy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(today, null));

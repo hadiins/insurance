@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Domain;
@@ -213,7 +213,7 @@ public sealed class MarketersController(
             MarketerId = id,
             PaymentBatchId = batchId,
             Amount = entries.Sum(e => e.Amount),
-            PaidOn = request.PaidOn ?? DateOnly.FromDateTime(now.UtcDateTime),
+            PaidOn = request.PaidOn ?? IranClock.DayOf(now),
             MethodType = request.MethodType,
             CashBoxId = request.CashBoxId,
             BankAccountId = request.BankAccountId,

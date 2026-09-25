@@ -1,6 +1,7 @@
 import type { NavGroup, NavItem } from "../../app/types";
 import { fa } from "../../lib/persian";
 import { highlightMatch } from "./highlightMatch";
+import type { NavBadgesDto } from "./useNavBadges";
 
 interface SidebarGroupProps {
   group: NavGroup;
@@ -8,6 +9,7 @@ interface SidebarGroupProps {
   collapsed: boolean;
   query: string;
   activeNavType: string | null;
+  badges: NavBadgesDto | null;
   onToggle: () => void;
   onSelect: (item: NavItem) => void;
 }
@@ -18,6 +20,7 @@ export function SidebarGroup({
   collapsed,
   query,
   activeNavType,
+  badges,
   onToggle,
   onSelect,
 }: SidebarGroupProps) {
@@ -100,6 +103,20 @@ export function SidebarGroup({
             <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
               {highlightMatch(item.title, query)}
             </span>
+            {/* No badge in collapsed mode: the 56px rail has room for the icon and nothing else,
+                and the flyout is where the title reappears. A badge from a failed count is simply
+                absent — never a zero (rules 15/16). */}
+            {!collapsed && item.badgeKey && badges !== null && (
+              <span
+                className={`flex-none rounded-full px-1.5 text-[10.5px] leading-[15px] tabular-nums ${
+                  item.badgeIsAlert && badges[item.badgeKey] > 0
+                    ? "bg-(--ember)/15 font-semibold text-(--ember)"
+                    : "bg-(--btn-bg) text-(--ice-3)"
+                }`}
+              >
+                {fa(badges[item.badgeKey])}
+              </span>
+            )}
           </a>
         ))}
       </div>

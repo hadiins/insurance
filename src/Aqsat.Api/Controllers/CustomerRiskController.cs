@@ -35,11 +35,16 @@ public sealed class CustomerRiskController(
             return NotFound();
         }
 
+        var kind = await dbContext.Customers.AsNoTracking()
+            .Where(c => c.Id == customerId)
+            .Select(c => (Aqsat.Domain.Enums.CustomerKind?)c.Kind)
+            .FirstOrDefaultAsync(ct);
         var latest = await riskService.GetLatestAsync(customerId, ct);
         return Ok(new CustomerRiskDto(
             latest is not null,
             InsufficientData: false,
-            latest is null ? null : Map(latest)));
+            latest is null ? null : Map(latest),
+            kind ?? Aqsat.Domain.Enums.CustomerKind.Iranian));
     }
 
     /// <summary>Run (or re-run) the assessment now — the «ارزیابی مجدد» button (doc §16).</summary>
@@ -55,10 +60,16 @@ public sealed class CustomerRiskController(
         var result = await riskService.AssessAsync(
             customerId, RiskAssessmentSource.Manual, currentUser.UserId, currentUser.DisplayName, ct);
 
+        var kind = await dbContext.Customers.AsNoTracking()
+            .Where(c => c.Id == customerId)
+            .Select(c => (Aqsat.Domain.Enums.CustomerKind?)c.Kind)
+            .FirstOrDefaultAsync(ct);
+
         return Ok(new CustomerRiskDto(
             !result.InsufficientData,
             result.InsufficientData,
-            result.InsufficientData ? null : Map(result.Assessment)));
+            result.InsufficientData ? null : Map(result.Assessment),
+            kind ?? Aqsat.Domain.Enums.CustomerKind.Iranian));
     }
 
     [HttpGet("risk/history")]

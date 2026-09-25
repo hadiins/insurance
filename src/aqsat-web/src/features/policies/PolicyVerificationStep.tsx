@@ -3,6 +3,7 @@ import { api, ApiError } from "../../lib/api";
 import { fa, money } from "../../lib/persian";
 import { toJalaliDateTimeDisplay } from "../../lib/jalali";
 import { CreditReportCard, type CreditReportDto } from "../../components/CreditReportCard";
+import { WaiverNotice } from "../../components/WaiverNotice";
 
 /// Wizard step 3.5 (owner decision 2026-09-01) — the operator side of the issuance-verification
 /// chain: start it (the customer gets the portal link by SMS), watch the stage, read the api.ir
@@ -24,6 +25,8 @@ interface PolicyVerificationDto {
   downPaymentPaidAtUtc: string | null;
   creditReport: CreditReportDto | null;
   smsSent: boolean | null;
+  externalInquiryNotApplicable: boolean;
+  externalInquiryNotApplicableReason: string | null;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -157,7 +160,12 @@ export function PolicyVerificationStep({
 
           {dto.stage === "Rejected" ? (
             <div className="rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-3 text-[12.5px] leading-relaxed text-(--ember)">
-              این بیمه‌نامه لغو شد. برای صدور مجدد، بیمه‌نامهٔ جدیدی ثبت کنید.
+              <div className="mb-1 font-bold">اعتبارسنجی رد شد و بیمه‌نامه لغو گردید.</div>
+              این تصمیم قطعی است؛ ادامهٔ زنجیره، تأیید قرارداد و دریافت پیش‌پرداخت برای این پرونده غیرفعال است.
+              {dto.agencyDecisionAtUtc && (
+                <div className="mt-1 text-[11.5px] text-(--ice-3)">زمان تصمیم: {fa(toJalaliDateTimeDisplay(dto.agencyDecisionAtUtc))}</div>
+              )}
+              <div className="mt-1">در صورت نیاز، پس از بررسی موضوع، بیمه‌نامهٔ جدیدی از طریق نمایندگی ثبت کنید.</div>
             </div>
           ) : (
             <>
@@ -211,6 +219,16 @@ export function PolicyVerificationStep({
                   استعلام قبلی مشتری ({fa(toJalaliDateTimeDisplay(dto.creditReport.retrievedAtUtc))}) بازیافت شد —
                   کارمزد و استعلام مجدد لازم نیست.
                 </div>
+              )}
+
+              {/* The explicit «اعمال نشد» state (rules 15/17): a passport-only customer's chain
+                  runs WITHOUT the external inquiry — this is a deliberate skip, never an empty
+                  result and never an error. */}
+              {dto.externalInquiryNotApplicable && !dto.creditReport && (
+                <WaiverNotice className="mb-3.5" title="استعلام اعتباری خارجی: اعمال نشد.">
+                  {dto.externalInquiryNotApplicableReason ??
+                    "این مشتری فاقد کد ملی است و استعلام خارجی برای او اجرا نمیشود — تصمیم اعتباری بر اساس سوابق داخلی گرفته میشود."}
+                </WaiverNotice>
               )}
 
               {dto.creditReport && <CreditReportCard report={dto.creditReport} />}

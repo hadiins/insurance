@@ -33,8 +33,11 @@ public sealed record PublicPortalInfoDto(
 
 public sealed record PublicPortalInstallmentDto(int SeqNo, DateOnly DueDate, decimal Amount);
 
-/// <summary>POST /api/portal/{token}/pay result.</summary>
-public sealed record PublicPortalPayResultDto(decimal PaidAmountToman, DateTimeOffset PaidAtUtc);
+/// <summary>POST /api/portal/{token}/pay result. When the agency's gateway is a real PSP the
+/// payment is NOT settled inline — RedirectUrl carries the PSP's payment page and the browser is
+/// sent there; the settle arrives later through the token's callback endpoint.</summary>
+public sealed record PublicPortalPayResultDto(
+    decimal? PaidAmountToman, DateTimeOffset? PaidAtUtc, string? RedirectUrl = null);
 
 /// <summary>POST /api/portal/{token}/approve-contract result.</summary>
 public sealed record PublicPortalStageResultDto(string Stage);
@@ -45,7 +48,14 @@ public sealed record PolicyVerificationDto(
     Guid? InvitationId, string? Token, string? Stage, string? Status, DateTimeOffset? ExpiresAtUtc,
     decimal? InquiryFeeToman, decimal? DownPaymentAmountToman,
     DateTimeOffset? AgencyDecisionAtUtc, DateTimeOffset? CustomerApprovedAtUtc,
-    DateTimeOffset? DownPaymentPaidAtUtc, CreditReportDto? CreditReport, bool? SmsSent);
+    DateTimeOffset? DownPaymentPaidAtUtc, CreditReportDto? CreditReport, bool? SmsSent,
+    /// <summary>True when the external inquiry step was deliberately SKIPPED — a passport-only
+    /// customer (or one with no stored national ID) has nothing for api.ir to look up. The UI
+    /// must show an explicit «اعمال نشد» state, never an empty result or a silent zero (rules
+    /// 15/17, owner decision 2026-09-21).</summary>
+    bool ExternalInquiryNotApplicable = false,
+    /// <summary>The Persian reason behind ExternalInquiryNotApplicable — shown verbatim.</summary>
+    string? ExternalInquiryNotApplicableReason = null);
 
 /// <summary>Structured api.ir credit data (UnpaidCheque + ActiveLoans). Every field nullable —
 /// RawSuccess=false means sandboxed or failed and the UI must say so, not render zeros as
@@ -68,9 +78,11 @@ public sealed record PublicPaymentLinkInfoDto(
 public sealed record PublicPaymentLinkInstallmentDto(
     Guid Id, int SeqNo, string PolicyNumber, DateOnly DueDate, decimal BalanceToman, bool IsOverdue);
 
-/// <summary>POST /api/portal/pay/{token}/installments/{installmentId} result.</summary>
+/// <summary>POST /api/portal/pay/{token}/installments/{installmentId} result. RedirectUrl set ⇒
+/// a real PSP charge was opened and the browser must be redirected; nothing is settled yet.</summary>
 public sealed record PublicPaymentLinkPayResultDto(
-    decimal PaidAmountToman, DateTimeOffset PaidAtUtc, string PolicyNumber, int SeqNo);
+    decimal? PaidAmountToman, DateTimeOffset? PaidAtUtc, string PolicyNumber, int SeqNo,
+    string? RedirectUrl = null);
 
 /// <summary>The operator-side status of a customer's installment-payment link — HasActiveLink
 /// false when the customer has none (or it expired/was revoked).</summary>

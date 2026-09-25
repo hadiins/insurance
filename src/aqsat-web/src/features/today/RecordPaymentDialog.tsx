@@ -41,15 +41,76 @@ interface PaymentResultDto {
   unallocatedAmount: number;
 }
 
+/** The id the Today dashboard scrolls to when a row's «دریافت» button is pressed. */
+export const RECORD_PAYMENT_PANEL_ID = "record-payment-panel";
+
 export function RecordPaymentDialog({
   installmentId,
   customerFullName,
   suggestedAmount,
   onClose,
   onRecorded,
+  variant = "modal",
 }: {
   installmentId: string;
   customerFullName: string;
+  suggestedAmount: number;
+  onClose: () => void;
+  onRecorded: () => void;
+  /** "modal" is the original behaviour and stays the default for the record pages that open this
+   * over their content. "inline" renders the same form as a panel inside the page, which is what
+   * the Today dashboard wants — the agent should not lose sight of the row they clicked. The
+   * validation, the request and the result rendering are identical either way. */
+  variant?: "modal" | "inline";
+}) {
+  if (variant === "inline") {
+    return (
+      <section
+        id={RECORD_PAYMENT_PANEL_ID}
+        className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-3.5"
+      >
+        <div className="mb-1 text-[13.5px] font-bold text-(--ice)">ثبت دریافت</div>
+        <div className="mb-3.5 text-[12.5px] text-(--ice-2)">{customerFullName}</div>
+        <PaymentForm
+          installmentId={installmentId}
+          suggestedAmount={suggestedAmount}
+          onClose={onClose}
+          onRecorded={onRecorded}
+        />
+      </section>
+    );
+  }
+
+  return (
+    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/55" />
+        <Dialog.Content className="fixed inset-0 z-[60] grid place-items-center p-5">
+          <div className="w-full max-w-[380px] rounded-(--r-lg) border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
+            <Dialog.Title className="mb-1.5 text-[15px] font-bold text-(--ice)">ثبت پرداخت</Dialog.Title>
+            <Dialog.Description className="mb-4.5 text-[13.5px] text-(--ice-2)">{customerFullName}</Dialog.Description>
+            <PaymentForm
+              installmentId={installmentId}
+              suggestedAmount={suggestedAmount}
+              onClose={onClose}
+              onRecorded={onRecorded}
+            />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+/** The form itself, with no chrome of its own, so the modal and the inline panel can never drift
+ * apart in what they validate or send. */
+function PaymentForm({
+  installmentId,
+  suggestedAmount,
+  onClose,
+  onRecorded,
+}: {
+  installmentId: string;
   suggestedAmount: number;
   onClose: () => void;
   onRecorded: () => void;
@@ -67,6 +128,7 @@ export function RecordPaymentDialog({
   const [result, setResult] = useState<PaymentResultDto | null>(null);
 
   const [referenceNo, setReferenceNo] = useState("");
+  const [note, setNote] = useState("");
   const [chequeNumber, setChequeNumber] = useState("");
   const [chequeBankName, setChequeBankName] = useState("");
   const [chequeDueDate, setChequeDueDate] = useState(new Date().toISOString().slice(0, 10));
@@ -139,6 +201,8 @@ export function RecordPaymentDialog({
                 cashBoxId,
               }
             : null,
+        // Describes the payment or the action taken on it, never the person paying (rule 8).
+        note: note.trim() || null,
       });
       setResult(recorded);
       onRecorded();
@@ -149,193 +213,167 @@ export function RecordPaymentDialog({
     }
   }
 
+  if (result) {
+    return (
+      <>
+        <div className="mb-4 space-y-2">
+          {result.allocations.map((line) => (
+            <div
+              key={line.installmentId}
+              className="flex items-center justify-between rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px]"
+            >
+              <span className="text-(--ice-2)">قسط شمارهٔ {fa(line.seqNo)}</span>
+              <span className="font-bold text-(--ice)">{money(line.amount)}</span>
+            </div>
+          ))}
+          {result.unallocatedAmount > 0 && (
+            <div className="rounded-(--r) border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
+              {money(result.unallocatedAmount)} تومان مازاد — به‌عنوان اعتبار مشتری باقی ماند.
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
+        >
+          بستن
+        </button>
+      </>
+    );
+  }
+
   return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/55" />
-        <Dialog.Content className="fixed inset-0 z-[60] grid place-items-center p-5">
-          <div className="w-full max-w-[380px] rounded-(--r-lg) border border-(--edge-2) bg-(--slate) p-5.5 shadow-[var(--sh)]">
-            <Dialog.Title className="mb-1.5 text-[15px] font-bold text-(--ice)">ثبت پرداخت</Dialog.Title>
-            <Dialog.Description className="mb-4.5 text-[13.5px] text-(--ice-2)">{customerFullName}</Dialog.Description>
+    <>
+      {error && (
+        <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
+          {error}
+        </div>
+      )}
 
-            {result ? (
-              <>
-                <div className="mb-4 space-y-2">
-                  {result.allocations.map((line) => (
-                    <div
-                      key={line.installmentId}
-                      className="flex items-center justify-between rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2 text-[12.5px]"
-                    >
-                      <span className="text-(--ice-2)">قسط شمارهٔ {fa(line.seqNo)}</span>
-                      <span className="font-bold text-(--ice)">{money(line.amount)}</span>
-                    </div>
-                  ))}
-                  {result.unallocatedAmount > 0 && (
-                    <div className="rounded-(--r) border border-(--amber)/30 bg-(--amber)/10 px-3 py-2 text-[12.5px] text-(--amber)">
-                      {money(result.unallocatedAmount)} تومان مازاد — به‌عنوان اعتبار مشتری باقی ماند.
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-full rounded-(--r) border border-(--mint) bg-(--mint) px-4 py-2 text-[12.5px] font-semibold text-(--on-mint) shadow-[var(--gl-mint)] transition-colors hover:brightness-105"
-                >
-                  بستن
-                </button>
-              </>
-            ) : (
-              <>
-                {error && (
-                  <div className="mb-3 rounded-(--r) border border-(--ember)/30 bg-(--ember)/10 px-3 py-2 text-[12.5px] text-(--ember)">
-                    {error}
-                  </div>
-                )}
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">مبلغ (تومان)</label>
+      <MoneyInput value={amount} onChange={setAmount} className={`mb-3.5 ${INPUT_CLASS} tabular-nums`} />
 
-                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">مبلغ (تومان)</label>
-                <MoneyInput
-                  value={amount}
-                  onChange={setAmount}
-                  className={`mb-3.5 ${INPUT_CLASS} tabular-nums`}
-                />
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
+      <div className="mb-3.5">
+        <JalaliDateField value={paidOn} onChange={setPaidOn} className={`${INPUT_CLASS} tabular-nums`} />
+      </div>
 
-                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ دریافت</label>
-                <div className="mb-3.5">
-                  <JalaliDateField
-                    value={paidOn}
-                    onChange={setPaidOn}
-                    className={`${INPUT_CLASS} tabular-nums`}
-                  />
-                </div>
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">روش پرداخت</label>
+      <select
+        value={methodType}
+        onChange={(e) => setMethodType(e.target.value as MethodType)}
+        className={`mb-3.5 ${INPUT_CLASS}`}
+      >
+        <option value="Cash">نقدی</option>
+        <option value="BankTransfer">واریز بانکی</option>
+        <option value="Cheque">چک</option>
+        <option value="PosDirect">پوز مستقیم بیمه‌گر</option>
+      </select>
 
-                <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">روش پرداخت</label>
-                <select
-                  value={methodType}
-                  onChange={(e) => setMethodType(e.target.value as MethodType)}
-                  className={`mb-3.5 ${INPUT_CLASS}`}
-                >
-                  <option value="Cash">نقدی</option>
-                  <option value="BankTransfer">واریز بانکی</option>
-                  <option value="Cheque">چک</option>
-                  <option value="PosDirect">پوز مستقیم بیمه‌گر</option>
-                </select>
+      {methodType === "BankTransfer" && (
+        <>
+          <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حساب بانکی</label>
+          <select
+            value={bankAccountId}
+            onChange={(e) => setBankAccountId(e.target.value)}
+            className={`mb-4.5 ${INPUT_CLASS}`}
+          >
+            <option value="">انتخاب کنید…</option>
+            {bankAccounts.filter((a) => a.isActive).map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.bankName} — {a.accountNumber}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
 
-                {methodType === "BankTransfer" && (
-                  <>
-                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">حساب بانکی</label>
-                    <select
-                      value={bankAccountId}
-                      onChange={(e) => setBankAccountId(e.target.value)}
-                      className={`mb-4.5 ${INPUT_CLASS}`}
-                    >
-                      <option value="">انتخاب کنید…</option>
-                      {bankAccounts.filter((a) => a.isActive).map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.bankName} — {a.accountNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
+      {(methodType === "Cash" || methodType === "Cheque") && (
+        <>
+          <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">
+            صندوق {methodType === "Cheque" && "(محل نگهداری چک)"}
+          </label>
+          <select
+            value={cashBoxId}
+            onChange={(e) => setCashBoxId(e.target.value)}
+            className={`mb-4.5 ${INPUT_CLASS}`}
+          >
+            <option value="">انتخاب کنید…</option>
+            {cashBoxes.filter((b) => b.isActive).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
 
-                {(methodType === "Cash" || methodType === "Cheque") && (
-                  <>
-                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">
-                      صندوق {methodType === "Cheque" && "(محل نگهداری چک)"}
-                    </label>
-                    <select
-                      value={cashBoxId}
-                      onChange={(e) => setCashBoxId(e.target.value)}
-                      className={`mb-4.5 ${INPUT_CLASS}`}
-                    >
-                      <option value="">انتخاب کنید…</option>
-                      {cashBoxes.filter((b) => b.isActive).map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
-
-                {methodType === "PosDirect" && (
-                  <>
-                    <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
-                      مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود — نیازی به انتخاب صندوق یا حساب بانکی نیست.
-                    </div>
-                    <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ مرجع/ترمینال (اختیاری)</label>
-                    <input
-                      value={referenceNo}
-                      onChange={(e) => setReferenceNo(e.target.value)}
-                      dir="ltr"
-                      className={`mb-4.5 ${INPUT_CLASS}`}
-                    />
-                  </>
-                )}
-
-                {methodType === "Cheque" && (
-                  <div className="mb-4.5 grid grid-cols-2 gap-2 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 p-2.5">
-                    <div>
-                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
-                      <input
-                        value={chequeNumber}
-                        onChange={(e) => setChequeNumber(e.target.value)}
-                        dir="ltr"
-                        className={INPUT_CLASS}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">بانک عامل</label>
-                      <select
-                        value={chequeBankName}
-                        onChange={(e) => setChequeBankName(e.target.value)}
-                        className={INPUT_CLASS}
-                      >
-                        <option value="">انتخاب کنید…</option>
-                        {banks.filter((b) => b.isActive).map((b) => (
-                          <option key={b.id} value={b.name}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
-                      <JalaliDateField value={chequeDueDate} onChange={setChequeDueDate} />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
-                      <input
-                        value={chequePresenterName}
-                        onChange={(e) => setChequePresenterName(e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={submitting}
-                    className={BTN_PRIMARY}
-                  >
-                    {submitting ? "در حال ثبت…" : "ثبت پرداخت"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className={BTN_SECONDARY}
-                  >
-                    انصراف
-                  </button>
-                </div>
-              </>
-            )}
+      {methodType === "PosDirect" && (
+        <>
+          <div className="mb-3 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 px-3 py-2 text-[12.5px] text-(--ice-3)">
+            مبلغ مستقیماً به حساب بیمه‌گر واریز می‌شود — نیازی به انتخاب صندوق یا حساب بانکی نیست.
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ مرجع/ترمینال (اختیاری)</label>
+          <input
+            value={referenceNo}
+            onChange={(e) => setReferenceNo(e.target.value)}
+            dir="ltr"
+            className={`mb-4.5 ${INPUT_CLASS}`}
+          />
+        </>
+      )}
+
+      {methodType === "Cheque" && (
+        <div className="mb-4.5 grid grid-cols-2 gap-2 rounded-(--r) border border-(--edge-2) bg-(--fld)/50 p-2.5">
+          <div>
+            <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">شمارهٔ چک</label>
+            <input value={chequeNumber} onChange={(e) => setChequeNumber(e.target.value)} dir="ltr" className={INPUT_CLASS} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">بانک عامل</label>
+            <select value={chequeBankName} onChange={(e) => setChequeBankName(e.target.value)} className={INPUT_CLASS}>
+              <option value="">انتخاب کنید…</option>
+              {banks.filter((b) => b.isActive).map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تاریخ سررسید</label>
+            <JalaliDateField value={chequeDueDate} onChange={setChequeDueDate} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11.5px] tracking-wider text-(--ice-3)">تحویل‌دهنده</label>
+            <input value={chequePresenterName} onChange={(e) => setChequePresenterName(e.target.value)} className={INPUT_CLASS} />
+          </div>
+        </div>
+      )}
+
+      {/* Free text about the payment, not about the payer — CLAUDE.md rule 8 is why the label says
+          which one this is. Number stays free-form: the mockup's 12-digit rule is deliberately not
+          enforced (owner decision), and ReferenceNo is a receipt reference an agent may not have. */}
+      <label className="mb-1.5 block text-[11.5px] tracking-wider text-(--ice-3)">
+        یادداشت پرداخت (اختیاری)
+      </label>
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={300}
+        placeholder="مثلاً: چک پست‌دیت برای تحویل در شعبه"
+        className={`mb-3.5 ${INPUT_CLASS}`}
+      />
+
+      <div className="flex gap-2">
+        <button type="button" onClick={submit} disabled={submitting} className={BTN_PRIMARY}>
+          {submitting ? "در حال ثبت…" : "ثبت پرداخت"}
+        </button>
+        <button type="button" onClick={onClose} className={BTN_SECONDARY}>
+          انصراف
+        </button>
+      </div>
+    </>
   );
 }

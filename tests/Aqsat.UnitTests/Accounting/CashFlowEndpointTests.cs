@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -49,7 +50,7 @@ public class CashFlowEndpointTests : IClassFixture<WebApplicationFactory<Program
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         // Box A carries an opening balance; box B starts empty and only receives a transfer.
         var boxAResponse = await client.PostAsJsonAsync(
@@ -85,6 +86,12 @@ public class CashFlowEndpointTests : IClassFixture<WebApplicationFactory<Program
         var scheduleResponse = await client.PostAsJsonAsync(
             $"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
         scheduleResponse.EnsureSuccessStatusCode();
+
+        AgencyContext.Current = fixture.AgencyAId;
+        var cashFlowPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        cashFlowPolicy.RequiresVerification = false;
+        cashFlowPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
 
         var downResponse = await client.PostAsJsonAsync(
             $"/api/policies/{policy.PolicyId}/receive-down-payment",
@@ -160,7 +167,7 @@ public class CashFlowEndpointTests : IClassFixture<WebApplicationFactory<Program
         boxResponse.EnsureSuccessStatusCode();
         var box = await boxResponse.Content.ReadFromJsonAsync<CashBoxDto>();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         // Zero/negative amount.
         var zero = await client.PostAsJsonAsync("/api/cash-flow/transfers",
@@ -210,7 +217,7 @@ public class CashFlowEndpointTests : IClassFixture<WebApplicationFactory<Program
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var boxResponse = await client.PostAsJsonAsync(
             "/api/settings/cash-and-bank/cash-boxes", new CreateCashBoxRequest("صندوق پورسانت", 5_000_000m));
@@ -234,6 +241,11 @@ public class CashFlowEndpointTests : IClassFixture<WebApplicationFactory<Program
         var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
 
         await client.PostAsJsonAsync($"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
+        AgencyContext.Current = fixture.AgencyAId;
+        var payoutPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        payoutPolicy.RequiresVerification = false;
+        payoutPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
         await client.PostAsJsonAsync(
             $"/api/policies/{policy.PolicyId}/receive-down-payment",
             new ReceiveDownPaymentRequest(today, null, PaymentMethod.Cash, box!.Id, null));

@@ -89,6 +89,22 @@ Delete the `.mdf`/`.ldf` files used for verification if you restored to a tempor
 outside the final data volume, and remove the scratch database if step 5 wasn't taken (verification
 only, no cutover).
 
+## If a restore is interrupted
+
+An instance restart — or a client killed mid-command — during `RESTORE DATABASE` leaves the target
+database in the `RESTORING` state: unusable, and `DROP DATABASE` / `ALTER DATABASE` refuse it
+("a database is in the Restoring state", "currently in use") for as long as the session running the
+restore is still alive. A session left in `KILLED/ROLLBACK` after the client died never yields on its
+own, so the fix is an instance restart, after which SQL Server discards the incompletely restored
+database and the scratch name disappears from `sys.databases`.
+
+Check for one with:
+
+```sql
+SELECT session_id, status, command FROM sys.dm_exec_requests WHERE command LIKE '%RESTORE%';
+SELECT name, state_desc FROM sys.databases WHERE state_desc = 'RESTORING';
+```
+
 ## What this does NOT cover
 
 - **Point-in-time recovery** — these are full backups only, no transaction-log shipping. Recovery

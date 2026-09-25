@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -40,7 +41,7 @@ public class OpenInstallmentsEndpointTests : IClassFixture<WebApplicationFactory
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-OPEN-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری پرداخت مستقل", null, null,
             Vehicle: new VehicleInput("۹۹ح۹۹۹", null, null, null, null, null), Property: null,

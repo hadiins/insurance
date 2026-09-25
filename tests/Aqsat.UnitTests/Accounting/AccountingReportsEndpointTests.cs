@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -58,7 +59,7 @@ public class AccountingReportsEndpointTests : IClassFixture<WebApplicationFactor
             .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
 
         var client = await LoginClientAsync(_factory, fixture);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var marketerResponse = await client.PostAsJsonAsync(
             "/api/marketers", new CreateMarketerRequest("بازاریاب ابطال", "09129992222", null, "Independent", null));
@@ -78,6 +79,11 @@ public class AccountingReportsEndpointTests : IClassFixture<WebApplicationFactor
         var policy = await policyResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
 
         await client.PostAsJsonAsync($"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
+        AgencyContext.Current = fixture.AgencyAId;
+        var accountingPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        accountingPolicy.RequiresVerification = false;
+        accountingPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
         await client.PostAsJsonAsync(
             $"/api/policies/{policy.PolicyId}/receive-down-payment", new ReceiveDownPaymentRequest(today, null));
 
@@ -127,7 +133,7 @@ public class AccountingReportsEndpointTests : IClassFixture<WebApplicationFactor
             .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
 
         var client = await LoginClientAsync(_factory, fixture);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var boxResponse = await client.PostAsJsonAsync(
             "/api/settings/cash-and-bank/cash-boxes", new CreateCashBoxRequest("صندوق بیمه‌گر", 0m));
@@ -146,6 +152,11 @@ public class AccountingReportsEndpointTests : IClassFixture<WebApplicationFactor
             response.EnsureSuccessStatusCode();
             var policy = await response.Content.ReadFromJsonAsync<CreatePolicyResultDto>();
             await client.PostAsJsonAsync($"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(2_000_000m, 2));
+            AgencyContext.Current = fixture.AgencyAId;
+            var liabilityPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+            liabilityPolicy.RequiresVerification = false;
+            liabilityPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+            await seedContext.SaveChangesAsync();
             await client.PostAsJsonAsync(
                 $"/api/policies/{policy.PolicyId}/receive-down-payment",
                 new ReceiveDownPaymentRequest(today, null, PaymentMethod.Cash, box!.Id, null));
@@ -194,7 +205,7 @@ public class AccountingReportsEndpointTests : IClassFixture<WebApplicationFactor
             .Where(l => l.Code == InsuranceLineSeeder.ThirdPartyCode).Select(l => l.Id).FirstAsync();
 
         var client = await LoginClientAsync(_factory, fixture);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
 
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-AG-{Guid.NewGuid():N}"[..16], salisLineId, null, "مشتری سنی معوقات", "09120001111", null,

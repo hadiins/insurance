@@ -18,10 +18,11 @@ build/
 secrets/
 release-out/
 
-# logs
+# logs (incl. .logs/ transcripts written by run-dev.ps1 — local only, never committed)
 *.log
 npm-debug.log*
 logs/
+.logs/
 
 # editor / os
 .DS_Store

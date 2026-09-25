@@ -1,4 +1,4 @@
-using Aqsat.Api.Contracts;
+﻿using Aqsat.Api.Contracts;
 using Aqsat.Application.Auth;
 using Aqsat.Application.Common;
 using Aqsat.Domain.Enums;
@@ -26,7 +26,7 @@ public sealed class ChequesController(AppDbContext dbContext, ICurrentUserContex
     public async Task<ActionResult<IReadOnlyList<UnifiedChequeRowDto>>> List(
         [FromQuery] string? status, [FromQuery] int? upcomingDays, CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         DateOnly? horizon = upcomingDays is { } days ? today.AddDays(days) : null;
 
         CollateralStatus? parsedStatus = null;
@@ -44,7 +44,7 @@ public sealed class ChequesController(AppDbContext dbContext, ICurrentUserContex
             .OrderBy(c => c.DueDate)
             .Select(c => new UnifiedChequeRowDto(
                 "Collateral", c.Id, c.PolicyId, c.Policy.PolicyNumber, c.Policy.Customer.FullName,
-                null, c.SayadId, c.BankName ?? "", c.Amount, c.DueDate, c.Status.ToString(), null, null))
+                c.ChequeSerial, c.SayadId, c.BankName ?? "", c.Amount, c.DueDate, c.Status.ToString(), null, null))
             .ToListAsync(ct);
 
         // IgnoreQueryFilters: a bounced payment cheque reverses its Payment, and the global

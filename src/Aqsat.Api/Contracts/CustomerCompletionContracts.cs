@@ -1,3 +1,5 @@
+using Aqsat.Domain.Enums;
+
 namespace Aqsat.Api.Contracts;
 
 /// <summary>docs/TASK-25-IDENTITY-VEHICLE.md §3 — the completion widget's counts. The original two
@@ -18,7 +20,8 @@ public sealed record CustomerIncompleteRowDto(
 /// "ذخیرهٔ خودکار هر ردیف"). Only fields actually present here are validated and written.</summary>
 public sealed record CompleteCustomerProfileRequest(
     string? FirstName, string? LastName, string? NationalId,
-    string? Mobile, string? EmergencyMobile, string? Address, string? PostalCode);
+    string? Mobile, string? EmergencyMobile, string? Address, string? PostalCode,
+    string? PassportNumber = null, DateOnly? PassportExpiry = null);
 
 /// <summary>One profile row for the issuance wizard's step-1 lookup (GET /api/customers/lookup).
 /// The national ID travels in FULL: CLAUDE.md rule 12 was rewritten by owner decision 2026-08-28 —
@@ -26,7 +29,8 @@ public sealed record CompleteCustomerProfileRequest(
 /// a secret to hide.</summary>
 public sealed record CustomerLookupProfileDto(
     Guid Id, string FullName, string? FirstName, string? LastName, string? NationalId,
-    string? Mobile, string? EmergencyMobile, string? Address, string? PostalCode, bool IsProfileComplete);
+    string? Mobile, string? EmergencyMobile, string? Address, string? PostalCode, bool IsProfileComplete,
+    CustomerKind Kind = CustomerKind.Iranian, string? PassportNumber = null, DateOnly? PassportExpiry = null);
 
 /// <summary>Found=false for a valid-but-unknown ID (the wizard then offers inline new-customer
 /// registration); PolicyCount lets the UI surface "این مشتری N بیمهنامه دارد" before issuing
@@ -39,4 +43,9 @@ public sealed record CustomerLookupResultDto(bool Found, CustomerLookupProfileDt
 /// registration, this endpoint exists specifically to buy inquiries and send an SMS.</summary>
 public sealed record CreateCustomerRequest(
     string? FirstName, string? LastName, string? NationalId, string? Mobile,
-    string? EmergencyMobile, string? PostalCode, string? Address);
+    string? EmergencyMobile, string? PostalCode, string? Address,
+    /// <summary>Which identity document identifies this customer — decides which identifier is
+    /// required and whether external credit inquiries ever run (owner decision 2026-09-21).</summary>
+    CustomerKind Kind = CustomerKind.Iranian,
+    /// <summary>Required for ForeignPassportOnly; optional for the other kinds.</summary>
+    string? PassportNumber = null, DateOnly? PassportExpiry = null);

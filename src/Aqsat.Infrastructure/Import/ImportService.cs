@@ -19,7 +19,7 @@ namespace Aqsat.Infrastructure.Import;
 /// fixed rials conversion); everything else (dedupe, template matching, per-row failure isolation,
 /// batch bookkeeping) is shared, not duplicated.
 /// </summary>
-public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbookReader, IFieldEncryptor fieldEncryptor)
+public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbookReader, IFieldEncryptor fieldEncryptor, TimeProvider timeProvider)
 {
     public const string PolicyReportImportType = "PolicyReport";
 
@@ -245,6 +245,10 @@ public sealed class ImportService(AppDbContext dbContext, IWorkbookReader workbo
         batch.NewCount = newCount;
         batch.DuplicateCount = duplicateCount;
         batch.FailedCount = failedCount;
+        // Stamped here, not at creation: «آخرین همگام‌سازی» on the dashboard means "when this
+        // agency's data was last brought up to date", which is when the batch committed — a batch
+        // created but never committed has not synced anything.
+        batch.CreatedAtUtc = timeProvider.GetUtcNow();
         await dbContext.SaveChangesAsync(ct);
 
         return new ImportCommitReport(batch.Id, newCount, duplicateCount, failedCount);

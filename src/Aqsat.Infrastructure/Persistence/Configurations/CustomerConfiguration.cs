@@ -26,17 +26,32 @@ public sealed class CustomerConfiguration : AqsatEntityConfiguration<Customer>
         // configuration no longer needs an IFieldEncryptor and joins the plain assembly scan.
         builder.Property(c => c.NationalId).HasMaxLength(30);
 
+        // Owner decision 2026-09-21 (foreign nationals) — Kind distinguishes Iranian / 996-series
+        // resident / passport-only; the passport is plaintext like the national ID (rule 12's
+        // "shown in full" applies to any identifier the operator typed in) with the same keyed
+        // HMAC alongside it for dedupe and future cross-agency paths.
+        builder.Property(c => c.Kind).HasConversion<byte>().IsRequired();
+        builder.Property(c => c.Kind).HasDefaultValue(Aqsat.Domain.Enums.CustomerKind.Iranian);
+        builder.Property(c => c.PassportNumber).HasMaxLength(20);
+        builder.Property(c => c.PassportExpiry).HasColumnType("date");
+
         // docs/TASK-25-IDENTITY-VEHICLE.md §3 — persisted so it can be indexed; SQL Server computes
         // it, the app never writes it (IsProfileComplete has a private setter for exactly this).
         builder.Property(c => c.IsProfileComplete)
             .HasComputedColumnSql(
-                "CASE WHEN [NationalId] IS NOT NULL AND [Mobile] IS NOT NULL AND [Address] IS NOT NULL " +
-                "AND [PostalCode] IS NOT NULL AND [FirstName] IS NOT NULL AND [LastName] IS NOT NULL " +
+                // Owner decision 2026-09-21 — a passport is a first-class identity: a customer
+                // whose identifier is a passport is COMPLETE once the other fields exist, not
+                // "incomplete forever" (COALESCE keeps Iranian rows' meaning byte-identical).
+                "CASE WHEN COALESCE([NationalId], [PassportNumber]) IS NOT NULL AND [Mobile] IS NOT NULL " +
+                "AND [Address] IS NOT NULL AND [PostalCode] IS NOT NULL " +
+                "AND [FirstName] IS NOT NULL AND [LastName] IS NOT NULL " +
                 "THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END",
                 stored: true);
 
         builder.HasIndex(c => new { c.AgencyId, c.ExternalCode }).IsUnique();
         builder.HasIndex(c => new { c.AgencyId, c.NationalIdHash });
+        // Passport dedupe/lookup leads with AgencyId like every other index (rule 3).
+        builder.HasIndex(c => new { c.AgencyId, c.PassportNumberHash });
         // The issuance wizard's step-1 lookup (GET /api/customers/lookup?nationalId=...) is an
         // equality search on the plaintext national ID (rule 3: AgencyId leads every index).
         builder.HasIndex(c => new { c.AgencyId, c.NationalId });

@@ -6,6 +6,7 @@ using Aqsat.Application.Sms;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
+using Aqsat.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,13 @@ public sealed class PortalInvitationException(string message) : Exception(messag
 
 public sealed record PortalInvitationResult(CustomerPortalInvitation Invitation, bool SmsSent);
 
-public sealed record PortalPaymentResult(decimal PaidAmountToman, DateTimeOffset PaidAtUtc);
+public sealed record PortalPaymentResult(
+    /// <summary>Null only when the gateway wants a browser redirect — nothing settled yet.</summary>
+    decimal? PaidAmountToman,
+    DateTimeOffset? PaidAtUtc,
+    /// <summary>Set for a real PSP (ZarinPal/GooyaPay): send the customer's browser here; the
+    /// callback endpoint completes the flow. Null for Mock and for a completed inline payment.</summary>
+    string? RedirectUrl = null);
 
 /// <summary>
 /// The link-issuing and payment half of the customer portal (docs/CUSTOMER-PORTAL-SPEC.md §3).
@@ -30,7 +37,7 @@ public sealed record PortalPaymentResult(decimal PaidAmountToman, DateTimeOffset
 public sealed class PortalInvitationService(
     AppDbContext dbContext,
     ISmsSender smsSender,
-    IEnumerable<IPaymentGateway> gateways,
+    GatewayPaymentCoordinator coordinator,
     IScopeGuard scopeGuard,
     PolicyVerificationService policyVerificationService,
     IConfiguration configuration,
@@ -182,10 +189,6 @@ public sealed class PortalInvitationService(
                 throw new PortalInvitationException("پرداخت آنلاین از سمت پلتفرم فعال نیست. لطفاً بعداً تلاش کنید یا با نمایندگی تماس بگیرید.");
             }
 
-            var gateway = gateways.FirstOrDefault(g => g.Provider == platformSettings.Provider)
-                ?? throw new PortalInvitationException(
-                    $"درگاه پرداخت «{platformSettings.Provider}» پشتیبانی نمی‌شود.");
-
             if (platformSettings.Provider != PaymentProvider.Mock &&
                 string.IsNullOrWhiteSpace(platformSettings.OwnerMerchantId))
             {
@@ -196,68 +199,143 @@ public sealed class PortalInvitationService(
             var customer = await dbContext.Customers.AsNoTracking()
                 .FirstAsync(c => c.Id == invitation.CustomerId, ct);
 
-            var callbackUrl = platformSettings.CallbackBaseUrl is { Length: > 0 } baseUrl
-                ? $"{baseUrl.TrimEnd('/')}/api/portal/{invitation.Token}/callback"
-                : null;
+            // Mock resolves the charge inline and never redirects, so no callback can ever arrive —
+            // demanding a callback base URL here would break the Mock provider's zero-configuration
+            // contract (a fresh install must complete this flow before any PSP account exists).
+            // A real PSP still fails fast here, before any request goes out, when no base is
+            // resolvable (settings.CallbackBaseUrl empty and Portal:ApiPublicBaseUrl unset).
+            var callbackUrl = platformSettings.Provider == PaymentProvider.Mock
+                ? string.Empty
+                : $"{await coordinator.ResolveCallbackBaseAsync(ct)}/api/portal/{invitation.Token}/callback";
 
-            var result = await gateway.ChargeAsync(
-                invitation.Token,
-                platformSettings.OwnerMerchantId,
-                invitation.InquiryFeeToman,
-                "پرداخت کارمزد استعلام",
-                callbackUrl ?? string.Empty,
+            var charge = await coordinator.ChargeAsync(
+                new GatewayChargeContext(
+                    platformSettings.Provider, GatewayPurpose.InquiryFee, agencyId,
+                    InvitationId: invitation.Id, CustomerId: invitation.CustomerId),
+                new GatewayChargeRequest(
+                    invitation.Token,
+                    platformSettings.OwnerMerchantId ?? string.Empty,
+                    invitation.InquiryFeeToman,
+                    "پرداخت کارمزد استعلام",
+                    callbackUrl,
+                    Mobile: customer.Mobile,
+                    FullName: customer.FullName),
                 ct);
 
-            if (!result.Succeeded)
+            if (charge.RequiresRedirect)
             {
-                throw new PortalInvitationException(
-                    result.FailureReason ?? "پرداخت ناموفق بود. لطفاً دوباره تلاش کنید.");
+                // A real PSP: nothing is settled — the callback endpoint finalises after verify.
+                return new PortalPaymentResult(null, null, charge.RedirectUrl);
             }
 
-            invitation.Status = PortalInvitationStatus.Paid;
-            // A verification chain records the fee landing in its own stage too — the retry
-            // endpoints key off FeePaid, so skipping this would strand a paid-but-failed chain at
-            // FeePending with no way to re-fire the inquiries. A standalone (PolicyId null) link
-            // keeps the same convention so the operator retry path can find it.
-            invitation.Stage = PolicyVerificationStage.FeePaid;
-            invitation.PaidAtUtc = DateTimeOffset.UtcNow;
-            invitation.PaidAmountToman = result.PaidAmountToman ?? invitation.InquiryFeeToman;
+            var settledAmount = await SettleFeeAsync(
+                invitation, customer, agencyId, charge.SettledAmountToman ?? invitation.InquiryFeeToman, customerIp, ct);
+            await FireInquiriesAsync(invitation, agencyId, ct);
 
-            // Same-transaction audit (rules 27-29) — customer-side action, no authenticated user, so
-            // the actor is the portal itself with the customer's mobile for traceability.
-            dbContext.AuditEntries.Add(new AuditEntry
-            {
-                AgencyId = agencyId,
-                UserId = invitation.CreatedByUserId,
-                UserDisplayName = "پورتال مشتری",
-                EntityType = nameof(CustomerPortalInvitation),
-                EntityId = invitation.Id,
-                PolicyId = Guid.Empty,
-                Action = AuditAction.PaymentRecorded,
-                Description = $"پرداخت کارمزد استعلام ({invitation.PaidAmountToman:N0} تومان) از طریق پورتال مشتری ({customer.Mobile})",
-                OccurredAt = DateTimeOffset.UtcNow,
-                IpAddress = customerIp,
-            });
-            await dbContext.SaveChangesAsync(ct);
-
-            // The inquiries fire the moment the fee lands, on BOTH link kinds: a policy chain
-            // advances to ReportReady for the wizard's step 4, a standalone (customer-file) link
-            // stores a PolicyId-null report the representative reviews before issuing (owner
-            // decision 2026-09-03). The fee itself is already persisted, so an inquiry failure is
-            // logged and surfaced via the stage (still FeePaid, retryable through the retry
-            // endpoints) rather than thrown — never an empty catch (rule 15), and the customer
-            // must not see the pay call as failed.
-            var inquiry = await policyVerificationService.RunInquiriesAsync(invitation, agencyId, ct);
-            if (!inquiry.Succeeded)
-            {
-                logger.LogWarning(
-                    "Credit inquiries after fee payment failed for invitation {InvitationId} (policy {PolicyId}): {Error}",
-                    invitation.Id, invitation.PolicyId, inquiry.Error);
-            }
-
-            return new PortalPaymentResult(invitation.PaidAmountToman!.Value, invitation.PaidAtUtc!.Value);
+            return new PortalPaymentResult(settledAmount, invitation.PaidAtUtc!.Value);
         });
     }
+
+    /// <summary>The PSP's browser callback for the inquiry fee: resolves the Pending charge by the
+    /// gateway's own reference inside the invitation's agency scope, verifies server-to-server
+    /// (never trusting the callback's success flag), then settles with exactly the same money-moving
+    /// path an inline fee payment uses — status/stage flips, same-transaction audit, and the
+    /// inquiries fired the moment the fee lands. Returns the SPA redirect the controller bounces
+    /// the customer's browser to.</summary>
+    public async Task<string> FinalizeFeeCallbackAsync(
+        string token, IReadOnlyDictionary<string, string> callbackParameters,
+        string? customerIp, CancellationToken ct = default)
+    {
+        return await RunWithAgencyScopeAsync(token, ct, async (invitation, agencyId) =>
+        {
+            var transaction = await coordinator.ResolveCallbackTransactionAsync(
+                invitation.Id, null, callbackParameters, ct);
+            var data = coordinator.ReadCallback(transaction.Provider, callbackParameters);
+            if (!data.SuccessFlagSet)
+            {
+                await coordinator.MarkCallbackFailedAsync(
+                    transaction, "بازگشت از درگاه پرداخت موفق گزارش نشد.", ct);
+                return PortalCallbackReturnUrl(token, "failed", "cancelled");
+            }
+
+            try
+            {
+                var outcome = await coordinator.VerifyAsync(transaction.Provider, transaction.GatewayReference, ct);
+                var customer = await dbContext.Customers.AsNoTracking()
+                    .FirstAsync(c => c.Id == invitation.CustomerId, ct);
+                var settledAmount = await SettleFeeAsync(
+                    invitation, customer, agencyId, outcome.SettledAmountToman, customerIp, ct);
+                await FireInquiriesAsync(invitation, agencyId, ct);
+                return PortalCallbackReturnUrl(token, "ok", $"{settledAmount:N0}");
+            }
+            catch (PortalInvitationException ex)
+            {
+                // Verify refused the payment — the row is already Failed/Expired in the database,
+                // and the customer must see the Persian reason on the SPA page, not a bare error.
+                return PortalCallbackReturnUrl(token, "failed", ex.Message);
+            }
+        });
+    }
+
+    /// <summary>The money-moving half of an inquiry fee, shared verbatim by the inline (mock /
+    /// one-phase) path and the PSP-callback path. Marks the invitation paid, stage FeePaid, and
+    /// writes the same-transaction audit row. Returns the settled amount.</summary>
+    private async Task<decimal> SettleFeeAsync(
+        CustomerPortalInvitation invitation, Customer customer, Guid agencyId,
+        decimal settledAmount, string? customerIp, CancellationToken ct)
+    {
+        if (settledAmount <= 0)
+        {
+            throw new PortalInvitationException("مبلغ پرداخت نامعتبر است؛ با پشتیبانی تماس بگیرید.");
+        }
+
+        invitation.Status = PortalInvitationStatus.Paid;
+        // A verification chain records the fee landing in its own stage too — the retry
+        // endpoints key off FeePaid, so skipping this would strand a paid-but-failed chain at
+        // FeePending with no way to re-fire the inquiries. A standalone (PolicyId null) link
+        // keeps the same convention so the operator retry path can find it.
+        invitation.Stage = PolicyVerificationStage.FeePaid;
+        invitation.PaidAtUtc = DateTimeOffset.UtcNow;
+        invitation.PaidAmountToman = settledAmount;
+
+        // Same-transaction audit (rules 27-29) — customer-side action, no authenticated user, so
+        // the actor is the portal itself with the customer's mobile for traceability.
+        dbContext.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = agencyId,
+            UserId = invitation.CreatedByUserId,
+            UserDisplayName = "پورتال مشتری",
+            EntityType = nameof(CustomerPortalInvitation),
+            EntityId = invitation.Id,
+            PolicyId = Guid.Empty,
+            Action = AuditAction.PaymentRecorded,
+            Description = $"پرداخت کارمزد استعلام ({invitation.PaidAmountToman:N0} تومان) از طریق پورتال مشتری ({customer.Mobile})",
+            OccurredAt = DateTimeOffset.UtcNow,
+            IpAddress = customerIp,
+        });
+        await dbContext.SaveChangesAsync(ct);
+        return settledAmount;
+    }
+
+    /// <summary>Fires the credit inquiries after a settled fee, logging (never throwing) a
+    /// failure — shared by the inline and callback paths (see PayAsync's remark).</summary>
+    private async Task FireInquiriesAsync(
+        CustomerPortalInvitation invitation, Guid agencyId, CancellationToken ct)
+    {
+        var inquiry = await policyVerificationService.RunInquiriesAsync(invitation, agencyId, ct);
+        if (!inquiry.Succeeded)
+        {
+            logger.LogWarning(
+                "Credit inquiries after fee payment failed for invitation {InvitationId} (policy {PolicyId}): {Error}",
+                invitation.Id, invitation.PolicyId, inquiry.Error);
+        }
+    }
+
+    /// <summary>Where the PSP's browser is bounced after a fee payment: back onto the SPA's own
+    /// /portal/{token} page with a machine-readable result the page renders.</summary>
+    private string PortalCallbackReturnUrl(string token, string payState, string detail) =>
+        $"{configuration["Portal:PublicBaseUrl"]?.TrimEnd('/')}/portal/{Uri.EscapeDataString(token)}" +
+        $"?pay={payState}&detail={Uri.EscapeDataString(detail)}";
 
     /// <summary>Runs work inside the invitation's agency scope: resolves the agency via the
     /// RLS-exempt PortalInvitationTokenIndex (the one token-keyed lookup an anonymous visitor

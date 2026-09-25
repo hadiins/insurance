@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -65,6 +66,11 @@ public class MarketerCommissionEndpointTests : IClassFixture<WebApplicationFacto
             $"/api/policies/{policy!.PolicyId}/schedule", new ScheduleRequest(1_700_000m, 9));
         scheduleResponse.EnsureSuccessStatusCode();
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<ScheduleResultDto>();
+        AgencyContext.Current = fixture.AgencyAId;
+        var commissionPolicy = await seedContext.Policies.FirstAsync(p => p.Id == policy.PolicyId);
+        commissionPolicy.RequiresVerification = false;
+        commissionPolicy.Status = Aqsat.Domain.Enums.PolicyStatus.Active;
+        await seedContext.SaveChangesAsync();
 
         // 10 slices total (1 down-payment + 9 installments), summing to 10,700,000 * 5% = 535,000.
         // Stage 4/7 — scheduling alone no longer implies the down payment was collected, so every
@@ -105,7 +111,7 @@ public class MarketerCommissionEndpointTests : IClassFixture<WebApplicationFacto
 
         // A rate change today must not alter yesterday's entries.
         var newRateResponse = await client.PostAsJsonAsync(
-            $"/api/marketers/{marketer.Id}/rates", new SetMarketerRateRequest(salisLineId, 20m, DateOnly.FromDateTime(DateTime.UtcNow)));
+            $"/api/marketers/{marketer.Id}/rates", new SetMarketerRateRequest(salisLineId, 20m, IranClock.Today()));
         newRateResponse.EnsureSuccessStatusCode();
 
         var afterRateChange = await client.GetFromJsonAsync<CommissionSummaryDto>($"/api/marketers/{marketer.Id}/commissions");

@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -51,7 +52,7 @@ public class UnifiedChequesEndpointTests : IClassFixture<WebApplicationFactory<P
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
         // The "upcoming" filter compares against the real wall clock — anchor due dates to actual "now".
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var policyResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
             $"POL-UQ-{Guid.NewGuid():N}"[..16], lineId, null, "بیمه‌گذار چک واحد", null, null,
             Vehicle: new VehicleInput("۸۸ط۴۴۴", null, null, null, null, null), Property: null,
@@ -63,7 +64,7 @@ public class UnifiedChequesEndpointTests : IClassFixture<WebApplicationFactory<P
 
         // Source 1: a guarantee cheque registered on the collateral page.
         var collateralResponse = await client.PostAsJsonAsync("/api/collateral", new CreateCollateralRequest(
-            policy.PolicyId, "ChequeSayadi", "IR010203040506070809101112", "بانک ملی", 3_000_000m, today.AddDays(20)));
+            policy.PolicyId, "ChequeSayadi", "IR010203040506070809101112", null, "بانک ملی", 3_000_000m, today.AddDays(20)));
         collateralResponse.EnsureSuccessStatusCode();
         var collateral = await collateralResponse.Content.ReadFromJsonAsync<CollateralDto>();
 

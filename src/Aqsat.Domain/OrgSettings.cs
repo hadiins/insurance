@@ -32,6 +32,12 @@ public class OrgSettings
     /// constant.</summary>
     public int RenewalAutoWatchLeadDays { get; set; } = 60;
 
+    /// <summary>The agency's monthly collection target in TOMAN (rule 19: stored internally in
+    /// toman). The Today dashboard divides it by the number of days in the current Jalali month to
+    /// draw the daily goal line. Null = no goal configured — the UI then draws no goal bar at all
+    /// rather than a fake zero target.</summary>
+    public decimal? MonthlyCollectionGoal { get; set; }
+
     // ---- Customer portal & payment gateway (docs/CUSTOMER-PORTAL-SPEC.md §3) ----
 
     /// <summary>The gateway this agency's CUSTOMERS pay the down payment through (goes to the

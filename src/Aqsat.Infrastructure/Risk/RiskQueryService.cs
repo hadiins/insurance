@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using Aqsat.Domain;
 using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
@@ -90,7 +91,7 @@ public sealed class RiskQueryService(AppDbContext dbContext, TimeProvider timePr
     public async Task<RiskDashboardDto> GetDashboardAsync(CancellationToken ct = default)
     {
         var agencyId = AgencyContext.Current ?? throw new RiskAssessmentException("دامنهٔ نمایندگی نامعتبر است.");
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
         var windowStart = DateTimeOffset.UtcNow.AddDays(-TrendWindowDays);
 
         var writeOffDays = await dbContext.OrgSettings.AsNoTracking()
@@ -220,7 +221,7 @@ public sealed class RiskQueryService(AppDbContext dbContext, TimeProvider timePr
 
     public async Task<IReadOnlyList<HighRiskRiskCustomerDto>> GetHighRiskAsync(CancellationToken ct = default)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = IranClock.Today(timeProvider);
 
         var overdueByCustomer = await dbContext.Installments.AsNoTracking()
             .Where(i => i.Status != InstallmentStatus.Settled && i.DueDate < today)

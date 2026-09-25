@@ -65,6 +65,10 @@ export type PageKind =
   | "alerts-rules"
   | "blank";
 
+/** Which counter from GET /api/nav/badges an item shows. Each is a call to action — open work the
+ * agent should get to — never a total of rows that exist. */
+export type NavBadgeKey = "installmentWorklist" | "cheques" | "riskReviews" | "renewalWatches";
+
 export interface NavItem {
   navType: string;
   title: string;
@@ -76,6 +80,12 @@ export interface NavItem {
    * e.g. "Platform.Owner" (docs/UPDATE-SYSTEM.md rule 1: agency users must never even see this
    * page exists, not just be blocked from using it). */
   requiresPermission?: string;
+  /** Renders a count next to the item. Omitted when the count endpoint fails — a silent zero would
+   * read as "nothing to do", which is exactly the wrong message (rules 15/16). */
+  badgeKey?: NavBadgeKey;
+  /** Draws the count in the attention colour when it is above zero. Only for items whose count
+   * means "something needs doing", never for a plain inventory. */
+  badgeIsAlert?: boolean;
 }
 
 export interface NavGroup {

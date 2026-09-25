@@ -1,3 +1,4 @@
+﻿using Aqsat.Application.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aqsat.Api.Contracts;
@@ -33,7 +34,7 @@ public class PaymentChequeEndpointTests : IClassFixture<WebApplicationFactory<Pr
         var (fixture, seedContext, client) = await SeedAsync();
 
         AgencyContext.Current = fixture.AgencyAId;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = IranClock.Today();
         var customer = new Customer { AgencyId = fixture.AgencyAId, ExternalCode = $"EXT-{Guid.NewGuid():N}"[..12], FullName = "مشتری چک" };
         var vehicle = new Vehicle { AgencyId = fixture.AgencyAId, Plate = "77ج777" };
         var cashBox = new CashBox { AgencyId = fixture.AgencyAId, Name = "صندوق مرکزی", IsActive = true };

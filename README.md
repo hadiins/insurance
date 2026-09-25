@@ -58,18 +58,21 @@ cp .env.example .env   # fill in real values — see the table below
 docker compose -f docker-compose.prod.yml --env-file .env up -d
 ```
 
-**First run only:** the `sqlserver-backup` volume is created empty and owned by `root`, but SQL
-Server's own process (`mssql`, uid 10001) needs to write backup files into it — and the `api`
-container (running as its unprivileged `app` user since the non-root hardening) needs to delete
-expired ones during the retention sweep. Fix ownership/permissions once, right after the first
-`up`:
+**Backup permissions are initialized automatically.** The one-shot `backup-init` service sets
+ownership of the backup directory to SQL Server's UID `10001` and shared GID `20001`, with mode
+`2770` (setgid, no access for others). SQL Server waits for successful initialization; API and
+Updater wait for SQL Server health. All three services join group `20001` and remain non-root.
+Only the initializer runs as root, without networking, the database volume, or Docker socket.
+It changes the directory permissions only, not existing backup contents. API retention cleanup
+can delete SQL-created files because deletion requires write permission on the directory.
 
-```bash
-docker compose -f docker-compose.prod.yml exec -u root sqlserver \
-  bash -c "mkdir -p /var/opt/mssql/backup && chown mssql:mssql /var/opt/mssql/backup && chmod 0770 /var/opt/mssql/backup"
-```
+When upgrading an existing deployment, recreate the services with Compose so their supplemental
+groups are applied; merely restarting old containers does not update their group membership.
+Do not rerun the old manual `chown mssql:mssql` command: it removes the shared directory group.
+If initialization fails, inspect `docker compose -f docker-compose.prod.yml logs backup-init`;
+SQL Server intentionally stays blocked rather than starting with broken backup permissions.
 
-**Also first run only:** create the least-privilege login the app connects as — `sa` stays for
+**First run only:** create the least-privilege login the app connects as — `sa` stays for
 emergency/break-glass use and the container healthcheck only, never in the app's connection
 string:
 
