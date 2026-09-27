@@ -256,13 +256,16 @@ try
 
     var app = builder.Build();
 
-    // The portal payment gateway is still the built-in MOCK — every "payment" it reports is
-    // simulated and no real money moves. Acceptable in Development; in Production it means the
-    // system can mark installments settled that were never actually paid, so say it loudly on
-    // every start until a real gateway (ZarinPal, see IPaymentGateway registration) is wired in.
+    // In Production a Mock-gateway charge is now REFUSED, not merely logged: PaymentGatewaySafetyGuard
+    // throws before any money, row, or redirect exists (see GatewayPaymentCoordinator.ChargeAsync).
+    // The rest of the product — issuance, scheduling, cash/bank/cheque receipts, reports — keeps
+    // working, so a deployment without a configured PSP is safe rather than merely noisy.
     if (app.Environment.IsProduction())
     {
-        Log.Fatal("درگاه پرداخت پورتال مشتریان هنوز Mock است — پرداخت‌های ثبت‌شده واقعی نیستند و هیچ مبلغی واریز نمی‌شود. تا اتصال درگاه واقعی، این وضعیت را نادیده نگیرید.");
+        Log.Warning(
+            "پرداخت آنلاین با درگاه شبیه‌سازی‌شده (Mock) در محیط Production غیرفعال است. " +
+            "برای فعال‌سازی، در پنل نمایندگی یک درگاه واقعی (زرین‌پال یا گویاپی) و شناسهٔ پذیرنده را تنظیم کنید. " +
+            "ثبت بیمه‌نامه، زمان‌بندی اقساط و دریافت‌های نقدی/چکی/واریز بانکی بدون تغییر کار می‌کنند.");
     }
 
     // Must run before anything that reads RemoteIpAddress (rate limiting partitions, audit IP
@@ -279,6 +282,22 @@ try
         if (IPAddress.TryParse(knownProxy.Value, out var proxyIp))
         {
             forwardedHeadersOptions.KnownProxies.Add(proxyIp);
+        }
+    }
+    // CIDR networks, the form a containerised reverse proxy actually has: its address is assigned by
+    // Docker and can change on every recreate, so pinning a single KnownProxies IP silently stops
+    // matching after a redeploy. A network keeps trusting exactly the private Docker range and
+    // nothing else — still no trust in anything the client can spoof from the internet.
+    foreach (var knownNetwork in app.Configuration.GetSection("Deployment:KnownNetworks").GetChildren())
+    {
+        if (knownNetwork.Value is { Length: > 0 } cidr
+            && Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(cidr, out var network))
+        {
+            forwardedHeadersOptions.KnownNetworks.Add(network);
+        }
+        else
+        {
+            Log.Warning("Deployment:KnownNetworks entry '{Value}' is not a valid CIDR block — ignored.", knownNetwork.Value);
         }
     }
     app.UseForwardedHeaders(forwardedHeadersOptions);
@@ -347,53 +366,6 @@ try
         // isn't reachable yet must not take the whole process down with it.
         if (app.Configuration.GetValue("Deployment:ApplyMigrationsOnStartup", true))
         {
-            // One-time deploy utility: drop the whole database so MigrateAsync below recreates it
-            // from scratch — the "wipe all previous data" move between hosting generations where
-            // the SQL server is only reachable from inside the host network (no out-of-band wipe
-            // possible). MUST be removed from configuration after the first successful start:
-            // leaving it on wipes again on every app-pool recycle. A Production environment
-            // refuses outright unless the operator ALSO sets
-            // Deployment:AllowProductionDatabaseReset — one env var that says "yes, I really mean
-            // to erase every agency's data" — so a stray flag in a copied .env can't do it alone.
-            if (app.Configuration.GetValue("Deployment:ResetDatabaseOnStartup", false))
-            {
-                var environmentName = app.Environment.EnvironmentName;
-                if (environmentName == "Production"
-                    && !app.Configuration.GetValue("Deployment:AllowProductionDatabaseReset", false))
-                {
-                    Log.Fatal(
-                        "Deployment:ResetDatabaseOnStartup is set in the Production environment — refused. " +
-                        "Set Deployment:AllowProductionDatabaseReset=true as well if erasing all production data is truly intended.");
-                }
-                else
-                {
-                    try
-                    {
-                        using var resetScope = app.Services.CreateScope();
-                        var cs = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
-                            resetScope.ServiceProvider.GetRequiredService<AppDbContext>().Database.GetDbConnection().ConnectionString);
-                        var databaseName = cs.InitialCatalog;
-                        cs.InitialCatalog = "master";
-                        await using var master = new Microsoft.Data.SqlClient.SqlConnection(cs.ConnectionString);
-                        await master.OpenAsync();
-                        // SINGLE_USER with ROLLBACK IMMEDIATE kills every other connection first —
-                        // a plain DROP fails as long as anything (a previous app instance, a stray
-                        // Hangfire server) still holds a connection to the database.
-                        await using var quarantine = master.CreateCommand();
-                        quarantine.CommandText = $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE";
-                        await quarantine.ExecuteNonQueryAsync();
-                        await using var drop = master.CreateCommand();
-                        drop.CommandText = $"DROP DATABASE [{databaseName}]";
-                        await drop.ExecuteNonQueryAsync();
-                        Log.Warning("Deployment:ResetDatabaseOnStartup was set — database {Database} dropped; migrations will recreate it empty.", databaseName);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Deployment:ResetDatabaseOnStartup failed — continuing against the existing database.");
-                    }
-                }
-            }
-
             try
             {
                 using var migrationScope = app.Services.CreateScope();

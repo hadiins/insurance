@@ -5,8 +5,43 @@ using Aqsat.Infrastructure.Persistence;
 using Aqsat.Infrastructure.Portal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Aqsat.Infrastructure.Payments;
+
+/// <summary>
+/// Fails closed on simulated money in Production. MockPaymentGateway resolves a charge as
+/// SUCCEEDED without moving a real rial, so a Production deployment still running the Mock would
+/// mark an installment «تسویه» and flip a commission slice Payable while no money ever arrived —
+/// exactly the failure this product exists to prevent. A loud startup log is not a control, so the
+/// coordinator itself refuses: every portal/installment payment path funnels through ChargeAsync, so
+/// one guard here covers all of them and no caller can bypass it.
+/// </summary>
+public interface IPaymentGatewaySafetyGuard
+{
+    /// <summary>Null when the charge may proceed; otherwise the operator-facing reason to refuse.</summary>
+    string? RefuseReason(PaymentProvider provider);
+}
+
+public sealed class PaymentGatewaySafetyGuard(IConfiguration configuration, ILogger<PaymentGatewaySafetyGuard> logger)
+    : IPaymentGatewaySafetyGuard
+{
+    private bool IsProduction =>
+        configuration["ASPNETCORE_ENVIRONMENT"] is "Production"
+        || configuration["DOTNET_ENVIRONMENT"] is "Production";
+
+    public string? RefuseReason(PaymentProvider provider)
+    {
+        if (provider != PaymentProvider.Mock || !IsProduction)
+        {
+            return null;
+        }
+
+        logger.LogCritical(
+            "تلاش برای پرداخت آنلاین از طریق درگاه شبیه‌سازی‌شده (Mock) رد شد؛ در محیط Production هیچ مبلغی واقعاً جابه‌جا نمی‌شود.");
+        return "پرداخت آنلاین در این سامانه غیرفعال است؛ درگاه پرداخت واقعی برای نمایندگی تنظیم نشده است. لطفاً با پشتیبانی تماس بگیرید.";
+    }
+}
 
 /// <summary>
 /// What the caller must do after phase one. Exactly one of the two branches is populated:
@@ -48,7 +83,10 @@ public sealed record GatewayVerificationOutcome(GatewayTransaction Transaction, 
 public sealed class GatewayPaymentCoordinator(
     AppDbContext dbContext,
     IEnumerable<IPaymentGateway> gateways,
-    IConfiguration configuration)
+    IConfiguration configuration,
+    // Optional so the many test call sites that build this directly keep compiling; the real
+    // container always injects the registered guard (see DependencyInjection).
+    IPaymentGatewaySafetyGuard? safetyGuard = null)
 {
     /// <summary>How long a pending PSP charge stays usable. ZarinPal's own reverse window is 30
     /// minutes, so a reference older than that is of no use to anyone anyway; گویا پی publishes no
@@ -151,6 +189,13 @@ public sealed class GatewayPaymentCoordinator(
     public async Task<GatewayChargeOutcome> ChargeAsync(
         GatewayChargeContext context, GatewayChargeRequest request, CancellationToken ct = default)
     {
+        // Fail closed BEFORE any money, row, or redirect exists. This is the single choke point all
+        // three customer payment paths (inquiry fee, down payment, installment) go through.
+        if (safetyGuard?.RefuseReason(context.Provider) is { } refusal)
+        {
+            throw new PortalInvitationException(refusal);
+        }
+
         var gateway = Resolve(context.Provider);
 
         if (request.AmountToman < gateway.MinAmountToman || request.AmountToman > gateway.MaxAmountToman)

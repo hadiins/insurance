@@ -57,58 +57,121 @@ public sealed class SmsReminderJob(
                 .Select(t => t.Body)
                 .FirstOrDefaultAsync(ct);
 
+            // ONE query for the whole day, not "load everything with Include, then a separate
+            // query per installment" (the N+1 the old loop had via the per-installment
+            // alreadySent check). Project straight into what the SMS needs, so a ~960-installment
+            // agency stops loading full Policy+Customer graphs it never reads.
+            var todayDayNumber = today.DayNumber;
+            var maxOffset = offsets.Max();
+
+            // DayNumber is not translatable for DateOnly on SQL Server, and the bound is more useful
+            // as real dates anyway: a range on the column itself is sargable, so SQL Server can seek
+            // an index on DueDate instead of scanning every unsettled installment in the agency.
+            // The upper bound is "the last day an offset can still be ahead of us".
+            var latestRelevantDue = today.AddDays(maxOffset);
+
             var candidates = await dbContext.Installments
-                .Where(i => i.Status != InstallmentStatus.Settled)
-                .Include(i => i.Policy).ThenInclude(p => p.Customer)
+                .AsNoTracking()
+                .Where(i => i.Status != InstallmentStatus.Settled
+                            && i.DueDate <= latestRelevantDue)
+                .Select(i => new
+                {
+                    i.Id,
+                    i.SeqNo,
+                    i.Balance,
+                    i.DueDate,
+                    PolicyNumber = i.Policy.PolicyNumber,
+                    CustomerId = i.Policy.CustomerId,
+                    Mobile = i.Policy.Customer.Mobile,
+                })
                 .ToListAsync(ct);
+
+            // The whole day's "already sent" set in ONE round trip, instead of one EXISTS query
+            // per candidate installment. Bounded by OffsetDays + recency rather than an IN-list of
+            // every candidate id: a given (installment, offset) pair can only ever match on ONE
+            // calendar day (the offset is derived from the immutable DueDate minus today), so any
+            // log for a current offset is at most a day or two old — an old row can never be the
+            // one that suppresses today's send. This also keeps the statement well under SQL
+            // Server's 2100-parameter limit for a large agency.
+            // SentAt is a DateTimeOffset, so the recency floor is the START of that Iranian day in
+            // UTC — inclusive, so a log written at 00:05 Tehran time is never excluded by rounding.
+            var oldestRelevantUtc = new DateTimeOffset(
+                today.AddDays(-14).ToDateTime(TimeOnly.MinValue), IranClock.Offset);
+            var alreadySentOffsets = await dbContext.ReminderLogs.AsNoTracking()
+                .Where(r => r.InstallmentId != null
+                            && r.RecipientType == ReminderRecipientType.Customer
+                            && offsets.Contains(r.OffsetDays)
+                            && r.SentAt >= oldestRelevantUtc)
+                .Select(r => new { r.InstallmentId, r.OffsetDays })
+                .ToListAsync(ct);
+            var alreadySent = alreadySentOffsets
+                .Where(r => r.InstallmentId.HasValue)
+                .GroupBy(r => r.InstallmentId!.Value)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (HashSet<int>)g.Select(x => x.OffsetDays).ToHashSet());
 
             foreach (var installment in candidates)
             {
-                var daysUntilDue = installment.DueDate.DayNumber - today.DayNumber;
-                if (!offsets.Contains(daysUntilDue))
+                var daysUntilDue = installment.DueDate.DayNumber - todayDayNumber;
+                var sentOffsets = alreadySent.TryGetValue(installment.Id, out var found)
+                    ? found
+                    : [];
+
+                // Normally the exact configured offset, on exactly that day. But "exactly" made the
+                // reminder fragile: if the host was down, a deploy skipped a run, or the send itself
+                // failed, that day passed and the customer was never reminded about that offset
+                // again — silently. So when today is PAST a configured offset, the smallest
+                // already-passed offset that was never sent is sent now, as a single catch-up.
+                // Cost stays bounded: idempotency is still keyed on (installment, offset), so each
+                // missed reminder costs at most one catch-up SMS and can never repeat.
+                var offset = daysUntilDue;
+                if (!offsets.Contains(offset))
+                {
+                    var missed = offsets
+                        .Where(o => o > daysUntilDue && !sentOffsets.Contains(o))
+                        .DefaultIfEmpty()
+                        .Min();
+                    if (missed == 0)
+                    {
+                        continue;
+                    }
+
+                    offset = missed;
+                }
+                else if (sentOffsets.Contains(offset))
                 {
                     continue;
                 }
 
-                var alreadySent = await dbContext.ReminderLogs.AsNoTracking().AnyAsync(
-                    r => r.InstallmentId == installment.Id && r.OffsetDays == daysUntilDue
-                        && r.RecipientType == ReminderRecipientType.Customer,
-                    ct);
-                if (alreadySent)
-                {
-                    continue;
-                }
-
-                var mobile = installment.Policy.Customer.Mobile;
+                var mobile = installment.Mobile;
                 if (string.IsNullOrWhiteSpace(mobile))
                 {
                     continue;
                 }
 
                 // The online-payment link rides the reminder when the agency has opted into the
-                // customer portal. Created-on-demand here (with its own immediate SaveChanges —
-                // the catch below detaches this context's whole pending batch, so a half-created
-                // link must never sit in it). A failure to mint the link must never cost the
-                // customer their reminder — degrade to a plain-text reminder and log it (rule 15).
+                // customer portal. A failure to mint the link must never cost the customer their
+                // reminder — degrade to a plain-text reminder and log it (rule 15).
                 string? paymentLink = null;
                 if (orgSettings?.CustomerPortalEnabled == true)
                 {
                     try
                     {
                         var link = await paymentLinkService.EnsureLinkAsync(
-                            installment.Policy.CustomerId, Guid.Empty, ct);
+                            installment.CustomerId, Guid.Empty, ct);
                         paymentLink = $"{configuration["Portal:PublicBaseUrl"]?.TrimEnd('/')}/pay/{link.Token}";
                     }
                     catch (Exception ex)
                     {
                         logger.LogWarning(ex,
                             "Failed to ensure payment link for customer {CustomerId}; reminder goes out without a link.",
-                            installment.Policy.CustomerId);
+                            installment.CustomerId);
                     }
                 }
 
                 var text = InstallmentReminderTemplate.Render(
-                    installment.Policy.PolicyNumber, installment.SeqNo, installment.Balance,
+                    installment.PolicyNumber, installment.SeqNo, installment.Balance,
                     installment.DueDate, customBody, paymentLink);
                 var sent = await smsSender.SendAsync(mobile, text, agencyId, ct);
 
@@ -118,29 +181,33 @@ public sealed class SmsReminderJob(
                     InstallmentId = installment.Id,
                     RecipientType = ReminderRecipientType.Customer,
                     Mobile = mobile,
-                    OffsetDays = daysUntilDue,
+                    OffsetDays = offset,
                     TemplateKey = InstallmentReminderTemplate.Key,
                     Channel = ReminderChannel.Sms,
                     Status = sent ? ReminderSendStatus.Sent : ReminderSendStatus.Failed,
                     SentAt = DateTimeOffset.UtcNow,
                 });
-            }
 
-            try
-            {
-                await dbContext.SaveChangesAsync(ct);
-            }
-            catch (DbUpdateException)
-            {
-                // A concurrent run (or a race with the manual-send endpoint) already logged the same
-                // (installment, offset) — the unique index caught it. Same "duplicate = success"
-                // idempotency as everywhere else in this codebase, not a failure worth surfacing.
-                foreach (var entry in dbContext.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged).ToList())
+                // Persist THIS reminder before sending the next one. The old code accumulated every
+                // agency's reminders in one pending batch and saved once at the end: a single duplicate
+                // (installment, offset) then rolled the whole batch back, and the catch below detached
+                // the entire batch — silently erasing the log of SMS messages that had already been
+                // sent and paid for. Each log is its own unit of work now, so a duplicate costs only
+                // its own row, exactly as a race elsewhere in this codebase is handled.
+                try
                 {
-                    entry.State = EntityState.Detached;
+                    await dbContext.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateException)
+                {
+                    // Duplicate = success (the unique index caught a concurrent run or the manual-send
+                    // endpoint). Detach ONLY this one entry; nothing else is pending anymore.
+                    dbContext.ChangeTracker.Clear();
                 }
             }
 
+            // No trailing batch save: every reminder above committed its own log inside the loop.
+            // This final Clear just drops the read-only projections' tracker entries.
             dbContext.ChangeTracker.Clear();
         }
     }
@@ -171,10 +238,12 @@ public static class InstallmentReminderTemplate
         string? customBody = null, string? paymentLink = null)
     {
         var body = (customBody ?? DefaultBody)
-            .Replace("{PolicyNumber}", policyNumber)
-            .Replace("{SeqNo}", seqNo.ToString())
-            .Replace("{Balance}", balance.ToString("N0"))
-            .Replace("{DueDate}", dueDate.ToString("yyyy-MM-dd"));
+            .Replace("{PolicyNumber}", PersianText.ToPersianDigits(policyNumber))
+            .Replace("{SeqNo}", PersianText.ToPersianDigits(seqNo.ToString()))
+            .Replace("{Balance}", PersianText.ToPersianDigits(balance.ToString("N0")))
+            // Jalali + Persian digits, NOT the old invariant "yyyy-MM-dd": the customer was being
+            // texted a Gregorian date with Latin digits, which no other surface of this product shows.
+            .Replace("{DueDate}", PersianText.JalaliDate(dueDate));
 
         if (paymentLink is null)
         {

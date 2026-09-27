@@ -70,6 +70,16 @@ services:
       # on both sides. (The version the panel shows and the "can't jump straight from 1.0 to 3.0"
       # prerequisite check use is stamped into the image at build time — build.args APP_VERSION
       # above; PlatformUpdatesController reads it from the assembly, never from env.)
+      # The compose network a same-host reverse proxy reaches the API from. Without this the
+      # container's only trusted proxy is loopback, so behind a proxy EVERY user's RemoteIpAddress
+      # collapses to one address: the 10-logins-per-minute limiter becomes a single shared bucket
+      # for the whole office (a trivial self-inflicted DoS), and every audit row records the proxy's
+      # IP instead of the actor's. Matching by CIDR rather than a single IP so the assignment stays
+      # correct when Docker re-addresses the container. Override Deployment__KnownNetworks if your
+      # proxy sits on a different subnet.
+      Deployment__KnownNetworks__0: "172.16.0.0/12"
+      # Offline seat only. See docs/UPDATE-SYSTEM.md §1 — the updater exists specifically so the
+      # internet-facing "api" container never has Docker socket access.
       Updater__BaseUrl: http://aqsat-updater:8081
       Updater__SharedToken: ${UPDATER_SHARED_TOKEN}
       # docs/TASKS.md Task 23 — POST /api/platform/updates/register verifies each submitted
@@ -84,8 +94,19 @@ services:
       # Shares the same physical files sqlserver writes backups into, so DatabaseBackupJob's
       # retention sweep (plain File I/O, running inside this container) can see and delete them.
       - sqlserver-backup:/var/opt/mssql/backup
+      # Serilog writes logs/aqsat-api-.log here. Without a volume the log lives in the container's
+      # writable layer, so EVERY `docker compose up -d --force-recreate` (which the updater does on
+      # every single release) deleted the entire history — exactly the window you need when an
+      # update misbehaves. A named volume keeps it across recreates.
+      - api-logs:/app/logs
+    # Bound to LOOPBACK ONLY, not 0.0.0.0. Publishing on every interface hands out a plain-HTTP
+    # 8080 that bypasses whatever TLS-terminating reverse proxy is in front: anyone on the network
+    # could speak to the API directly over cleartext, and would not hit the proxy's own rate limits
+    # or access log. Bind 127.0.0.1 so a same-host proxy (nginx/Caddy/Traefik) reaches it and
+    # nothing else can. A REMOTE host must change the left-hand side to the host's reachable
+    # address — that is a deliberate, reviewed deployment decision, not a default.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -132,3 +153,4 @@ services:
 volumes:
   sqlserver-data:
   sqlserver-backup:
+  api-logs:

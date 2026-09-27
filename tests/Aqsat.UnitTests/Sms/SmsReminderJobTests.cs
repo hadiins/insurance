@@ -151,7 +151,8 @@ public class SmsReminderJobTests
         // One SMS carrying the /pay/{token} link, and the link row behind it. Scoped to this
         // test's own policy: the reminder job is platform-wide, so a concurrently-running test's
         // due installment in the shared DB can legitimately add an SMS to the same sender.
-        var text = Assert.Single(sender.SentTexts.Where(t => t.Contains(policyNumber)));
+        // Matched on the PERSIAN-DIGIT form, which is what the template actually renders.
+        var text = Assert.Single(sender.SentTexts.Where(t => t.Contains(PersianDigits(policyNumber))));
         var link = Assert.Single(await context.CustomerPaymentLinks.AsNoTracking()
             .Where(l => l.CustomerId == customerId && l.Status == PaymentLinkStatus.Active).ToListAsync());
         Assert.Contains($"/pay/{link.Token}", text);
@@ -167,7 +168,7 @@ public class SmsReminderJobTests
         AgencyContext.Current = fixture.AgencyAId;
         var job2 = CreateJob(context, sender, new MutableTimeProvider(AtMidnightUtc(today.AddDays(4))));
         await job2.RunAsync();
-        Assert.Contains($"/pay/{link.Token}", Assert.Single(sender.SentTexts.Where(t => t.Contains(policyNumber))));
+        Assert.Contains($"/pay/{link.Token}", Assert.Single(sender.SentTexts.Where(t => t.Contains(PersianDigits(policyNumber)))));
         var linksAfter = await context.CustomerPaymentLinks.AsNoTracking()
             .Where(l => l.CustomerId == customerId && !l.IsDeleted).ToListAsync();
         Assert.Single(linksAfter);
@@ -194,7 +195,7 @@ public class SmsReminderJobTests
         var job = CreateJob(context, sender, new MutableTimeProvider(AtMidnightUtc(today)));
         await job.RunAsync();
 
-        var text = Assert.Single(sender.SentTexts.Where(t => t.Contains(policyNumber)));
+        var text = Assert.Single(sender.SentTexts.Where(t => t.Contains(PersianDigits(policyNumber))));
         Assert.DoesNotContain("/pay/", text);
         Assert.Equal(0, await context.CustomerPaymentLinks.CountAsync(l => l.CustomerId == customerId));
     }
@@ -204,7 +205,19 @@ public class SmsReminderJobTests
     {
         var plain = InstallmentReminderTemplate.Render("74B321", 2, 1_500_000m, new DateOnly(2026, 3, 17));
         Assert.DoesNotContain("/pay/", plain);
-        Assert.Contains("74B321", plain);
+        // The body the customer actually receives, asserted POSITIVELY with Unicode escapes. The
+        // policy number keeps its letters (a real one is alphanumeric) but every DIGIT is Persian,
+        // exactly as the rest of the UI renders, and the due date is JALALI — never the Gregorian
+        // yyyy-MM-dd the old template emitted, meaningless on a Persian-locale phone.
+        // Escapes, not literals: this file is saved without a BOM, and a literal Persian digit here
+        // depends on the compiler reading the source as UTF-8.
+        Assert.Contains("\u06F7\u06F4B\u06F3\u06F2\u06F1", plain);        // ۷۴B۳۲۱
+        Assert.Contains("\u06F2", plain);                              // ۲ (installment sequence)
+        Assert.Contains("\u06F1,\u06F5\u06F0\u06F0,\u06F0\u06F0\u06F0", plain); // ۱,۵۰۰,۰۰۰
+        // 2026-03-17 is 1404/12/26 in the Iranian calendar (verified against PersianCalendar,
+        // not hand-counted): the whole point is that the customer never sees a Gregorian date.
+        Assert.Contains("\u06F1\u06F4\u06F0\u06F4/\u06F1\u06F2/\u06F2\u06F6", plain); // ۱۴۰۴/۱۲/۲۶
+        Assert.DoesNotContain("2026-03-17", plain);
 
         var withLink = InstallmentReminderTemplate.Render("74B321", 2, 1_500_000m, new DateOnly(2026, 3, 17), null, "https://x.example/pay/TOK");
         Assert.EndsWith("پرداخت آنلاین: https://x.example/pay/TOK", withLink);
@@ -212,11 +225,16 @@ public class SmsReminderJobTests
         // A custom body that asks for the placeholder gets it substituted in place, not appended.
         var custom = InstallmentReminderTemplate.Render(
             "74B321", 2, 1_500_000m, new DateOnly(2026, 3, 17), "قسط {SeqNo}: {Balance} — {PaymentLink}", "https://x.example/pay/TOK");
-        Assert.Equal("قسط 2: 1,500,000 — https://x.example/pay/TOK", custom);
+        Assert.Equal("قسط ۲: ۱,۵۰۰,۰۰۰ — https://x.example/pay/TOK", custom);
     }
 
     private static DateTimeOffset AtMidnightUtc(DateOnly date) =>
         new(date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+    /// <summary>The reminder body renders digits as Persian ones, so assertions that look for a
+    /// seeded policy number must search for the same form the customer actually receives.</summary>
+    private static string PersianDigits(string value) =>
+        Aqsat.Application.Common.PersianText.ToPersianDigits(value);
 
     private static async Task<(Guid CustomerId, Guid InstallmentId, string PolicyNumber)> SeedOneDueInstallmentAsync(
         AppDbContext context, Guid agencyId, DateOnly today)

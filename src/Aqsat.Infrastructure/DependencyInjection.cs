@@ -125,6 +125,11 @@ public static class DependencyInjection
         // BaseAddress comes from configuration, which is what lets زرينپال be pointed at its
         // sandbox host without a code change. Each is then re-registered behind the interface so
         // all three remain discoverable through the single IEnumerable the services already take.
+        // Refuses simulated money in Production — see PaymentGatewaySafetyGuard. Registered BEFORE
+        // the coordinator so the container always injects it (its constructor parameter is optional
+        // only to keep direct test construction compiling).
+        services.AddSingleton<Aqsat.Infrastructure.Payments.IPaymentGatewaySafetyGuard,
+            Aqsat.Infrastructure.Payments.PaymentGatewaySafetyGuard>();
         services.AddScoped<Aqsat.Infrastructure.Payments.GatewayPaymentCoordinator>();
         services.AddScoped<Aqsat.Application.Payments.IPaymentGateway,
             Aqsat.Infrastructure.Payments.MockPaymentGateway>();

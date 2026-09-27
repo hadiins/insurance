@@ -94,7 +94,7 @@ domain) in front of it for anything beyond local testing.
 | `SA_PASSWORD` | yes | SQL Server `sa` password — used only by the container healthcheck and the one-time setup below; the app never connects as `sa` |
 | `DB_USER` / `DB_PASSWORD` | yes | The least-privilege login `api` and `updater` connect as — owns the `Aqsat` database only, no server-level privileges |
 | `JWT_KEY` | yes | Signs auth tokens. Generate with `openssl rand -base64 48`; rotating it invalidates every active session |
-| `NATIONAL_ID_KEY` | yes | AES key encrypting `Customer.NationalId`/`Marketer.NationalId` at rest (CLAUDE.md rule 12). **Losing this key makes every stored national ID permanently unrecoverable** — back it up somewhere other than the DB backup itself |
+| `NATIONAL_ID_KEY` | no | **Legacy only.** National IDs are stored as PLAINTEXT by deliberate owner decision (2026-08-28, CLAUDE.md rule 12) because the national ID is the issuance wizard's entry key and must stay directly queryable. A keyed HMAC `NationalIdHash` is still maintained alongside it for dedupe and audit. This key is needed ONLY to decrypt the old `NationalIdEncrypted` columns during the one-time `NationalIdPlaintextBackfillJob` on first startup; set the pre-2026-08-28 value if you are upgrading such a database, and it can be dropped once the backfill has run |
 | `API_IR_KEY` | no | api.ir API key. Leave unset and every call routes to `/api/Sandbox/Echo` (CLAUDE.md's "ask before calling a paid endpoint outside Sandbox") |
 | `API_IR_ALLOW_PAID` | no, default `false` | Set `true` only once an agency has a real, funded api.ir key — this is the switch that turns on real per-call billing (SMS, Shahkar, ChequeColor; see `docs/PHASE-1-SPEC.md` §6 for the price list) |
 | `BACKUP_RETENTION_DAYS` | no, default `14` | How long `DatabaseBackupJob` keeps old `.bak` files before deleting them |
@@ -106,6 +106,11 @@ domain) in front of it for anything beyond local testing.
 Non-env-var settings worth knowing (in `appsettings.*.json`, overridable via environment):
 - `Deployment:KnownProxies` — JSON array of reverse-proxy IPs trusted for X-Forwarded-For/Proto
   (rate limiting and audit IP attribution depend on it; default trusts loopback only)
+- `Deployment:KnownNetworks` — JSON array of reverse-proxy CIDR blocks, the form a containerised proxy
+  actually has (its IP changes on every recreate). `docker-compose.prod.yml` sets this to Docker's
+  private `172.16.0.0/12` so a same-host proxy behind which every client would otherwise collapse to a
+  single IP keeps per-client rate limiting and per-actor audit IPs. Nothing outside the listed ranges is
+  trusted, so X-Forwarded-For still cannot be spoofed from the internet.
 - `Security:PasswordIterations` — PBKDF2 cost for NEW password hashes (default `600000`; dev/test
   lowers it purely for suite speed). Existing hashes keep their stored count, so lowering it never
   weakens already-hashed passwords

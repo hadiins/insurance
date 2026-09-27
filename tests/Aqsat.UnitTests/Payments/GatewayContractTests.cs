@@ -348,6 +348,94 @@ public class GatewayContractTests
         Assert.Equal("ZAR-AUTH-9", nok.Reference);
     }
 
+    // ---- Production safety guard ----
+
+    /// <summary>The whole point of PaymentGatewaySafetyGuard: a Production deployment that never
+    /// finished configuring a real PSP must NOT be able to settle an installment against simulated
+    /// money. Without this, a customer clicks "پرداخت", the Mock reports success, the installment is
+    /// marked «تسویه» and commission flips Payable — while no rial ever moved. A log line is not a
+    /// control; the charge has to be refused before any row, money, or redirect exists.</summary>
+    [Theory]
+    [InlineData("ASPNETCORE_ENVIRONMENT", "Production", true)]
+    [InlineData("DOTNET_ENVIRONMENT", "Production", true)]
+    [InlineData("ASPNETCORE_ENVIRONMENT", "Development", false)]
+    [InlineData("ASPNETCORE_ENVIRONMENT", "", false)]
+    public void The_mock_gateway_is_refused_in_production_and_allowed_elsewhere(
+        string key, string value, bool expectRefusal)
+    {
+        var guard = new PaymentGatewaySafetyGuard(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [key] = value,
+            }).Build(),
+            NullLogger<PaymentGatewaySafetyGuard>.Instance);
+
+        var reason = guard.RefuseReason(PaymentProvider.Mock);
+
+        if (expectRefusal)
+        {
+            Assert.NotNull(reason);
+            Assert.Contains("غیرفعال", reason);
+        }
+        else
+        {
+            Assert.Null(reason);
+        }
+
+        // A REAL PSP is never blocked by this guard, in any environment — otherwise wiring up
+        // ZarinPal in Production would be impossible.
+        Assert.Null(guard.RefuseReason(PaymentProvider.ZarinPal));
+        Assert.Null(guard.RefuseReason(PaymentProvider.GooyaPay));
+    }
+
+    [Fact]
+    public async Task The_coordinator_refuses_a_mock_charge_in_production_before_calling_the_gateway()
+    {
+        using var db = TestDbContextFactory.Create();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ASPNETCORE_ENVIRONMENT"] = "Production" })
+            .Build();
+
+        // A gateway that would report success if it were ever reached.
+        var neverCalled = new CountingGateway();
+        var coordinator = new GatewayPaymentCoordinator(
+            db,
+            new IPaymentGateway[] { neverCalled },
+            configuration,
+            new PaymentGatewaySafetyGuard(configuration, NullLogger<PaymentGatewaySafetyGuard>.Instance));
+
+        var ex = await Assert.ThrowsAsync<PortalInvitationException>(() => coordinator.ChargeAsync(
+            new GatewayChargeContext(PaymentProvider.Mock, GatewayPurpose.Installment, Guid.NewGuid()),
+            new GatewayChargeRequest("tok", "merchant", 1_000m, "desc", "https://cb")));
+
+        Assert.Contains("غیرفعال", ex.Message);
+        // Fail closed BEFORE the gateway: no request, no GatewayTransaction, no settlement.
+        Assert.Equal(0, neverCalled.Calls);
+    }
+
+    private sealed class CountingGateway : IPaymentGateway
+    {
+        public int Calls { get; private set; }
+        public PaymentProvider Provider => PaymentProvider.Mock;
+        public decimal MinAmountToman => 0m;
+        public decimal MaxAmountToman => decimal.MaxValue;
+
+        public Task<GatewayChargeRequestResult> RequestAsync(
+            GatewayChargeRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            return Task.FromResult(new GatewayChargeRequestResult(
+                true, false, null, null, request.AmountToman, null));
+        }
+
+        public Task<GatewayPaymentResult> VerifyAsync(
+            string gatewayReference, string merchantId, decimal amountToman, CancellationToken ct = default)
+            => Task.FromResult(new GatewayPaymentResult(true, amountToman, null));
+
+        public GatewayCallbackData ReadCallback(IReadOnlyDictionary<string, string> parameters)
+            => new(true, string.Empty, null);
+    }
+
     // ---- coordinator pre-flight ----
 
     [Fact]

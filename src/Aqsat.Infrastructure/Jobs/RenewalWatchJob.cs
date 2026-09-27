@@ -196,6 +196,8 @@ public static class RenewalReminderTemplate
         var body = customBody ?? (recipientType == ReminderRecipientType.Marketer ? MarketerDefaultBody : CustomerDefaultBody);
         return body
             .Replace("{LineName}", lineNameFa)
-            .Replace("{ExpiryDate}", expiryDate.ToString("yyyy-MM-dd"));
+            // Jalali + Persian digits, matching InstallmentReminderTemplate and every other
+            // customer-facing surface — a Gregorian date on a Persian-locale phone is meaningless.
+            .Replace("{ExpiryDate}", PersianText.JalaliDate(expiryDate));
     }
 }
