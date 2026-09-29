@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Aqsat.Domain.Enums;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,12 @@ namespace Aqsat.Infrastructure.Auth;
 /// </summary>
 public sealed class ScopeResolutionMiddleware(RequestDelegate next)
 {
+    /// <summary>Request header opting a Headquarters/Regional caller into subtree reads.</summary>
+    public const string HierarchyScopeHeader = "X-Organization-Scope";
+
+    /// <summary>The only value of <see cref="HierarchyScopeHeader"/> that widens the RLS filter.</summary>
+    public const string TreeScopeValue = "tree";
+
     public async Task InvokeAsync(HttpContext httpContext, AppDbContext dbContext)
     {
         // Set for every request reaching this middleware, authenticated or not — AppDbContext's
@@ -96,6 +103,18 @@ public sealed class ScopeResolutionMiddleware(RequestDelegate next)
 
         CurrentUserContext.Current = new ResolvedUser(userId, appUser.FullName, membership.OrganizationId, permissions);
         AgencyContext.Current = membership.OrganizationId;
+
+        // Widened (subtree) reads are OFF unless the caller asks for them AND the org it is acting as
+        // actually sits above other tenants. The explicit header is what keeps this migration safe to
+        // deploy: the owner's own session resolves to the single Headquarters org that every
+        // self-served agency is parented under, so an ambient widening would silently turn every
+        // owner query into a read across the entire tenant tree. Regional/HQ-only matters because an
+        // Agency asking for "tree" is a no-op at best — its subtree is itself — and must never be able
+        // to widen its own filter by sending a header.
+        AgencyContext.HierarchyRead =
+            string.Equals(httpContext.Request.Headers[HierarchyScopeHeader].FirstOrDefault(), TreeScopeValue,
+                StringComparison.OrdinalIgnoreCase)
+            && membership.Organization.Level is OrganizationLevel.Headquarters or OrganizationLevel.Regional;
 
         var identity = (ClaimsIdentity)httpContext.User.Identity!;
         foreach (var permission in permissions)

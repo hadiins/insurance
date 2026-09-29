@@ -10,6 +10,7 @@ namespace Aqsat.Infrastructure.Persistence;
 public static class AgencyContext
 {
     private static readonly AsyncLocal<Guid?> CurrentAgencyId = new();
+    private static readonly AsyncLocal<bool> HierarchyReadScope = new();
 
     public static Guid? Current
     {
@@ -18,23 +19,47 @@ public static class AgencyContext
     }
 
     /// <summary>
+    /// When true, the RLS FILTER predicate widens from <see cref="Current"/> to that organization's
+    /// whole subtree (migration AddAgencyHierarchyReadScope): a Regional or Headquarters tenant reads
+    /// the rows of every tenant below it. Writes never widen — the policy's BLOCK predicates stay on
+    /// the strict-equality function, so a widened session cannot insert into or update a subordinate
+    /// agency's rows.
+    ///
+    /// Default false on purpose. Every self-served agency is parented under the single Headquarters
+    /// org, so widening is a deliberate, per-request decision and never an ambient surprise; whoever
+    /// sets <see cref="Current"/> for a request must assign this too rather than rely on the default.
+    /// </summary>
+    public static bool HierarchyRead
+    {
+        get => HierarchyReadScope.Value;
+        set => HierarchyReadScope.Value = value;
+    }
+
+    /// <summary>
     /// Scoped assignment with automatic restore — the RLS-safe way to work inside a specific
     /// agency outside a request (jobs, the public portal token flow):
     /// <code>using (AgencyContext.BeginScope(agencyId)) { ... }</code>
     /// A bare <c>Current = agencyId</c> leaks the value to whatever ran after the block in the
     /// same async flow (CLAUDE.md #12/#17: a leaked scope is indistinguishable from no scope);
-    /// the previous value is restored even on exception.
+    /// the previous value is restored even on exception. <see cref="HierarchyRead"/> is restored
+    /// the same way, so a widened read can never outlive the block that asked for it.
     /// </summary>
-    public static IDisposable BeginScope(Guid agencyId)
+    public static IDisposable BeginScope(Guid agencyId, bool hierarchyRead = false)
     {
         var previous = Current;
+        var previousHierarchy = HierarchyRead;
         Current = agencyId;
-        return new RestoreScope(previous);
+        HierarchyRead = hierarchyRead;
+        return new RestoreScope(previous, previousHierarchy);
     }
 
-    private sealed class RestoreScope(Guid? previous) : IDisposable
+    private sealed class RestoreScope(Guid? previous, bool previousHierarchy) : IDisposable
     {
-        public void Dispose() => Current = previous;
+        public void Dispose()
+        {
+            Current = previous;
+            HierarchyRead = previousHierarchy;
+        }
     }
 }
 

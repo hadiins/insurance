@@ -67,6 +67,15 @@ on every row · unique indexes for payment dedupe, marketer-user, active lock, p
 4. Duplicate payment insert → treated as success, one row.
 5. Assign one marketer to a second agency → unique index rejects it.
 
+**Follow-up (2026-09-28) — hierarchical read scope:** the policy's 45 `FILTER` predicates now run
+through `fn_AgencyReadPredicate`, which widens from strict equality to the acting organization's
+subtree (`fn_AgencySubtree`, 3 levels via `ParentId`) when `SESSION_CONTEXT(N'AgencyHierarchyRead')`
+is `'1'`. That flag is set only by `ScopeResolutionMiddleware` when the caller sends
+`X-Organization-Scope: tree` **and** acts as a Regional/Headquarters org. The 82 `BLOCK` predicates
+were deliberately left on the strict-equality function: a widened session reads subordinates and
+still cannot write into their rows. Reversibility of the rehoming was verified by applying `Down`
+against a live database and re-applying `Up`.
+
 ---
 
 ### [x] Task 4 — Auth, roles, org hierarchy, marketer accounts
