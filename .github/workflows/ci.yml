@@ -51,10 +51,14 @@ jobs:
           dotnet-version: "8.0.x"
       # The service container starts before any step runs, so the Docker daemon (root)
       # auto-creates this path root-owned — plain chmod would fail with "Operation not
-      # permitted". sudo is passwordless on GH-hosted runners.
+      # permitted". sudo is passwordless on GH-hosted runners. 0777 (not just owner-write) is
+      # needed because the SQL Server user inside the container is not the runner's user.
+      # Print the mode: a regression here otherwise shows up only as SQL Server's opaque
+      # "Operating system error 5(Access is denied.)" several minutes into the suite.
       - run: |
           sudo mkdir -p /tmp/aqsat-backup-ci
           sudo chmod 777 /tmp/aqsat-backup-ci
+          stat -c '%A %U:%G %n' /tmp/aqsat-backup-ci
       - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj --configuration Release
 
   gitleaks:
