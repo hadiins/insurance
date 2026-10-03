@@ -25,8 +25,7 @@ public class DatabaseBackupJobTests
         var fixture = await DevSeeder.SeedAuthFixtureAsync(context);
         AgencyContext.Current = fixture.AgencyAId;
 
-        var backupDirectory = Path.Combine(Path.GetTempPath(), $"aqsat-backup-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(backupDirectory);
+        var backupDirectory = CreateBackupDirectory("aqsat-backup-test");
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -132,8 +131,7 @@ public class DatabaseBackupJobTests
         var fixture = await DevSeeder.SeedAuthFixtureAsync(context);
         AgencyContext.Current = fixture.AgencyAId;
 
-        var backupDirectory = Path.Combine(Path.GetTempPath(), $"aqsat-backup-retention-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(backupDirectory);
+        var backupDirectory = CreateBackupDirectory("aqsat-backup-retention");
 
         try
         {
@@ -166,6 +164,44 @@ public class DatabaseBackupJobTests
         {
             await DeleteBackupDirectoryBestEffortAsync(backupDirectory);
         }
+    }
+
+    /// <summary>
+    /// Per-case backup directory. BACKUP DATABASE writes server-side, so the path the tests hand
+    /// SQL Server must live on a filesystem SQL Server itself can see:
+    /// <list type="bullet">
+    /// <item>LocalDB (Windows dev): server and test share the machine, so the OS temp dir works.</item>
+    /// <item>CI (Linux runner + SQL Server service container): the server sees only its own
+    /// filesystem — a runner-side temp path is invisible to it and BACKUP succeeds while the
+    /// runner-side assertion finds nothing. CI bind-mounts <c>/tmp/aqsat-backup-ci</c> into the
+    /// service container and passes it via <c>AQSAT_BACKUP_DIRECTORY</c>; the tests use a
+    /// GUID-suffixed subdir under it so concurrent cases stay isolated.</item>
+    /// </list>
+    /// The subdir is created world-writable on non-Windows hosts: the SQL Server process runs as a
+    /// different uid (mssql) than the test runner, and writing the .bak needs write permission on
+    /// the directory.
+    /// </summary>
+    private static string CreateBackupDirectory(string prefix)
+    {
+        var root = Environment.GetEnvironmentVariable("AQSAT_BACKUP_DIRECTORY");
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            root = Path.GetTempPath();
+        }
+
+        var directory = Path.Combine(root, $"{prefix}-{Guid.NewGuid():N}");
+        if (OperatingSystem.IsWindows())
+        {
+            Directory.CreateDirectory(directory);
+            return directory;
+        }
+
+        Directory.CreateDirectory(
+            directory,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+            | UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute
+            | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute);
+        return directory;
     }
 
     /// <summary>
