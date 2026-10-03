@@ -5,6 +5,11 @@
 # AQSAT_TEST_CONNECTION points the suite at the ephemeral job's service container — its sa
 # password is a throwaway value that only ever exists inside this ephemeral runner, which is why
 # it can live in source (unlike any real environment's credentials).
+#
+# AQSAT_BACKUP_DIRECTORY points the backup tests at a directory bind-mounted into the SQL Server
+# service container below. BACKUP DATABASE writes server-side, so without the shared mount the
+# runner-side assertions can't see the .bak and the two DatabaseBackupJobTests fail. The tests
+# still create a GUID-suffixed subdir per case, so they stay isolated from each other.
 name: CI
 
 on:
@@ -31,13 +36,29 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 20
+        # Shared with the runner so BACKUP DATABASE (server-side write) lands where the
+        # runner-side test assertions can see it. The mssql process inside the service
+        # container needs write access; the tests chmod their per-case subdir to 0777.
+        volumes:
+          - /tmp/aqsat-backup-ci:/tmp/aqsat-backup-ci
     env:
       AQSAT_TEST_CONNECTION: "Server=localhost;Database=AqsatTest;User Id=sa;Password=Ci-Sa-Password-9!;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      AQSAT_BACKUP_DIRECTORY: "/tmp/aqsat-backup-ci"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+      # The service container starts before any step runs, so the Docker daemon (root)
+      # auto-creates this path root-owned — plain chmod would fail with "Operation not
+      # permitted". sudo is passwordless on GH-hosted runners. 0777 (not just owner-write) is
+      # needed because the SQL Server user inside the container is not the runner's user.
+      # Print the mode: a regression here otherwise shows up only as SQL Server's opaque
+      # "Operating system error 5(Access is denied.)" several minutes into the suite.
+      - run: |
+          sudo mkdir -p /tmp/aqsat-backup-ci
+          sudo chmod 777 /tmp/aqsat-backup-ci
+          stat -c '%A %U:%G %n' /tmp/aqsat-backup-ci
       - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj --configuration Release
 
   gitleaks:
