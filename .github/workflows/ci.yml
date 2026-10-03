@@ -49,9 +49,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+      # The service container starts before any step runs, so the Docker daemon (root)
+      # auto-creates this path root-owned — plain chmod would fail with "Operation not
+      # permitted". sudo is passwordless on GH-hosted runners.
       - run: |
-          mkdir -p /tmp/aqsat-backup-ci
-          chmod 777 /tmp/aqsat-backup-ci
+          sudo mkdir -p /tmp/aqsat-backup-ci
+          sudo chmod 777 /tmp/aqsat-backup-ci
       - run: dotnet test tests/Aqsat.UnitTests/Aqsat.UnitTests.csproj --configuration Release
 
   gitleaks:
