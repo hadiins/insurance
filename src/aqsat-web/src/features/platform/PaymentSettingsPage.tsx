@@ -13,6 +13,7 @@ interface PaymentSettingsDto {
   ownerMerchantIdMasked: string | null;
   callbackBaseUrl: string | null;
   inquiryFeeToman: number;
+  verificationEnabled: boolean;
   updatedAt: string | null;
 }
 
@@ -29,6 +30,11 @@ export function PaymentSettingsPage() {
   const [merchantId, setMerchantId] = useState("");
   const [callbackUrl, setCallbackUrl] = useState("");
   const [inquiryFee, setInquiryFee] = useState(0);
+  // Owner's master switch for the issuance-verification chain (step 4). Off = installment
+  // policies issue like cash (schedule + manual receipt, no portal chain, no fee, no gateway) —
+  // the interim mode while the PSP license is pending. Defaults to true for a fresh panel load
+  // (the server defaults it true too), so the toggle never renders "off" before the first GET.
+  const [verificationEnabled, setVerificationEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +48,7 @@ export function PaymentSettingsPage() {
         setEnabled(s.enabled);
         setCallbackUrl(s.callbackBaseUrl ?? "");
         setInquiryFee(s.inquiryFeeToman);
+        setVerificationEnabled(s.verificationEnabled);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطای غیرمنتظره"));
   }, []);
@@ -59,10 +66,12 @@ export function PaymentSettingsPage() {
         ownerMerchantId: merchantId.trim() === "" ? null : merchantId.trim(),
         callbackBaseUrl: callbackUrl.trim() === "" ? null : callbackUrl.trim(),
         inquiryFeeToman: Number(inquiryFee),
+        verificationEnabled,
       });
       setSettings(updated);
       setMerchantId("");
       setInquiryFee(updated.inquiryFeeToman);
+      setVerificationEnabled(updated.verificationEnabled);
       setMessage(
         updated.enabled
           ? `درگاه ${PROVIDERS.find((p) => p.value === updated.provider)?.label} فعال شد.`
@@ -156,6 +165,28 @@ export function PaymentSettingsPage() {
           />
           <span className="text-[13.5px] text-(--ice)">فعالسازی پرداخت آنلاین در پورتال مشتری</span>
         </label>
+
+        <div className="mb-4 rounded-(--r) border border-(--edge-2) bg-(--fld) px-3 py-2.5">
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={verificationEnabled}
+              onChange={(e) => setVerificationEnabled(e.target.checked)}
+              className="h-4 w-4 accent-(--mint)"
+            />
+            <span className="text-[13.5px] font-semibold text-(--ice)">اعتبارسنجی در صدور اقساطی (گام ۴)</span>
+          </label>
+          <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--ice-3)">
+            {verificationEnabled
+              ? "فعال — صدور اقساطی از زنجیرهٔ اعتبارسنجی می‌گذرد: پرداخت کارمزد استعلام، استعلام اعتباری، تأیید نمایندگی و تأیید قرارداد توسط مشتری."
+              : "غیرفعال — صدور اقساطی بدون زنجیرهٔ اعتبارسنجی انجام می‌شود: فقط زمان‌بندی و دریافت دستی پیش‌پرداخت؛ بدون کارمزد، بدون درگاه و بدون استعلام. تا زمان اخذ مجوز درگاه پرداخت می‌توانید این حالت را نگه دارید."}
+          </div>
+          {!verificationEnabled && (
+            <div className="mt-1.5 text-[11.5px] leading-relaxed text-(--amber)">
+              بیمه‌نامه‌هایی که در این حالت صادر می‌شوند، در سیستم علامت‌گذاری می‌شوند تا بعداً قابل بازبینی باشند.
+            </div>
+          )}
+        </div>
 
         <div className="mb-1 text-[12.5px] font-semibold text-(--ice-2)">کارمزد استعلام (تومان)</div>
         <div className="mb-2 text-[11.5px] text-(--ice-3)">

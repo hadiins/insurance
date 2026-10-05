@@ -61,6 +61,19 @@ public sealed class PolicyVerificationService(
             throw new PortalInvitationException("این بیمه‌نامه نقدی است و نیازی به اعتبارسنجی اقساطی ندارد.");
         }
 
+        // Defense in depth: installment policies created while the owner's VerificationEnabled
+        // switch is off stamp RequiresVerification=false, but an operator could still open the
+        // step-4 URL directly (or call this endpoint while the switch is off). The switch is the
+        // live authority; the flag only documents the creation state.
+        var verificationEnabled = await dbContext.PlatformPaymentSettings
+            .AsNoTracking()
+            .Select(s => (bool?)s.VerificationEnabled)
+            .FirstOrDefaultAsync(ct) ?? true;
+        if (!verificationEnabled)
+        {
+            throw new PortalInvitationException("اعتبارسنجی اقساطی در حال حاضر توسط مالک پلتفرم غیرفعال است؛ صدور بدون اعتبارسنجی انجام می‌شود.");
+        }
+
         if (policy.InstallmentCount == 0)
         {
             throw new PortalInvitationException("ابتدا زمان‌بندی اقساط (مرحلهٔ ۳) را تکمیل کنید.");

@@ -32,6 +32,18 @@ public sealed class PlatformPaymentController(
         return Ok(ToDto(settings));
     }
 
+    /// <summary>Read-only, agency-safe view of the live verification switch for the issuance
+    /// wizard (step 4). Any signed-in operator may read it — the panel's full payment settings
+    /// stay Platform.Owner-only; only this one boolean is agency-visible, because every agent's
+    /// wizard must know whether step 4 exists before creating the policy.</summary>
+    [HttpGet("verification-status")]
+    [Authorize]
+    public async Task<ActionResult<VerificationStatusDto>> GetVerificationStatus(CancellationToken ct)
+    {
+        var settings = await GetOrCreateAsync(ct);
+        return Ok(new VerificationStatusDto(settings.VerificationEnabled));
+    }
+
     [HttpPut("settings")]
     public async Task<ActionResult<PlatformPaymentSettingsDto>> UpdateSettings(
         UpdatePlatformPaymentSettingsRequest request, CancellationToken ct)
@@ -73,6 +85,10 @@ public sealed class PlatformPaymentController(
         }
         settings.CallbackBaseUrl = string.IsNullOrWhiteSpace(request.CallbackBaseUrl) ? null : request.CallbackBaseUrl.Trim();
         settings.InquiryFeeToman = request.InquiryFeeToman;
+        if (request.VerificationEnabled is { } verificationEnabled)
+        {
+            settings.VerificationEnabled = verificationEnabled;
+        }
         settings.UpdatedAt = DateTimeOffset.UtcNow;
         settings.UpdatedByUserId = currentUser.UserId;
         await dbContext.SaveChangesAsync(ct);
@@ -82,7 +98,7 @@ public sealed class PlatformPaymentController(
         // is a secret, "changed" suffices.
         await securityEvents.WriteAsync(
             SecurityEventType.SensitiveSettingChanged, SecuritySeverity.Warning,
-            $"تنظیمات درگاه پرداخت مالک تغییر کرد (درگاه {provider}، وضعیت {(request.Enabled ? "فعال" : "غیرفعال")})",
+            $"تنظیمات درگاه پرداخت مالک تغییر کرد (درگاه {provider}، وضعیت {(request.Enabled ? "فعال" : "غیرفعال")}، اعتبارسنجی {(settings.VerificationEnabled ? "فعال" : "غیرفعال")})",
             cancellationToken: ct);
 
         return Ok(ToDto(settings));
@@ -115,6 +131,7 @@ public sealed class PlatformPaymentController(
             Mask(settings.OwnerMerchantId),
             settings.CallbackBaseUrl,
             settings.InquiryFeeToman,
+            settings.VerificationEnabled,
             settings.UpdatedAt == default ? null : settings.UpdatedAt);
 
     private static string? Mask(string merchantId) =>

@@ -44,6 +44,7 @@ internal static class TestDatabaseCleanup
             "DELETE FROM Marketers; DELETE FROM OrgSettings; " +
             "DELETE FROM UserOrgRoles; DELETE FROM RolePermissions; DELETE FROM Roles; " +
             "DELETE FROM Users; DELETE FROM Organizations; DELETE FROM ApiIrSettings; " +
+            "DELETE FROM PlatformPaymentSettings; " +
             "DELETE FROM AgencyStatsDaily; DELETE FROM CustomerPortalInvitations; " +
             "DELETE FROM CreditReports; DELETE FROM Banks; " +
             "DELETE FROM PortalInvitationTokenIndex; DELETE FROM ApiIrCallLogs; " +

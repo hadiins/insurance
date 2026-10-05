@@ -32,8 +32,16 @@ public class Policy : AgencyOwnedEntity, IAuditableEntity
     /// is hard-blocked (server-side) until the portal verification chain completes — fee payment,
     /// credit inquiries, agency approval and customer contract approval (owner decision
     /// 2026-09-01, «انسداد کامل»). False for cash issuance and for imported policies, whose down
-    /// payments never had this gate.</summary>
+    /// payments never had this gate. Also false for installment policies created while the owner's
+    /// VerificationEnabled switch is off (see VerificationBypassedByOwner below).</summary>
     public bool RequiresVerification { get; set; }
+
+    /// <summary>Stamped at creation when an installment policy skips verification because the
+    /// platform owner's VerificationEnabled switch is off (pending PSP license). Audit marker only:
+    /// no gate reads this flag — the live switch plus RequiresVerification=false already encode the
+    /// decision. Lets a later audit tell "issued without verification by owner decision" apart from
+    /// "cash/imported, never in the chain's scope".</summary>
+    public bool VerificationBypassedByOwner { get; set; }
 
     public DateOnly IssueDate { get; set; }
 

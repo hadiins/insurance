@@ -77,25 +77,8 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         seedContext.Vehicles.Add(vehicle);
         await seedContext.SaveChangesAsync();
 
-        var policy = new Policy
-        {
-            AgencyId = fixture.AgencyAId,
-            PolicyNumber = $"POL-{Guid.NewGuid():N}"[..16],
-            InsuranceLineId = thirdPartyLineId,
-            CustomerId = customer.Id,
-            VehicleId = vehicle.Id,
-            ContractName = "صدور دستی",
-            IsInstallment = true,
-            RequiresVerification = true,
-            IssueDate = new DateOnly(2026, 3, 1),
-            StartDate = new DateOnly(2026, 3, 1),
-            EndDate = new DateOnly(2027, 3, 1),
-            NetPremium = 10_000_000m,
-            ServiceFee = 2_000_000m,
-            DownPayment = 0,
-            InstallmentCount = 0,
-        };
-        seedContext.Policies.Add(policy);
+        // StartChainAsync refuses to start unless the agency portal is enabled (line ~125):
+        // wizard setup data, not behavior under test — seed it directly like the old helper did.
         seedContext.OrgSettings.Add(new OrgSettings
         {
             OrganizationId = fixture.AgencyAId,
@@ -103,6 +86,9 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
             PortalInvitationTtlHours = 48,
         });
         await seedContext.SaveChangesAsync();
+
+        // NB: the policy itself is NOT seeded here — it is created below through the REAL manual
+        // endpoint (POST /api/policies), because the switch stamping lives in PoliciesController.
 
         // The inquiry fee is the owner's concern (PlatformPaymentSettings): Mock + enabled is the
         // normal dev/panel setup, and the agency's own gateway defaults to Mock as well.
@@ -125,11 +111,69 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
 
+        // The policy itself must be created THROUGH THE REAL manual endpoint (POST /api/policies):
+        // the switch stamping (RequiresVerification / VerificationBypassedByOwner) lives in
+        // PoliciesController and never runs on a directly-seeded row. The client already carries
+        // the agency operator token from the login above, so this also pins the real wizard path:
+        // step-1 create with PaymentType=installment, honoring whatever the owner switch currently is.
+        var createdResponse = await client.PostAsJsonAsync("/api/policies", new CreatePolicyRequest(
+            $"POL-{Guid.NewGuid():N}"[..16], thirdPartyLineId, customer.Id, null, null, null,
+            Vehicle: new VehicleInput("55الف555-63", null, null, null, null, null), Property: null,
+            new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 1), new DateOnly(2027, 3, 1),
+            10_000_000m, 2_000_000m, null, null, false,
+        // NB: NetPremium(10M)+ServiceFee(2M)=12M total like the old seeded row, and DownPayment
+        // here (2M) EQUALS the schedule downPayment param (2M): the full-chain test pins
+        // 2.5M/installment, and any divergence silently breaks its amount assertions.
+        // (Schedule itself rejects downPayment >= TotalReceivable, so this must stay below 12M.)
+            PaymentType: "installment"));
+        createdResponse.EnsureSuccessStatusCode();
+        var createdResult = (await createdResponse.Content.ReadFromJsonAsync<CreatePolicyResultDto>())!;
+
         var schedule = await client.PostAsJsonAsync(
-            $"/api/policies/{policy.Id}/schedule", new ScheduleRequest(downPayment, 4));
+            $"/api/policies/{createdResult.PolicyId}/schedule", new ScheduleRequest(downPayment, 4));
         schedule.EnsureSuccessStatusCode();
 
-        return new Harness(client, fixture, policy.Id, customer.Id, policy.PolicyNumber);
+        return new Harness(client, fixture, createdResult.PolicyId, customer.Id, createdResult.PolicyNumber);
+    }
+
+    /// <summary>Writes the owner's switch straight to the singleton row (the tests in this class
+    /// sign in as an agency operator, which the owner-gated panel endpoint would refuse — so the
+    /// switch itself is exercised through the real endpoint in PlatformPaymentEndpointTests, and
+    /// here only its downstream effect on issuance is pinned).
+    ///
+    /// AgencyContext.Current = null, not BeginScope (whose parameter is a non-nullable Guid):
+    /// with a genuinely null scope the pooled connection re-stamps SESSION_CONTEXT cleanly on its
+    /// next open. This row has no AgencyId (platform-level, not RLS-scoped), so it must be
+    /// written/read outside any agency scope.</summary>
+    private static async Task SetVerificationEnabledAsync(bool enabled)
+    {
+        var previous = AgencyContext.Current;
+        AgencyContext.Current = null;
+        try
+        {
+            await using var context = TestDbContextFactory.Create();
+            // The shared LocalDB survives across test classes: a sibling class can leave its own
+            // singleton row behind (or a get-or-create race can leave two). FirstOrDefault would
+            // then read a stale or duplicate row nondeterministically, and a no-change SaveChanges
+            // returns 0. Reset to exactly one row so the API under test reads the value this test set.
+            var existing = await context.PlatformPaymentSettings.ToListAsync();
+            if (existing.Count > 0)
+            {
+                context.PlatformPaymentSettings.RemoveRange(existing);
+            }
+            context.PlatformPaymentSettings.Add(new PlatformPaymentSettings { VerificationEnabled = enabled });
+            await context.SaveChangesAsync();
+
+            // Read-back THROUGH THE SAME null-scope connection: the write must be visible to the
+            // very next read the API will do. Single (not FirstOrDefault): exactly one row must
+            // exist after the reset below, so a duplicate fails loudly instead of flaking.
+            var reread = await context.PlatformPaymentSettings.AsNoTracking().SingleAsync();
+            Assert.Equal(enabled, reread.VerificationEnabled);
+        }
+        finally
+        {
+            AgencyContext.Current = previous;
+        }
     }
 
     private async Task<PolicyVerificationDto> StartChainAsync(Harness h)
@@ -200,6 +244,69 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
             $"/api/policies/{cashPolicy.PolicyId}/record-full-payment",
             new RecordFullPaymentRequest(12_000_000m, new DateOnly(2026, 3, 2), "نقدی", null));
         paid.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task When_the_owner_switch_is_off_an_installment_policy_issues_like_cash()
+    {
+        await SetVerificationEnabledAsync(false);
+        try
+        {
+            var h = await CreateScheduledInstallmentPolicyAsync();
+
+            // The policy stamps RequiresVerification=false plus the bypass marker at creation.
+            await using var verify = TestDbContextFactory.Create();
+            AgencyContext.Current = h.Fixture.AgencyAId;
+            var row = await verify.Policies.AsNoTracking().SingleAsync(p => p.Id == h.PolicyId);
+            Assert.True(row.IsInstallment);
+            Assert.False(row.RequiresVerification);
+            Assert.True(row.VerificationBypassedByOwner);
+
+            // No chain exists — the operator's verification view says so without erroring, and the
+            // manual down-payment receipt lands without the hard block.
+            var status = await h.Client.GetFromJsonAsync<PolicyVerificationDto>(
+                $"/api/policies/{h.PolicyId}/verification");
+            Assert.Null(status!.InvitationId);
+
+            var received = await h.Client.PostAsJsonAsync(
+                $"/api/policies/{h.PolicyId}/receive-down-payment",
+                new ReceiveDownPaymentRequest(new DateOnly(2026, 3, 2), null));
+            received.EnsureSuccessStatusCode();
+
+            var finalized = await h.Client.PostAsync($"/api/policies/{h.PolicyId}/finalize", null);
+            finalized.EnsureSuccessStatusCode();
+
+            // Defense in depth: the verification start endpoint refuses while the switch is off —
+            // no chain can be opened by URL-guessing while bypassed.
+            var chain = await h.Client.PostAsync($"/api/policies/{h.PolicyId}/verification", null);
+            Assert.Equal(HttpStatusCode.BadRequest, chain.StatusCode);
+            Assert.Contains("غیرفعال", await chain.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            await SetVerificationEnabledAsync(true);
+        }
+    }
+
+    [Fact]
+    public async Task When_the_owner_switch_is_on_an_installment_policy_still_arms_the_hard_block()
+    {
+        await SetVerificationEnabledAsync(true);
+
+        var h = await CreateScheduledInstallmentPolicyAsync();
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = h.Fixture.AgencyAId;
+        var row = await verify.Policies.AsNoTracking().SingleAsync(p => p.Id == h.PolicyId);
+        Assert.True(row.IsInstallment);
+        Assert.True(row.RequiresVerification);
+        Assert.False(row.VerificationBypassedByOwner);
+
+        var blocked = await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/receive-down-payment",
+            new ReceiveDownPaymentRequest(new DateOnly(2026, 3, 2), null));
+        Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+        Assert.Contains("اعتبارسنجی", await blocked.Content.ReadAsStringAsync());
     }
 
     [Fact]

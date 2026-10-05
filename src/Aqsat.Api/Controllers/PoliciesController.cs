@@ -330,7 +330,16 @@ public sealed class PoliciesController(
             return ValidationProblem("نوع پرداخت نامعتبر است؛ فقط cash یا installment مجاز است.");
         }
         var isInstallment = !string.Equals(paymentType, "cash", StringComparison.OrdinalIgnoreCase);
-        var requiresVerification = isInstallment;
+        // The platform owner can switch the issuance-verification chain (step 4) off entirely
+        // (PlatformPaymentSettings.VerificationEnabled) while the PSP license is pending: an
+        // installment policy then stamps RequiresVerification=false at creation and issues like cash
+        // — schedule plus manual receipt, no portal chain, no inquiry fee, no gateway. Absent row =
+        // enabled (the current behavior), so a fresh install never boots with the chain silently off.
+        var verificationEnabled = await dbContext.PlatformPaymentSettings
+            .AsNoTracking()
+            .Select(s => (bool?)s.VerificationEnabled)
+            .FirstOrDefaultAsync(ct) ?? true;
+        var requiresVerification = isInstallment && verificationEnabled;
 
         // Multi-insurer agencies issue through more than one insurer; the per-insurer remittance
         // liability view groups on this. Unspecified → the agency's own insurer (Organization.
@@ -353,6 +362,7 @@ public sealed class PoliciesController(
             ContractName = "صدور دستی",
             IsInstallment = isInstallment,
             RequiresVerification = requiresVerification,
+            VerificationBypassedByOwner = isInstallment && !verificationEnabled,
             // Manual rows begin in the existing pending-confirmation state. They do not count as
             // active/earned policies until the wizard's server-side finalize endpoint accepts the
             // required schedule/verification/payment evidence.

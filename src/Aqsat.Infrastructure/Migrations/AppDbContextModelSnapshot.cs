@@ -3615,6 +3615,9 @@ namespace Aqsat.Infrastructure.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("VerificationEnabled")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
@@ -3809,6 +3812,9 @@ namespace Aqsat.Infrastructure.Migrations
 
                     b.Property<Guid?>("VehicleId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("VerificationBypassedByOwner")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 

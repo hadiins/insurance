@@ -7,11 +7,18 @@ namespace Aqsat.Api.Contracts;
 /// rule as ApiIrSettingsDto).</summary>
 public sealed record PlatformPaymentSettingsDto(
     string Provider, bool Enabled, bool HasOwnerMerchantId, string? OwnerMerchantIdMasked,
-    string? CallbackBaseUrl, decimal InquiryFeeToman, DateTimeOffset? UpdatedAt);
+    string? CallbackBaseUrl, decimal InquiryFeeToman, bool VerificationEnabled, DateTimeOffset? UpdatedAt);
 
 /// <summary>PUT body. OwnerMerchantId null or whitespace means "keep the stored one" — the panel
 /// sends it that way whenever the field is untouched, so an ordinary save can never wipe a working
 /// credential; replacing it is the only path that writes it (same contract as
-/// UpdateApiIrSettingsRequest).</summary>
+/// UpdateApiIrSettingsRequest). VerificationEnabled is the owner's on/off switch for the issuance
+/// wizard's step 4 (credit verification): false lets installment policies issue like cash —
+/// schedule plus manual receipt, no portal chain, no inquiry fee, no gateway.</summary>
 public sealed record UpdatePlatformPaymentSettingsRequest(
-    string Provider, bool Enabled, string? OwnerMerchantId, string? CallbackBaseUrl, decimal InquiryFeeToman);
+    string Provider, bool Enabled, string? OwnerMerchantId, string? CallbackBaseUrl, decimal InquiryFeeToman,
+    bool? VerificationEnabled = null);
+
+/// <summary>Agency-safe read of just the live verification switch — the issuance wizard's step-4
+/// existence flag. No provider, no merchant data, nothing sensitive.</summary>
+public sealed record VerificationStatusDto(bool VerificationEnabled);

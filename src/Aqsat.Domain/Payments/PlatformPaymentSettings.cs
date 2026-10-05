@@ -33,6 +33,13 @@ public class PlatformPaymentSettings : SoftDeletableEntity
     /// portal payment endpoints refuse regardless of any agency's own settings.</summary>
     public bool Enabled { get; set; }
 
+    /// <summary>Master switch for the policy issuance-verification chain (step 4 of the issuance
+    /// wizard). When false, new installment policies are created with RequiresVerification=false,
+    /// so issuance completes without the customer's inquiry-fee payment, portal chain or gateway.
+    /// True = current behavior, deliberately the safe default — turning verification off is an
+    /// explicit owner decision (pending PSP license).</summary>
+    public bool VerificationEnabled { get; set; } = true;
+
     /// <summary>The inquiry fee each customer pays in the portal before the api.ir inquiries run
     /// (تومان) — an owner-account concern by definition, since the fee is collected through the
     /// owner's gateway into the owner's account (owner decision 2026-09-01). Snapshot-copied into

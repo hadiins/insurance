@@ -170,6 +170,68 @@ public class PlatformPaymentEndpointTests : IClassFixture<WebApplicationFactory<
     }
 
     [Fact]
+    public async Task Verification_switch_defaults_on_persists_both_ways_and_round_trips()
+    {
+        await ClearPlatformPaymentSettingsAsync();
+
+        var client = await CreateOwnerClientAsync();
+
+        // A fresh install must never boot with the chain silently off.
+        var first = await client.GetFromJsonAsync<PlatformPaymentSettingsDto>("/api/platform/payment/settings");
+        Assert.NotNull(first);
+        Assert.True(first!.VerificationEnabled);
+
+        // The panel's ordinary full-shape save keeps an untouched switch at its stored value.
+        var saveResponse = await client.PutAsJsonAsync("/api/platform/payment/settings",
+            new UpdatePlatformPaymentSettingsRequest(
+                "Mock", true, "own-live-1234567890abcdef", "https://api.example.ir", 25_000m));
+        saveResponse.EnsureSuccessStatusCode();
+        var saved = await saveResponse.Content.ReadFromJsonAsync<PlatformPaymentSettingsDto>();
+        Assert.NotNull(saved);
+        Assert.True(saved!.VerificationEnabled);
+
+        // Explicitly switching off persists and round-trips through GET.
+        var offResponse = await client.PutAsJsonAsync("/api/platform/payment/settings",
+            new UpdatePlatformPaymentSettingsRequest(
+                "Mock", true, null, "https://api.example.ir", 25_000m, false));
+        offResponse.EnsureSuccessStatusCode();
+        var off = await offResponse.Content.ReadFromJsonAsync<PlatformPaymentSettingsDto>();
+        Assert.NotNull(off);
+        Assert.False(off!.VerificationEnabled);
+        var reread = await client.GetFromJsonAsync<PlatformPaymentSettingsDto>("/api/platform/payment/settings");
+        Assert.NotNull(reread);
+        Assert.False(reread!.VerificationEnabled);
+
+        // And back on — the owner re-enables the chain the same way when the license arrives.
+        var onResponse = await client.PutAsJsonAsync("/api/platform/payment/settings",
+            new UpdatePlatformPaymentSettingsRequest(
+                "Mock", true, null, "https://api.example.ir", 25_000m, true));
+        onResponse.EnsureSuccessStatusCode();
+        var on = await onResponse.Content.ReadFromJsonAsync<PlatformPaymentSettingsDto>();
+        Assert.NotNull(on);
+        Assert.True(on!.VerificationEnabled);
+    }
+
+    [Fact]
+    public async Task Verification_status_endpoint_exposes_only_the_switch_to_any_signed_in_operator()
+    {
+        await ClearPlatformPaymentSettingsAsync();
+
+        var client = await CreateOwnerClientAsync();
+        var status = await client.GetFromJsonAsync<VerificationStatusDto>("/api/platform/payment/verification-status");
+        Assert.NotNull(status);
+        Assert.True(status!.VerificationEnabled);
+
+        await client.PutAsJsonAsync("/api/platform/payment/settings",
+            new UpdatePlatformPaymentSettingsRequest(
+                "Mock", true, null, null, 25_000m, false));
+
+        var off = await client.GetFromJsonAsync<VerificationStatusDto>("/api/platform/payment/verification-status");
+        Assert.NotNull(off);
+        Assert.False(off!.VerificationEnabled);
+    }
+
+    [Fact]
     public async Task An_unknown_provider_or_a_malformed_callback_url_is_rejected()
     {
         await ClearPlatformPaymentSettingsAsync();

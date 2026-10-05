@@ -113,7 +113,9 @@ interface BankAccountDto {
 
 type MethodType = "Cash" | "BankTransfer" | "Cheque" | "PosDirect";
 
-/** Step 4 (اعتبارسنجی) only exists on the installment path; cash jumps 2 → 5. */
+/** Step 4 (اعتبارسنجی) only exists on the installment path; cash jumps 2 → 5. When the
+ * platform owner switches verification off (see verification-status endpoint), installment
+ * policies stamp RequiresVerification=false at creation and skip 4 the same way. */
 type Step = 1 | 2 | 3 | 4 | 5;
 
 type PaymentType = "installment" | "cash";
@@ -282,6 +284,18 @@ export function NewPolicyPage() {
   const [scheduling, setScheduling] = useState(false);
   const [scheduleResult, setScheduleResult] = useState<ScheduleResultDto | null>(null);
   const [scheduledDownPayment, setScheduledDownPayment] = useState(0);
+
+  // The owner's live verification switch (platform payment settings). When off, an installment
+  // policy stamps RequiresVerification=false at creation and the wizard skips step 4 (3 → 5),
+  // exactly like the cash path — no chain, no fee, no gateway. Defaults to true so the wizard
+  // never renders the 3 → 5 jump before the first status call answers.
+  const [verificationEnabled, setVerificationEnabled] = useState(true);
+  useEffect(() => {
+    api
+      .get<{ verificationEnabled: boolean }>("/platform/payment/verification-status")
+      .then((s) => setVerificationEnabled(s.verificationEnabled))
+      .catch(() => setVerificationEnabled(true));
+  }, []);
 
   // Step 4 — down-payment receipt + finalize, same shape as SchedulePolicyPage's receipt block.
   const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);
@@ -927,7 +941,15 @@ export function NewPolicyPage() {
       ? received
       : scheduleResult !== null && (scheduledDownPayment <= 0 || received);
 
-  const stepOrder: Step[] = paymentType === "cash" ? [1, 2, 5] : [1, 2, 3, 4, 5];
+  const stepOrder: Step[] =
+    paymentType === "cash"
+      ? [1, 2, 5]
+      : verificationEnabled
+        ? [1, 2, 3, 4, 5]
+        // Installment with the owner's switch off: the schedule step still happens (creation
+        // jumps to 3 unconditionally), only the verification step is skipped — 3 → 5, exactly
+        // what the "next" button does. Listing 3 keeps the stepper highlight honest.
+        : [1, 2, 3, 5];
   const stepIndex = stepOrder.indexOf(step);
 
   function openPolicyFile() {
@@ -1444,7 +1466,7 @@ export function NewPolicyPage() {
           )}
 
           <div className="mt-4 flex items-center gap-2">
-            <button type="button" onClick={() => setStep(4)} disabled={scheduleResult === null} className={BTN_PRIMARY}>
+            <button type="button" onClick={() => setStep(verificationEnabled ? 4 : 5)} disabled={scheduleResult === null} className={BTN_PRIMARY}>
               مرحلهٔ بعد
             </button>
             <div className="text-[11.5px] leading-relaxed text-(--ice-3)">
@@ -1454,7 +1476,7 @@ export function NewPolicyPage() {
         </div>
       )}
 
-      {step === 4 && created && scheduleResult && paymentType === "installment" && (
+      {step === 4 && created && scheduleResult && paymentType === "installment" && verificationEnabled && (
         <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-1 text-[13.5px] font-bold text-(--ice)">
             اعتبارسنجی مشتری — بیمه‌نامهٔ <span className="tabular-nums">{created.policyNumber}</span>
@@ -1488,7 +1510,7 @@ export function NewPolicyPage() {
         </div>
       )}
 
-      {step === 5 && created && (paymentType === "cash" || scheduleResult) && (
+      {step === 5 && created && (paymentType === "cash" || scheduleResult || (paymentType === "installment" && !verificationEnabled)) && (
         <div className="rounded-(--r-lg) border border-(--edge) bg-(--pane) p-5">
           <div className="mb-3 text-[13.5px] font-bold text-(--ice)">
             بررسی پرونده، {paymentType === "cash" ? "ثبت پرداخت کامل" : "دریافت پیشپرداخت"} و ثبت نهایی
