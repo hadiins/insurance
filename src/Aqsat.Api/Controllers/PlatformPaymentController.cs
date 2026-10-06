@@ -18,14 +18,20 @@ namespace Aqsat.Api.Controllers;
 /// agency's own down-payment gateway is configured per agency on OrgSettings instead. GET/PUT
 /// only, no delete: the singleton row is created on first read and never removed. The merchant ID
 /// is write-only through this API — GET returns a mask.
+///
+/// NB: the PlatformOwner policy lives on the ACTIONS, never on this class — authorize attributes
+/// at class and action level are additive (an action-level [Authorize] does not replace the class
+/// policy), and verification-status must stay readable by any signed-in operator: the issuance
+/// wizard runs under agency accounts, and a 403 there silently fell back to "verification on",
+/// routing every agent into step 4 no matter what the owner saved (incident 2026-10-06).
 /// </summary>
 [ApiController]
 [Route("api/platform/payment")]
-[Authorize(Policy = Permissions.PlatformOwner)]
 public sealed class PlatformPaymentController(
     AppDbContext dbContext, ICurrentUserContext currentUser, SecurityEventWriter securityEvents) : ControllerBase
 {
     [HttpGet("settings")]
+    [Authorize(Policy = Permissions.PlatformOwner)]
     public async Task<ActionResult<PlatformPaymentSettingsDto>> GetSettings(CancellationToken ct)
     {
         var settings = await GetOrCreateAsync(ct);
@@ -45,6 +51,7 @@ public sealed class PlatformPaymentController(
     }
 
     [HttpPut("settings")]
+    [Authorize(Policy = Permissions.PlatformOwner)]
     public async Task<ActionResult<PlatformPaymentSettingsDto>> UpdateSettings(
         UpdatePlatformPaymentSettingsRequest request, CancellationToken ct)
     {

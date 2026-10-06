@@ -63,6 +63,26 @@ public class PlatformPaymentEndpointTests : IClassFixture<WebApplicationFactory<
         return client;
     }
 
+    /// <summary>An ordinary agency user WITHOUT Platform.Owner — standing in for the operator
+    /// account the issuance wizard actually runs under. NB: the fixture's dual-agency manager
+    /// cannot play this part: DevSeeder grants managerRole every permission in Permissions.All,
+    /// PlatformOwner included, so only the staff role (which deliberately excludes it) proves the
+    /// owner-only gate. Same fixture user the 403-on-missing-permission checks use.</summary>
+    private async Task<HttpClient> CreateAgencyOperatorClientAsync()
+    {
+        await using var context = TestDbContextFactory.Create();
+        var fixture = await DevSeeder.SeedAuthFixtureAsync(context);
+
+        var client = _factory.CreateClient();
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(fixture.AgencyOnlyStaffMobile, DevSeeder.SeededUserPassword));
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Add("X-Organization-Id", fixture.AgencyAId.ToString());
+        return client;
+    }
+
     // Shared LocalDB: a leftover singleton row (sibling test, live panel save) would turn "first
     // read creates the row" into a no-op, so every test starts from an empty table.
     private static async Task ClearPlatformPaymentSettingsAsync()
@@ -229,6 +249,36 @@ public class PlatformPaymentEndpointTests : IClassFixture<WebApplicationFactory<
         var off = await client.GetFromJsonAsync<VerificationStatusDto>("/api/platform/payment/verification-status");
         Assert.NotNull(off);
         Assert.False(off!.VerificationEnabled);
+    }
+
+    [Fact]
+    public async Task Verification_status_is_agency_readable_while_the_settings_panel_stays_owner_only()
+    {
+        await ClearPlatformPaymentSettingsAsync();
+
+        // The owner switches the chain off through the real panel endpoint.
+        var owner = await CreateOwnerClientAsync();
+        var offResponse = await owner.PutAsJsonAsync("/api/platform/payment/settings",
+            new UpdatePlatformPaymentSettingsRequest("Mock", true, null, null, 25_000m, false));
+        offResponse.EnsureSuccessStatusCode();
+
+        // An ordinary agency operator — the wizard's actual caller — must read the live value:
+        // authorize attributes at class and action level are ADDITIVE, so a class-level
+        // PlatformOwner policy 403'd this read, the wizard's catch fell back to "verification on",
+        // and every agent was routed into step 4 no matter what the owner saved (incident
+        // 2026-10-06).
+        var operatorClient = await CreateAgencyOperatorClientAsync();
+        var statusResponse = await operatorClient.GetAsync("/api/platform/payment/verification-status");
+        Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+        var status = await statusResponse.Content.ReadFromJsonAsync<VerificationStatusDto>();
+        Assert.False(status!.VerificationEnabled);
+
+        // …while the full panel (provider, merchant id, fee) stays Platform.Owner-only for them.
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await operatorClient.GetAsync("/api/platform/payment/settings")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await operatorClient.PutAsJsonAsync("/api/platform/payment/settings",
+                new UpdatePlatformPaymentSettingsRequest("Mock", false, null, null, 0m))).StatusCode);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTabsStore } from "../../app/store/tabsStore";
 import { useTabKey } from "../shell/TabContext";
 import { useDraftState } from "../shell/useDraftState";
@@ -288,14 +288,27 @@ export function NewPolicyPage() {
   // The owner's live verification switch (platform payment settings). When off, an installment
   // policy stamps RequiresVerification=false at creation and the wizard skips step 4 (3 → 5),
   // exactly like the cash path — no chain, no fee, no gateway. Defaults to true so the wizard
-  // never renders the 3 → 5 jump before the first status call answers.
+  // never renders the 3 → 5 jump before the first status call answers. Re-read on every step
+  // transition, not just at mount: the owner may flip the switch in another tab mid-session, and
+  // a stale "on" is exactly what used to strand operators on step 4 (incident 2026-10-06 —
+  // the read also 403'd for agency accounts until the controller's class-level policy moved).
   const [verificationEnabled, setVerificationEnabled] = useState(true);
-  useEffect(() => {
+  const loadVerificationStatus = useCallback(() => {
     api
       .get<{ verificationEnabled: boolean }>("/platform/payment/verification-status")
       .then((s) => setVerificationEnabled(s.verificationEnabled))
       .catch(() => setVerificationEnabled(true));
   }, []);
+  useEffect(() => {
+    loadVerificationStatus();
+  }, [step, loadVerificationStatus]);
+  // If the switch goes off while the operator sits on step 4, release the screen the same way the
+  // step-3 button would: jump straight to the down-payment receipt. The server gates accept it
+  // too (VerificationGateActiveAsync honors the live switch), so a policy stuck mid-chain finishes
+  // like a cash issuance instead of demanding the customer's contract approval forever.
+  useEffect(() => {
+    if (step === 4 && created && scheduleResult && !verificationEnabled) setStep(5);
+  }, [step, created, scheduleResult, verificationEnabled]);
 
   // Step 4 — down-payment receipt + finalize, same shape as SchedulePolicyPage's receipt block.
   const [cashBoxes, setCashBoxes] = useState<CashBoxDto[]>([]);

@@ -446,7 +446,7 @@ public sealed class PoliciesController(
         }
 
         if (policy.InstallmentCount <= 0) return "ابتدا اقساط بیمه‌نامه زمان‌بندی شود.";
-        if (policy.RequiresVerification)
+        if (await VerificationGateActiveAsync(policy, ct))
         {
             var approved = await dbContext.CustomerPortalInvitations.AsNoTracking().AnyAsync(i =>
                 i.PolicyId == policy.Id && !i.IsDeleted
@@ -459,6 +459,24 @@ public sealed class PoliciesController(
             p.InstallmentIdHint == policy.Id && p.Method == DownPaymentMethod
             && p.Amount == policy.DownPayment && !p.IsDeleted, ct);
         return received ? null : "ابتدا پیش‌پرداخت تعریف‌شده دریافت شود.";
+    }
+
+    /// <summary>Whether the verification gate actually applies to this policy. The owner's LIVE
+    /// VerificationEnabled switch wins over the creation-time RequiresVerification stamp (owner
+    /// decision 2026-10-06, incident follow-up): flipping the switch off must release the
+    /// down-payment and finalize gates for policies that were born under the switch and are stuck
+    /// mid-chain — otherwise "verification off" only helps future issuances and leaves half-stuck
+    /// rows unfinishable without the customer's contract approval. Absent settings row = enabled
+    /// (the safe default, same rule as every other reader of this switch). The table has no
+    /// AgencyId, so this read is RLS-free regardless of the ambient scope.</summary>
+    private async Task<bool> VerificationGateActiveAsync(Policy policy, CancellationToken ct)
+    {
+        if (!policy.RequiresVerification) return false;
+        var verificationEnabled = await dbContext.PlatformPaymentSettings
+            .AsNoTracking()
+            .Select(s => (bool?)s.VerificationEnabled)
+            .FirstOrDefaultAsync(ct);
+        return verificationEnabled ?? true;
     }
 
     /// <summary>در انتظار تأیید مشتری — the agent flags a freshly-issued policy as awaiting the
@@ -912,8 +930,9 @@ public sealed class PoliciesController(
         // payment cannot be recorded, manually or otherwise, until the portal verification chain
         // (fee paid → credit report → agency approval → customer contract approval) is done. The
         // online portal path satisfies this by construction: PayDownPaymentAsync only runs at
-        // stage CustomerApproved.
-        if (policy.RequiresVerification)
+        // stage CustomerApproved. The owner's live switch releases the block (2026-10-06): with
+        // verification off, a policy stuck mid-chain receipts exactly like a cash issuance.
+        if (await VerificationGateActiveAsync(policy, ct))
         {
             var chainDone = await dbContext.CustomerPortalInvitations.AsNoTracking()
                 .AnyAsync(i => i.PolicyId == policy.Id

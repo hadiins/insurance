@@ -289,6 +289,59 @@ public class PolicyVerificationEndpointTests : IClassFixture<WebApplicationFacto
     }
 
     [Fact]
+    public async Task Turning_the_owner_switch_off_mid_chain_releases_a_stuck_policy_like_cash()
+    {
+        // A policy born under the switch ON keeps RequiresVerification=true and an open chain —
+        // the exact "stuck at step 4, waiting for the customer's contract" shape from the
+        // 2026-10-06 incident. The owner's LIVE switch must release both server gates (receipt +
+        // finalize), not just stamp future policies, or the interim mode rescues nobody.
+        await SetVerificationEnabledAsync(true);
+        var h = await CreateScheduledInstallmentPolicyAsync();
+
+        await using var verify = TestDbContextFactory.Create();
+        AgencyContext.Current = h.Fixture.AgencyAId;
+        var row = await verify.Policies.AsNoTracking().SingleAsync(p => p.Id == h.PolicyId);
+        Assert.True(row.RequiresVerification);
+        Assert.False(row.VerificationBypassedByOwner);
+
+        // Chain started and agency-approved — only the customer's confirmation is missing, and
+        // the down payment is hard-blocked while the switch is on.
+        var dto = await StartChainAsync(h);
+        await PayFeeOnPortalAsync(dto.Token!);
+        await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/verification/decision", new AgencyVerificationDecisionRequest(true));
+        var blocked = await h.Client.PostAsJsonAsync(
+            $"/api/policies/{h.PolicyId}/receive-down-payment",
+            new ReceiveDownPaymentRequest(new DateOnly(2026, 3, 2), null));
+        Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+        Assert.Contains("اعتبارسنجی", await blocked.Content.ReadAsStringAsync());
+
+        await SetVerificationEnabledAsync(false);
+        try
+        {
+            // The owner flips the switch: receipt and finalize accept the stuck policy exactly
+            // like a cash issuance — no contract confirmation from the customer required.
+            var received = await h.Client.PostAsJsonAsync(
+                $"/api/policies/{h.PolicyId}/receive-down-payment",
+                new ReceiveDownPaymentRequest(new DateOnly(2026, 3, 2), null));
+            received.EnsureSuccessStatusCode();
+
+            var finalized = await h.Client.PostAsync($"/api/policies/{h.PolicyId}/finalize", null);
+            finalized.EnsureSuccessStatusCode();
+
+            // Defense in depth holds: the switch stays the live authority, so a fresh chain start
+            // still refuses while it is off.
+            var chain = await h.Client.PostAsync($"/api/policies/{h.PolicyId}/verification", null);
+            Assert.Equal(HttpStatusCode.BadRequest, chain.StatusCode);
+            Assert.Contains("غیرفعال", await chain.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            await SetVerificationEnabledAsync(true);
+        }
+    }
+
+    [Fact]
     public async Task When_the_owner_switch_is_on_an_installment_policy_still_arms_the_hard_block()
     {
         await SetVerificationEnabledAsync(true);
