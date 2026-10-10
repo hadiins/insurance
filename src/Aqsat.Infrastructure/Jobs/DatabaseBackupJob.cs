@@ -1,3 +1,4 @@
+using Aqsat.Infrastructure.Backup;
 using Aqsat.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,12 @@ namespace Aqsat.Infrastructure.Jobs;
 /// A backup nobody has ever restored is not a backup (this task's own check) — see
 /// docs/RESTORE-RUNBOOK.md for the tested, documented restore procedure.
 /// </summary>
-public sealed class DatabaseBackupJob(AppDbContext dbContext, IConfiguration configuration, TimeProvider timeProvider, ILogger<DatabaseBackupJob> logger)
+public sealed class DatabaseBackupJob(
+    AppDbContext dbContext,
+    IConfiguration configuration,
+    TimeProvider timeProvider,
+    ILogger<DatabaseBackupJob> logger,
+    IOffsiteBackupUploader? offsiteUploader = null)
 {
     public async Task RunAsync(CancellationToken ct = default)
     {
@@ -39,6 +45,16 @@ public sealed class DatabaseBackupJob(AppDbContext dbContext, IConfiguration con
         logger.LogInformation("Database backup written to {FilePath}", filePath);
 
         CleanupOldBackups(directory, databaseName, retentionDays);
+
+        // Offsite leg (Google Drive, ciphertext-only). Runs only after the local file exists and
+        // retention ran, so a Drive outage can never cost the local backup — but it DOES surface:
+        // the exception fails this Hangfire job (retry + red row in the dashboard) rather than
+        // silently never copying off-host. Null uploader happens in direct test construction;
+        // DI always supplies one.
+        if (offsiteUploader is not null)
+        {
+            await offsiteUploader.UploadAsync(filePath, ct);
+        }
     }
 
     private void CleanupOldBackups(string directory, string databaseName, int retentionDays)

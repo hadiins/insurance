@@ -66,6 +66,16 @@ services:
       ApiIr__AllowPaidEndpoints: ${API_IR_ALLOW_PAID:-false}
       Backup__Directory: /var/opt/mssql/backup
       Backup__RetentionDays: ${BACKUP_RETENTION_DAYS:-14}
+      # Offsite leg — Google Drive, ciphertext-only (AES-256-GCM sealed before it leaves the box;
+      # see \"Backup & restore\" in README). All three are opt-in: leave unset and the uploader
+      # no-ops (local backups keep working untouched).
+      # BACKUP_ENCRYPTION_KEY = base64 of 32 bytes, generated once and stored OFF the server —
+      # every offsite .enc is unrecoverable without it. service-account JSON = inline JSON or a
+      # file path INSIDE the container (mount it read-only); the Drive folder must be shared with
+      # the service-account email first.
+      Backup__EncryptionKey: ${BACKUP_ENCRYPTION_KEY:-}
+      Backup__Offsite__FolderId: ${BACKUP_OFFSITE_FOLDER_ID:-}
+      Backup__Offsite__ServiceAccountJson: ${BACKUP_OFFSITE_SERVICE_ACCOUNT_JSON:-}
       # docs/TASKS.md Task 22 — the panel's own outbound call to Aqsat.Updater. Same shared token
       # on both sides. (The version the panel shows and the "can't jump straight from 1.0 to 3.0"
       # prerequisite check use is stamped into the image at build time — build.args APP_VERSION

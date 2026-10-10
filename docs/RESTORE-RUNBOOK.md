@@ -18,15 +18,49 @@ The backup file is written by the **sqlserver** container to a Docker volume
 `System.IO` file deletion — can see the same files.
 
 **Get backups off the host.** A volume on the same VM is not a disaster-recovery plan — it survives
-a bad deploy, not a lost VM. Copy `.bak` files to separate storage (object storage in an Iranian
-provider, per CLAUDE.md's data-residency rule) on whatever cadence your incident tolerance requires;
-this repo does not automate that leg.
+a bad deploy, not a lost VM. Since 2026-10 this leg IS automated: after every daily backup,
+`DatabaseBackupJob` seals the `.bak` with AES-256-GCM (`BackupFileEncryptor`, key =
+`Backup:EncryptionKey`) and uploads the ciphertext-only `.enc` to a Google Drive folder
+(`GoogleDriveOffsiteUploader`, resumable upload, service-account auth), then prunes remote files
+older than the same `Backup:RetentionDays` window. What lands in Drive is opaque ciphertext —
+Google (or anyone with the folder link) sees nothing but random bytes; the key never leaves this
+environment. **The whole thing is opt-in**: with `Backup:Offsite:FolderId` unset the uploader
+no-ops and local backups work exactly as before. Setup lives in `.env.example`
+(`BACKUP_ENCRYPTION_KEY` / `BACKUP_OFFSITE_FOLDER_ID` /
+`BACKUP_OFFSITE_SERVICE_ACCOUNT_JSON`).
+
+Data-residency note (CLAUDE.md): customer/national-ID data must stay hosted in Iran. An
+encrypted blob on a foreign cloud is ciphertext, not plaintext — but it is still YOUR call as
+the owner whether that satisfies the rule for your deployment; if it doesn't, leave the leg
+disabled and copy `.bak` files to Iranian object storage on your own cadence instead. Key
+discipline is non-negotiable either way: the encryption key must be stored OFF the server
+(password manager / sealed copy). Losing it makes every offsite backup unrecoverable — by
+design.
 
 ## Restoring — step by step
 
 Run these against the `sqlserver` container (`docker compose -f docker-compose.prod.yml exec sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$SA_PASSWORD"`), or any `sqlcmd`/SSMS/Azure Data Studio session pointed at it.
 
-### 1. Find the backup file
+### 1b. Restoring from an OFFSITE (.enc) copy — when the VM/volume is gone
+
+The Drive folder holds `<dbname>-<timestamp>.bak.enc` files — AES-256-GCM ciphertext, NOT usable
+`.bak`s. On ANY machine with .NET 8 (not on the api container):
+
+```bash
+# 1. Download the newest .enc from the Drive folder.
+# 2. Decrypt with the OFF-server copy of the key (generate-time value of BACKUP_ENCRYPTION_KEY):
+dotnet run --project src/Aqsat.BackupDecrypt -- <key-base64> <downloaded.enc> Aqsat-restored.bak
+#    -- or:  ... -- --key-file /path/to/key.txt <downloaded.enc> Aqsat-restored.bak
+# 3. Exit code 0 = GCM tags verified on EVERY chunk (tampered/truncated files fail loudly,
+#    exit 2 — never a silently-short restore). Copy Aqsat-restored.bak to the new server's
+#    /var/opt/mssql/backup/ and continue from step 2 below with that filename.
+```
+
+The decrypt tool compiles its single dependency (`BackupFileEncryptor.cs`) by source-link, so it
+builds even when the rest of the tree won't — which is exactly when you're restoring. Wrong key =
+`CryptographicException`, exit 2; the partial output is deleted.
+
+### 1. Find the backup file (local `.bak`)
 
 ```bash
 docker compose -f docker-compose.prod.yml exec sqlserver ls -la /var/opt/mssql/backup

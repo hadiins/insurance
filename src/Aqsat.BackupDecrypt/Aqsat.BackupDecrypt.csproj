@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Offline operator tool: decrypts an offsite .enc backup back to .bak before the RESTORE
+         steps in docs/RESTORE-RUNBOOK.md. Deliberately tiny — no hosting, no database. -->
+    <AssemblyName>aqsat-backup-decrypt</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Source-link, not ProjectReference: Aqsat.Infrastructure drags EF/Hangfire/SQL into a tool
+         whose only need is BackupFileEncryptor.cs. Compiling that one file directly keeps the
+         decrypt path buildable even when the rest of the tree won't build — which is exactly when
+         you're restoring a backup. -->
+    <Compile Include="..\Aqsat.Infrastructure\Backup\BackupFileEncryptor.cs" Link="BackupFileEncryptor.cs" />
+  </ItemGroup>
+
+</Project>

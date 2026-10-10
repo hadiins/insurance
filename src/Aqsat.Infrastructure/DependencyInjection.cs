@@ -108,6 +108,13 @@ public static class DependencyInjection
         services.AddScoped<SmsReminderJob>();
         services.AddScoped<RenewalWatchJob>();
         services.AddScoped<DatabaseBackupJob>();
+        // Offsite backup leg — opt-in via Backup:Offsite:FolderId; without it the uploader no-ops.
+        // Typed HttpClient (pooled handler + 10-min timeout: multi-GB uploads over slow links beat
+        // the 100s default) exactly like ApiIrClient/UpdaterClient above.
+        services.AddHttpClient<Backup.IOffsiteBackupUploader, Backup.GoogleDriveOffsiteUploader>((_, http) =>
+        {
+            http.Timeout = TimeSpan.FromMinutes(10);
+        });
         services.AddScoped<AgencyStatsRollupJob>();
         services.AddScoped<RiskAssessmentJob>();
         services.AddScoped<Aqsat.Infrastructure.Stats.AgencyStatsService>();

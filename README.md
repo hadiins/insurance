@@ -97,6 +97,8 @@ domain) in front of it for anything beyond local testing.
 | `NATIONAL_ID_KEY` | no | **Legacy only.** National IDs are stored as PLAINTEXT by deliberate owner decision (2026-08-28, CLAUDE.md rule 12) because the national ID is the issuance wizard's entry key and must stay directly queryable. A keyed HMAC `NationalIdHash` is still maintained alongside it for dedupe and audit. This key is needed ONLY to decrypt the old `NationalIdEncrypted` columns during the one-time `NationalIdPlaintextBackfillJob` on first startup; set the pre-2026-08-28 value if you are upgrading such a database, and it can be dropped once the backfill has run |
 | `API_IR_KEY` | no | api.ir API key. Leave unset and every call routes to `/api/Sandbox/Echo` (CLAUDE.md's "ask before calling a paid endpoint outside Sandbox") |
 | `API_IR_ALLOW_PAID` | no, default `false` | Set `true` only once an agency has a real, funded api.ir key — this is the switch that turns on real per-call billing (SMS, Shahkar, ChequeColor; see `docs/PHASE-1-SPEC.md` §6 for the price list) |
+| `BACKUP_RETENTION_DAYS` | no, default `14` | How many days of daily `.bak` files (local AND the Drive offsite copies) are kept |
+| `BACKUP_ENCRYPTION_KEY` / `BACKUP_OFFSITE_FOLDER_ID` / `BACKUP_OFFSITE_SERVICE_ACCOUNT_JSON` | only for the Drive offsite leg | All three opt-in: leave unset and backups stay local-only. Key = base64 of 32 bytes (`openssl rand -base64 32`, stored OFF the server); folder = Drive folder ID shared with the service-account email; JSON = the service-account key inline or a mounted file path — see `.env.example` and "Backup & restore" below |
 | `BACKUP_RETENTION_DAYS` | no, default `14` | How long `DatabaseBackupJob` keeps old `.bak` files before deleting them |
 | `UPDATER_SHARED_TOKEN` | only if using `updater` | Bearer token `Aqsat.Updater` requires on every request (`X-Updater-Token` header) — see "Update service" below |
 | `UPDATER_SIGNING_PUBLIC_KEY_PEM` | only if using `updater` | RSA public key (PEM) `Aqsat.Updater` verifies release package signatures against |
@@ -137,6 +139,15 @@ this exact failure mode was found and fixed by testing it directly).
 Backups run daily and automatically. **Restoring one has an actual tested procedure** —
 [`docs/RESTORE-RUNBOOK.md`](docs/RESTORE-RUNBOOK.md) — not just a `BACKUP DATABASE` line and a
 hope. Read it before you need it, not during an incident.
+
+After the local `.bak` lands, an opt-in offsite leg seals it with AES-256-GCM (key =
+`Backup:EncryptionKey`, stored OFF the server — losing it makes every offsite copy
+unrecoverable, by design) and pushes the ciphertext-only `.enc` to a Google Drive folder via a
+resumable Drive v3 upload with service-account auth (`IOffsiteBackupUploader`, registered as a
+typed `HttpClient` in `DependencyInjection`). With `Backup:Offsite:FolderId` unset it no-ops;
+remote files older than the same retention window are trashed (recoverable for 30 days).
+`src/Aqsat.BackupDecrypt` is the standalone decrypt tool for the restore path, and the full
+decrypt-then-restore walkthrough is RESTORE-RUNBOOK step 1b.
 
 ## Update service (`Aqsat.Updater`)
 
