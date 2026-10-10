@@ -25,8 +25,7 @@ public class DatabaseBackupJobTests
         var fixture = await DevSeeder.SeedAuthFixtureAsync(context);
         AgencyContext.Current = fixture.AgencyAId;
 
-        var backupDirectory = Path.Combine(Path.GetTempPath(), $"aqsat-backup-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(backupDirectory);
+        var backupDirectory = CreateBackupDirectory("aqsat-backup-test");
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -132,8 +131,7 @@ public class DatabaseBackupJobTests
         var fixture = await DevSeeder.SeedAuthFixtureAsync(context);
         AgencyContext.Current = fixture.AgencyAId;
 
-        var backupDirectory = Path.Combine(Path.GetTempPath(), $"aqsat-backup-retention-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(backupDirectory);
+        var backupDirectory = CreateBackupDirectory("aqsat-backup-retention");
 
         try
         {
@@ -167,6 +165,53 @@ public class DatabaseBackupJobTests
             await DeleteBackupDirectoryBestEffortAsync(backupDirectory);
         }
     }
+
+    /// <summary>
+    /// Per-case backup directory. BACKUP DATABASE writes server-side, so the path the tests hand
+    /// SQL Server must live on a filesystem SQL Server itself can see:
+    /// <list type="bullet">
+    /// <item>LocalDB (Windows dev): server and test share the machine, so the OS temp dir works.</item>
+    /// <item>CI (Linux runner + SQL Server service container): the server sees only its own
+    /// filesystem — a runner-side temp path is invisible to it and BACKUP succeeds while the
+    /// runner-side assertion finds nothing. CI bind-mounts <c>/tmp/aqsat-backup-ci</c> into the
+    /// service container and passes it via <c>AQSAT_BACKUP_DIRECTORY</c>; the tests use a
+    /// GUID-suffixed subdir under it so concurrent cases stay isolated.</item>
+    /// </list>
+    /// The subdir is made world-writable on non-Windows hosts: the SQL Server process inside the CI
+    /// service container runs as its own user, not as the test runner, so writing the .bak there
+    /// needs the <i>other</i> write bit — not just owner/group.
+    /// </summary>
+    private static string CreateBackupDirectory(string prefix)
+    {
+        var root = Environment.GetEnvironmentVariable("AQSAT_BACKUP_DIRECTORY");
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            root = Path.GetTempPath();
+        }
+
+        var directory = Path.Combine(root, $"{prefix}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+
+        if (OperatingSystem.IsWindows())
+        {
+            return directory;
+        }
+
+        // An explicit chmod, not a create-time UnixFileMode: mkdir's mode argument is filtered by
+        // the process umask (the CI runner's 022 turns 0777 into 0755), and the SQL Server user
+        // cannot write into a 0755 directory — BACKUP DATABASE then fails with "Cannot open backup
+        // device ... Operating system error 5(Access is denied.)". chmod is not umask-filtered.
+        File.SetUnixFileMode(directory, BackupDirectoryMode);
+        return directory;
+    }
+
+    /// <summary>
+    /// <c>rwxrwxrwx</c> — see <see cref="CreateBackupDirectory"/> for why the "other" bits matter.
+    /// </summary>
+    private const UnixFileMode BackupDirectoryMode =
+        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+        | UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute
+        | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
 
     /// <summary>
     /// Temp cleanup is best-effort by design. SQL Server holds a read handle on a .bak until it is
